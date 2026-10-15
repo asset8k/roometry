@@ -1,0 +1,36 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Project guide
+project_guide.md
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+
+# Frontend dependencies and build output
+node_modules/
+frontend/dist/
+
+# Test and tool caches
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Generated evaluation output (retain folder placeholder)
+artifacts/*
+!artifacts/.gitkeep
+
+# Local uploads and OS files
+uploads/
+.DS_Store
