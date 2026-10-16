@@ -7,7 +7,9 @@ authors = [
     { name = "Asset", email = "asset8k@gmail.com" }
 ]
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "pydantic>=2.12,<3",
+]
 
 [project.scripts]
 roometry = "roometry:main"
@@ -15,3 +17,8 @@ roometry = "roometry:main"
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8,<10",
+]

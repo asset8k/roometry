@@ -16,6 +16,6 @@ Planned capabilities:
 
 Planned stack: Python, FastAPI, Pydantic, LangGraph, MCP, PostgreSQL, React, TypeScript, and React Three Fiber / Three.js.
 
-**Status:** Initial project skeleton. Application features are not implemented yet. Target MVP: October 29, 2026.
+**Status:** Scene schemas, a sample JSON scene, and structural tests are implemented. The agent, geometry checks, and application UI are still in development. Target MVP: October 29, 2026.
 
 This is an Applied AI Engineering portfolio project focused on stateful agents, human-in-the-loop execution, structured scene editing, and verification. Room geometry is approximate; Roometry is not a precision measurement or building-code certification tool.
