@@ -1,6 +1,6 @@
 # Roometry Scene Contract
 
-Status: version 1 Pydantic schemas, approved asset metadata, a JSON fixture, and structural tests are implemented. TypeScript types, renderer assets, physical geometry validation, and scene-edit enforcement are not implemented yet.
+Status: version 1 Pydantic schemas, approved asset metadata, a JSON fixture, generated TypeScript types, a furnished viewer with eight procedural models, local color previews, and structural/model tests are implemented. Most of the broader model catalog, physical geometry validation, and scene-edit persistence/enforcement are not implemented yet.
 
 ## Purpose
 
@@ -200,6 +200,8 @@ Use a small fixture scene for each named room type to check coverage before clai
 Every object has its own `color`, independent of its asset ID. For example, the same TV asset can appear gray in one scene and black in another. Apply the color to the main material or designated colorable parts; screens, glass, and small details may retain neutral materials so the object remains recognizable.
 
 The initial color model uses one primary color per object. Textures, arbitrary image uploads for picture frames, and separate per-part color controls are deferred. Color changes are deterministic manual edits, require no LLM call, and are preserved in later AI refinements unless the user asks to change them.
+
+The current viewer provides local, unsaved color previews for unlocked objects, including fixed fixtures. Preview overrides do not mutate the source fixture and disappear on refresh. Persisting these edits and preserving them across AI refinements require the later scene-edit/refinement APIs. The viewer's asset registry maps stable IDs to normalized model families; approved assets without a visual model use a dimensioned bounding-box fallback.
 
 #### Placement and support
 
@@ -478,7 +480,7 @@ These are initial resource limits, not geometric acceptance rules or measured ro
 
 The schema does not prove containment, collisions, physical surface contact, wall/ceiling attachment, headroom, budget adherence, or preservation of previous constraints. Those require the later geometry and scene-mutation services. Revalidate incoming data before each acceptance; these models do not make Python lists or attributes immutable.
 
-`data/fixtures/bedroom_scene.json` extends the documented examples with the chandelier and a window-linked curtain, covering all four placement modes. It is a synthetic development fixture, not a reconstruction benchmark or a physically certified layout. Run the structural tests with `uv run pytest`.
+`data/fixtures/bedroom_scene.json` includes nine objects: bed, rug, desk, computer, TV, clock, chandelier, window-linked curtain, and wardrobe, covering all four placement modes. The wardrobe completes the Day 2 bed/desk/wardrobe renderer examples. It is a synthetic development fixture, not a reconstruction benchmark or a physically certified layout. Run the structural tests with `uv run pytest`.
 
 ### Full acceptance policy to implement
 
@@ -506,3 +508,5 @@ Project/run metadata stores the scene revision ID, parent revision, kind (`base`
 Manual edits use the same geometry and authorization rules as agent edits and do not invoke an LLM. Refinements start from the latest authorized scene, including accepted manual edits. They must not overwrite a newer revision created while the agent was running.
 
 Pydantic models in `src/roometry/scenes/schemas.py` are the machine-readable source of truth, with approved asset/category metadata in `src/roometry/scenes/assets.py`. Export JSON Schema through `RoomScene.model_json_schema()` or share synchronized types with the frontend. Update this document, example fixtures, validators, and renderer together when changing the contract; incompatible changes require a new schema version and an explicit migration strategy.
+
+The frontend currently uses `frontend/src/lib/scene.schema.json` and `scene.generated.ts`, with a validated bundled fixture under `frontend/src/data/`. Regenerate them using `npm run scene:generate` from `frontend/`. The exporter validates the source fixture through Python before copying it. The frontend's JSON Schema check does not reproduce Python model validators for relationships, normalization, or scene history; it is an additional input-shape check, not a substitute for backend acceptance.

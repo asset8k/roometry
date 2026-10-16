@@ -1,0 +1,591 @@
+{
+  "$defs": {
+    "ObjectDimensions": {
+      "additionalProperties": false,
+      "properties": {
+        "width": {
+          "exclusiveMinimum": 0,
+          "maximum": 30.0,
+          "title": "Width",
+          "type": "number"
+        },
+        "depth": {
+          "exclusiveMinimum": 0,
+          "maximum": 30.0,
+          "title": "Depth",
+          "type": "number"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "maximum": 30.0,
+          "title": "Height",
+          "type": "number"
+        }
+      },
+      "required": [
+        "width",
+        "depth",
+        "height"
+      ],
+      "title": "ObjectDimensions",
+      "type": "object"
+    },
+    "Opening": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "door",
+            "window"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "wall": {
+          "enum": [
+            "north",
+            "south",
+            "west",
+            "east"
+          ],
+          "title": "Wall",
+          "type": "string"
+        },
+        "offset_m": {
+          "maximum": 30.0,
+          "minimum": 0,
+          "title": "Offset M",
+          "type": "number"
+        },
+        "width_m": {
+          "exclusiveMinimum": 0,
+          "maximum": 30.0,
+          "title": "Width M",
+          "type": "number"
+        },
+        "height_m": {
+          "exclusiveMinimum": 0,
+          "maximum": 10.0,
+          "title": "Height M",
+          "type": "number"
+        },
+        "sill_height_m": {
+          "maximum": 10.0,
+          "minimum": 0,
+          "title": "Sill Height M",
+          "type": "number"
+        },
+        "swing": {
+          "enum": [
+            "inward",
+            "outward",
+            "none",
+            "unknown"
+          ],
+          "title": "Swing",
+          "type": "string"
+        },
+        "hinge": {
+          "anyOf": [
+            {
+              "enum": [
+                "min_offset",
+                "max_offset",
+                "unknown"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Hinge"
+        },
+        "provenance": {
+          "enum": [
+            "photo_observed",
+            "user_added"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        },
+        "measurements_source": {
+          "enum": [
+            "user_confirmed",
+            "estimated"
+          ],
+          "title": "Measurements Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "wall",
+        "offset_m",
+        "width_m",
+        "height_m",
+        "sill_height_m",
+        "swing",
+        "hinge",
+        "provenance",
+        "measurements_source"
+      ],
+      "title": "Opening",
+      "type": "object"
+    },
+    "Position": {
+      "additionalProperties": false,
+      "description": "World-space bottom center, in meters; room containment is checked later.",
+      "properties": {
+        "x": {
+          "maximum": 100.0,
+          "minimum": -100.0,
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "maximum": 100.0,
+          "minimum": 0,
+          "title": "Y",
+          "type": "number"
+        },
+        "z": {
+          "maximum": 100.0,
+          "minimum": -100.0,
+          "title": "Z",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "z"
+      ],
+      "title": "Position",
+      "type": "object"
+    },
+    "RoomDimensions": {
+      "additionalProperties": false,
+      "properties": {
+        "room_type": {
+          "enum": [
+            "bedroom",
+            "living_room",
+            "kitchen",
+            "bathroom",
+            "office",
+            "dining_room",
+            "entryway",
+            "laundry_room",
+            "other"
+          ],
+          "title": "Room Type",
+          "type": "string"
+        },
+        "width_m": {
+          "exclusiveMinimum": 0,
+          "maximum": 30.0,
+          "title": "Width M",
+          "type": "number"
+        },
+        "length_m": {
+          "exclusiveMinimum": 0,
+          "maximum": 30.0,
+          "title": "Length M",
+          "type": "number"
+        },
+        "height_m": {
+          "exclusiveMinimum": 0,
+          "maximum": 10.0,
+          "title": "Height M",
+          "type": "number"
+        },
+        "measurements_source": {
+          "enum": [
+            "user_confirmed",
+            "estimated"
+          ],
+          "title": "Measurements Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "room_type",
+        "width_m",
+        "length_m",
+        "height_m",
+        "measurements_source"
+      ],
+      "title": "RoomDimensions",
+      "type": "object"
+    },
+    "SceneObject": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "bed",
+            "sofa",
+            "armchair",
+            "chair",
+            "stool",
+            "bench",
+            "ottoman",
+            "desk",
+            "table",
+            "coffee_table",
+            "side_table",
+            "nightstand",
+            "wardrobe",
+            "dresser",
+            "shelf",
+            "tv_stand",
+            "shoe_rack",
+            "sideboard",
+            "wall_shelf",
+            "storage_box",
+            "basket",
+            "bin",
+            "computer",
+            "laptop",
+            "monitor",
+            "printer",
+            "game_console",
+            "speaker",
+            "tv",
+            "projector",
+            "rug",
+            "picture",
+            "clock",
+            "window_covering",
+            "souvenir",
+            "vase",
+            "book_stack",
+            "household_accessory",
+            "mirror",
+            "plant",
+            "floor_lamp",
+            "table_lamp",
+            "chandelier",
+            "ceiling_light",
+            "ceiling_fan",
+            "radiator",
+            "air_conditioner",
+            "fan",
+            "kitchen_cabinet",
+            "kitchen_counter",
+            "wall_cabinet",
+            "extractor_hood",
+            "refrigerator",
+            "cooker",
+            "dishwasher",
+            "washing_machine",
+            "dryer",
+            "microwave",
+            "kettle",
+            "toaster",
+            "sink",
+            "toilet",
+            "bathtub",
+            "shower",
+            "vanity",
+            "towel_rack",
+            "water_heater",
+            "drying_rack"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "asset_id": {
+          "enum": [
+            "bed_standard_01",
+            "sofa_standard_01",
+            "armchair_standard_01",
+            "chair_standard_01",
+            "stool_standard_01",
+            "bench_standard_01",
+            "ottoman_standard_01",
+            "desk_standard_01",
+            "table_standard_01",
+            "coffee_table_standard_01",
+            "side_table_standard_01",
+            "nightstand_standard_01",
+            "wardrobe_standard_01",
+            "dresser_standard_01",
+            "shelf_standard_01",
+            "tv_stand_standard_01",
+            "shoe_rack_standard_01",
+            "sideboard_standard_01",
+            "wall_shelf_standard_01",
+            "storage_box_standard_01",
+            "basket_standard_01",
+            "bin_standard_01",
+            "computer_standard_01",
+            "laptop_standard_01",
+            "monitor_standard_01",
+            "printer_standard_01",
+            "game_console_standard_01",
+            "speaker_standard_01",
+            "tv_standard_01",
+            "projector_standard_01",
+            "rug_standard_01",
+            "picture_standard_01",
+            "clock_standard_01",
+            "window_covering_standard_01",
+            "souvenir_standard_01",
+            "vase_standard_01",
+            "book_stack_standard_01",
+            "household_accessory_standard_01",
+            "mirror_standard_01",
+            "plant_standard_01",
+            "floor_lamp_standard_01",
+            "table_lamp_standard_01",
+            "chandelier_standard_01",
+            "ceiling_light_standard_01",
+            "ceiling_fan_standard_01",
+            "radiator_standard_01",
+            "air_conditioner_standard_01",
+            "fan_standard_01",
+            "kitchen_cabinet_standard_01",
+            "kitchen_counter_standard_01",
+            "wall_cabinet_standard_01",
+            "extractor_hood_standard_01",
+            "refrigerator_standard_01",
+            "cooker_standard_01",
+            "dishwasher_standard_01",
+            "washing_machine_standard_01",
+            "dryer_standard_01",
+            "microwave_standard_01",
+            "kettle_standard_01",
+            "toaster_standard_01",
+            "sink_standard_01",
+            "toilet_standard_01",
+            "bathtub_standard_01",
+            "shower_standard_01",
+            "vanity_standard_01",
+            "towel_rack_standard_01",
+            "water_heater_standard_01",
+            "drying_rack_standard_01",
+            "bed_crib_01",
+            "picture_square_01",
+            "picture_rectangular_01",
+            "souvenir_figurine_01",
+            "souvenir_ornament_01",
+            "souvenir_trophy_01",
+            "shelf_coat_rack_01",
+            "storage_box_chest_01",
+            "basket_laundry_01",
+            "kitchen_counter_island_01",
+            "kitchen_counter_sink_01",
+            "kitchen_counter_hob_01",
+            "kitchen_cabinet_oven_01",
+            "washing_machine_stack_01",
+            "window_covering_curtain_01",
+            "window_covering_blind_01",
+            "household_accessory_bowl_01",
+            "household_accessory_utensil_holder_01",
+            "household_accessory_soap_dispenser_01",
+            "household_accessory_toothbrush_cup_01",
+            "household_accessory_caddy_01",
+            "household_accessory_toilet_brush_01",
+            "household_accessory_toilet_paper_holder_01"
+          ],
+          "maxLength": 96,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Asset Id",
+          "type": "string"
+        },
+        "position": {
+          "$ref": "#/$defs/Position"
+        },
+        "rotation_y_rad": {
+          "title": "Rotation Y Rad",
+          "type": "number"
+        },
+        "dimensions_m": {
+          "$ref": "#/$defs/ObjectDimensions"
+        },
+        "color": {
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "title": "Color",
+          "type": "string"
+        },
+        "placement": {
+          "enum": [
+            "floor",
+            "surface",
+            "wall",
+            "ceiling"
+          ],
+          "title": "Placement",
+          "type": "string"
+        },
+        "support_object_id": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Support Object Id"
+        },
+        "wall": {
+          "anyOf": [
+            {
+              "enum": [
+                "north",
+                "south",
+                "west",
+                "east"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Wall"
+        },
+        "opening_id": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Opening Id"
+        },
+        "fixed": {
+          "title": "Fixed",
+          "type": "boolean"
+        },
+        "locked": {
+          "title": "Locked",
+          "type": "boolean"
+        },
+        "provenance": {
+          "enum": [
+            "photo_observed",
+            "user_added",
+            "agent_added"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        },
+        "measurements_source": {
+          "enum": [
+            "user_confirmed",
+            "catalog",
+            "estimated"
+          ],
+          "title": "Measurements Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "asset_id",
+        "position",
+        "rotation_y_rad",
+        "dimensions_m",
+        "color",
+        "placement",
+        "support_object_id",
+        "wall",
+        "opening_id",
+        "fixed",
+        "locked",
+        "provenance",
+        "measurements_source"
+      ],
+      "title": "SceneObject",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "room": {
+      "$ref": "#/$defs/RoomDimensions"
+    },
+    "openings": {
+      "items": {
+        "$ref": "#/$defs/Opening"
+      },
+      "maxItems": 32,
+      "title": "Openings",
+      "type": "array"
+    },
+    "objects": {
+      "items": {
+        "$ref": "#/$defs/SceneObject"
+      },
+      "maxItems": 200,
+      "title": "Objects",
+      "type": "array"
+    },
+    "assumptions": {
+      "items": {
+        "maxLength": 1000,
+        "minLength": 1,
+        "pattern": "\\S",
+        "type": "string"
+      },
+      "maxItems": 50,
+      "title": "Assumptions",
+      "type": "array"
+    },
+    "warnings": {
+      "items": {
+        "maxLength": 1000,
+        "minLength": 1,
+        "pattern": "\\S",
+        "type": "string"
+      },
+      "maxItems": 50,
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "room",
+    "openings",
+    "objects",
+    "assumptions",
+    "warnings"
+  ],
+  "title": "RoomScene",
+  "type": "object"
+}

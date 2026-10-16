@@ -46,7 +46,7 @@ def test_fixture_validates_and_round_trips():
     scene = RoomScene.model_validate_json(FIXTURE.read_text())
     restored = RoomScene.model_validate_json(scene.model_dump_json())
     assert restored == scene
-    assert len(scene.objects) == 8
+    assert len(scene.objects) == 9
     assert {obj.placement for obj in scene.objects} == {
         "floor",
         "surface",
@@ -334,7 +334,7 @@ def test_surface_support_must_exist_and_be_eligible(scene_data, support_id):
 
 def test_references_do_not_depend_on_list_order(scene_data):
     scene_data["objects"].reverse()
-    assert len(RoomScene.model_validate(scene_data).objects) == 8
+    assert len(RoomScene.model_validate(scene_data).objects) == 9
 
 
 def test_nested_surface_support_and_cycles_rejected(scene_data):

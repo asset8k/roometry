@@ -235,6 +235,31 @@
       "locked": false,
       "provenance": "photo_observed",
       "measurements_source": "estimated"
+    },
+    {
+      "id": "wardrobe_1",
+      "type": "wardrobe",
+      "asset_id": "wardrobe_standard_01",
+      "position": {
+        "x": 3.25,
+        "y": 0.0,
+        "z": 0.35
+      },
+      "rotation_y_rad": 0.0,
+      "dimensions_m": {
+        "width": 1.1,
+        "depth": 0.6,
+        "height": 2.1
+      },
+      "color": "#B8A48A",
+      "placement": "floor",
+      "support_object_id": null,
+      "wall": null,
+      "opening_id": null,
+      "fixed": false,
+      "locked": false,
+      "provenance": "photo_observed",
+      "measurements_source": "estimated"
     }
   ],
   "assumptions": [
