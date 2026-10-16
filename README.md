@@ -16,6 +16,42 @@ Planned capabilities:
 
 Planned stack: Python, FastAPI, Pydantic, LangGraph, MCP, PostgreSQL, React, TypeScript, and React Three Fiber / Three.js.
 
-**Status:** Scene schemas, a sample JSON scene, and structural tests are implemented. The agent, geometry checks, and application UI are still in development. Target MVP: October 29, 2026.
+**Status:** Scene schemas, a sample JSON scene, structural tests, a FastAPI health endpoint, and a runnable React/Vite scaffold are implemented. The 3D renderer, agent, and geometry checks are still in development. Target MVP: October 29, 2026.
 
 This is an Applied AI Engineering portfolio project focused on stateful agents, human-in-the-loop execution, structured scene editing, and verification. Room geometry is approximate; Roometry is not a precision measurement or building-code certification tool.
+
+## Local development
+
+Requires Python 3.12+, [uv](https://docs.astral.sh/uv/), and Node.js 22.12+ (an active LTS release is recommended).
+
+From the repository root, start the backend:
+
+```bash
+uv sync --locked
+cp -n .env.example .env
+uv run uvicorn roometry.main:app --reload
+```
+
+Copy the environment example only on first setup; preserve an existing `.env`. No database or model-provider credentials are needed for the current scaffold. `GET http://127.0.0.1:8000/api/health` returns `{"status":"ok","service":"roometry"}`. API docs are at `http://127.0.0.1:8000/docs`. This endpoint checks API liveness only.
+
+In another terminal, start the frontend:
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+Open `http://127.0.0.1:5173`. The scaffold checks backend connectivity through Vite's `/api` development proxy. Optional overrides are documented in `frontend/.env.example`; copy it to `frontend/.env` to customize them. Backend `.env` settings and frontend `.env` settings are separate. Frontend variables prefixed with `VITE_` are public.
+
+Checks:
+
+```bash
+# From the repository root
+uv run pytest -q
+
+# From frontend/
+npm run build
+```
+
+`npm run build` checks TypeScript and creates `frontend/dist/`. Production API routing and deployment will be configured later.

@@ -1,18 +1,18 @@
 [project]
 name = "roometry"
 version = "0.1.0"
-description = "Add your description here"
+description = "AI 3D Room Optimization Agent"
 readme = "README.md"
 authors = [
     { name = "Asset", email = "asset8k@gmail.com" }
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "fastapi>=0.143.3",
     "pydantic>=2.12,<3",
+    "pydantic-settings>=2.16.0",
+    "uvicorn>=0.54.0",
 ]
-
-[project.scripts]
-roometry = "roometry:main"
 
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13.0"]
