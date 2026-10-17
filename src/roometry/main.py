@@ -2,11 +2,14 @@
 
 from typing import Literal
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from roometry.config import Settings, get_settings
+from roometry.scenes.router import router as scenes_router
 
 
 class HealthResponse(BaseModel):
@@ -26,6 +29,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             allow_methods=["*"],
             allow_headers=["*"],
         )
+
+    application.include_router(scenes_router)
+
+    @application.exception_handler(RequestValidationError)
+    async def request_validation_error(
+        _request: Request, error: RequestValidationError,
+    ) -> JSONResponse:
+        # Raw error input may contain NaN/Infinity or exception context that
+        # JSONResponse cannot encode. Return the useful, JSON-safe error fields.
+        return JSONResponse(status_code=422, content={
+            "detail": [
+                {"type": issue["type"], "loc": issue["loc"], "msg": issue["msg"]}
+                for issue in error.errors()
+            ],
+        })
 
     @application.get("/api/health", response_model=HealthResponse, tags=["health"])
     async def health() -> HealthResponse:

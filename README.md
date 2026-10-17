@@ -16,7 +16,7 @@ Planned capabilities:
 
 Planned stack: Python, FastAPI, Pydantic, LangGraph, MCP, PostgreSQL, React, TypeScript, and React Three Fiber / Three.js.
 
-**Status:** Day 2 is complete: scene schemas, fixtures, tests, a FastAPI health endpoint, and a React Three Fiber viewer with nine procedural object models, camera controls, wall display modes, and local color previews are implemented. The broader model catalog, agent, and geometry checks are still in development. Target MVP: October 29, 2026.
+**Status:** Day 2 is complete: scene schemas, fixtures, tests, a FastAPI health endpoint, and a React Three Fiber viewer with nine procedural object models, camera controls, wall display modes, and local color previews are implemented. Day 3 Steps 1–2 add backend geometry validation and a stateless move/rotate preview API. The broader model catalog, agent, and interactive editing are still in development. Target MVP: October 29, 2026.
 
 This is an Applied AI Engineering portfolio project focused on stateful agents, human-in-the-loop execution, structured scene editing, and verification. Room geometry is approximate; Roometry is not a precision measurement or building-code certification tool.
 
@@ -65,7 +65,14 @@ npm run build
 
 Top-down uses an overhead perspective camera, not a measured orthographic floor plan. Transparent/hidden wall modes keep opening markers and wall-mounted objects visible; cutaway hides near-wall attachments with their host walls. Door/window markers are decorative surfaces, not wall cutouts. WebGL is required for rendering. The viewer is loaded separately from the page, but the production build still reports a large Three.js bundle; further loading/performance work remains for later milestones.
 
-Day 2 verification covers schema loading, coordinates, model bounds/transforms/colors, unknown-model fallbacks, locked-object color protection, camera framing/reset, and wall visibility. Desktop and phone-sized browser layouts have been checked. **Next: Day 3** adds object selection, movement/rotation, backend containment/collision checks, and before/after scene support. These editing and geometry features are outside Day 2.
+Day 2 verification covers schema loading, coordinates, model bounds/transforms/colors, unknown-model fallbacks, locked-object color protection, camera framing/reset, and wall visibility. Desktop and phone-sized browser layouts have been checked.
+
+## Day 3 review checkpoints
+
+1. **Implemented:** backend geometry baseline in `scenes/geometry.py` and `scenes/validation.py`, with structured failures and 110 geometry tests. The nine-object bedroom fixture passes these checks. Run `uv run pytest tests/test_geometry.py -q`; see `docs/scene-contract.md` for usage and rule codes. Passing this baseline does not establish full physical acceptance.
+2. **Implemented:** deterministic move/rotate operations, fixed/locked protection, support-child transforms, and a stateless demo preview/validation API. Invalid candidates return the unchanged normalized base scene. See [the edit API guide](docs/scene-edit-api.md) for endpoints, response behavior, and a runnable example. HTTPX is a development-only dependency for API tests.
+3. **Pending:** frontend selection and transform controls, with backend validation and rejected-edit recovery.
+4. **Pending:** before/after fixture switching and integration verification.
 
 Python remains the source of truth. After changing its schemas, asset metadata, or `data/fixtures/bedroom_scene.json`, run `npm run scene:generate` from `frontend/`, then review and commit the generated JSON Schema, TypeScript types, and frontend fixture. Frontend validation checks JSON shape; cross-field Python rules and physical geometry still require backend validation. Generated files are committed so ordinary frontend builds do not need Python.
 

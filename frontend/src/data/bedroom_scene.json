@@ -270,6 +270,6 @@
   ],
   "warnings": [
     "The scene is approximate. Confirm opening geometry and furniture dimensions in the room.",
-    "Fixture data has schema validation only; collisions, door clearance, and headroom are not yet verified by geometry tools."
+    "This synthetic fixture is tested against baseline geometry; door swings, walking clearance, and headroom remain unverified."
   ]
 }

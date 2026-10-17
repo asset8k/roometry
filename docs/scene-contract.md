@@ -478,9 +478,56 @@ Initial structural resource limits are defined in `scenes/schemas.py`:
 
 These are initial resource limits, not geometric acceptance rules or measured room accuracy. Asset metadata declares fixture defaults but does not silently replace explicit `fixed`/`locked` input values. Initial scene creation must apply authorized fixture policy, and later mutations must enforce it against previous authorized state.
 
-The schema does not prove containment, collisions, physical surface contact, wall/ceiling attachment, headroom, budget adherence, or preservation of previous constraints. Those require the later geometry and scene-mutation services. Revalidate incoming data before each acceptance; these models do not make Python lists or attributes immutable.
+The schema does not prove containment, collisions, physical surface contact, wall/ceiling attachment, headroom, budget adherence, or preservation of previous constraints. The baseline geometry checks below cover some of these rules; full acceptance still requires further geometry and scene-mutation services. Revalidate incoming data before each acceptance; these models do not make Python lists or attributes immutable.
 
 `data/fixtures/bedroom_scene.json` includes nine objects: bed, rug, desk, computer, TV, clock, chandelier, window-linked curtain, and wardrobe, covering all four placement modes. The wardrobe completes the Day 2 bed/desk/wardrobe renderer examples. It is a synthetic development fixture, not a reconstruction benchmark or a physically certified layout. Run the structural tests with `uv run pytest`.
+
+### Implemented baseline geometry — Day 3 Step 1
+
+`validate_geometry(scene)` in `src/roometry/scenes/validation.py` revalidates the scene structure and returns a serializable `GeometryReport`. Structural failures raise Pydantic `ValidationError`; spatial failures appear in `report.errors`. The function does not mutate the input. Reports use policy version `baseline-v1`, deterministic entity ordering, and a `valid` value derived from whether the errors collection is empty.
+
+```python
+from pathlib import Path
+from roometry.scenes.schemas import RoomScene
+from roometry.scenes.validation import validate_geometry
+
+scene = RoomScene.model_validate_json(
+    Path("data/fixtures/bedroom_scene.json").read_text()
+)
+report = validate_geometry(scene)
+print(report.model_dump_json(indent=2))
+```
+
+Reusable calculations in `scenes/geometry.py` use oriented rectangles in X/Z and vertical intervals, matching the renderer's rotation and bottom-center pivot. Collision detection uses the separating-axis test on both objects' local axes rather than world-aligned bounding boxes. Distance/contact tolerance is `0.000001` m. Wall-facing angular tolerance is separately `0.000001` rad, and both ends of the back edge must also touch the wall within the distance tolerance.
+
+Each error has `code`, `entity_ids`, and `message`:
+
+| Code | Baseline rule |
+| --- | --- |
+| `object_outside_room` | All rotated footprint corners and the object's vertical extent must fit inside the room |
+| `object_overlap` | Solid bounding boxes must not penetrate beyond tolerance; exact touching and vertical separation are allowed |
+| `rug_overlap` | Rugs may overlap furniture, but two rug footprints cannot overlap, even if their thin vertical intervals fall within tolerance |
+| `surface_support` | A surface object's bottom must touch its approved support's top, and all child footprint corners must fit on the rotated support |
+| `wall_attachment` | A wall object must face inward and have its entire back edge touching the specified host wall |
+| `ceiling_attachment` | A ceiling object's top must touch the ceiling |
+| `opening_outside_wall` | Opening offset, width, sill height, and height must fit the host wall |
+| `wall_opening_overlap` | A correctly attached wall object must not overlap a door or window, except its own linked window for an approved covering asset |
+
+Rug and window-covering exceptions come from trusted asset registry metadata. A curtain remains solid for object/object collision checks. Surface children remain ordinary solids too: touching the support top is allowed; penetrating it is rejected.
+
+`report.valid` means only that the implemented baseline passed. Every report includes a separate `baseline_scope` warning: solid bounding boxes are conservative, and door swings, walking/headroom clearances, overlapping openings, room-specific rules, budgets, and preservation of authorized prior state remain unchecked. Floor furniture blocking a doorway also requires the later clearance rules. The geometry function itself does not enforce fixed/locked edit restrictions or save scenes; the Step 2 edit service below adds protection checks and an API.
+
+The bundled bedroom fixture passes these baseline checks without layout changes. Run `uv run pytest tests/test_geometry.py -q` for the geometry tests, or `uv run pytest -q` for the full backend suite.
+
+### Implemented demo edit operations and API — Day 3 Step 2
+
+`scenes/edit_schemas.py` defines strict move/rotate request models separately from the scene format. A move sets an absolute X/Z position; a rotation sets an absolute Y angle in radians. Neither operation can set elevation, dimensions, color, references, protection flags, or other scene fields. Scene schema version 1 remains unchanged.
+
+`apply_edit(scene, edit)` in `scenes/mutations.py` returns a structurally validated candidate without mutating its input. It rejects fixed/locked targets and direct surface/wall/ceiling edits. Floor-support movement and rotation transform all surface children together around the support's bottom-center pivot, preserving elevation and adding the parent's angle change to each child's angle. A change that would transform a fixed/locked child is rejected atomically, even below geometry tolerance. Identical normalized parent transforms are no-ops; direct requests targeting protected objects are still rejected.
+
+`preview_edit(request)` in `scenes/service.py` first checks the supplied base's geometry, applies an edit to a copy, and checks the candidate's geometry. A rejected edit returns the unmodified normalized base with structured edit errors or candidate geometry errors. It never returns an invalid candidate as the accepted scene. If the base is already invalid, it is reported unchanged and no edit is attempted; this does not manufacture a valid recovery scene. Absolute requests can be retried without applying the movement or rotation twice.
+
+`scenes/router.py` exposes `POST /api/scenes/validate` and `POST /api/scenes/preview-edit`. These are stateless demo calculations. They do not establish ownership, store edits, or verify a saved revision. Protection checks compare with the supplied base; a client can alter that base between calls. Saved-project APIs must instead load an authorized previous scene from trusted storage and enforce revision concurrency. See [scene-edit-api.md](scene-edit-api.md) for request/response details and an executable example.
 
 ### Full acceptance policy to implement
 
