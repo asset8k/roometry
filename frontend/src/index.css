@@ -51,6 +51,10 @@ h2, h3, p { margin-top: 0; }
 .object-list { max-height: min(300px, 36vh); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; margin: 0; padding: 0 5px 0 0; list-style: none; }
 .object-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid #e8e8df; }
 .object-info { min-width: 0; }
+.object-info { flex: 1; text-align: left; border: 0; padding: 5px; border-radius: 5px; }
+.object-info[aria-pressed='true'] { background: #e7edde; }
+.object-info:hover { background: #eff1e8; }
+.object-info:disabled { cursor: default; }
 .object-info strong { display: block; font-size: 12px; font-weight: 500; text-transform: capitalize; }
 .object-info span { display: block; margin-top: 5px; color: #858b7d; font-size: 10px; text-transform: capitalize; }
 .object-list input[type='color'] { width: 28px; height: 28px; padding: 2px; border: 1px solid #d5daca; border-radius: 7px; background: #fcfbf7; cursor: pointer; flex-shrink: 0; }
@@ -94,6 +98,29 @@ h2, h3, p { margin-top: 0; }
 .wall-control select { min-height: 36px; max-width: 130px; padding: 7px; border: 1px solid #cbd2c1; border-radius: 6px; background: #f7f6ef; font: inherit; color: inherit; }
 .wall-control select:focus-visible { outline: 2px solid #496751; outline-offset: 2px; }
 .view-hint { margin: 12px 23px 0; min-height: 28px; font-size: 12px; line-height: 1.6; color: #717d67; }
+.selection-strip { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; margin: 5px 23px 0; min-height: 32px; color: #65765d; font-size: 12px; }
+.selection-strip strong { text-transform: capitalize; }
+.selection-strip a { margin-left: auto; border-bottom: 1px solid #aab89e; padding: 5px; }
+.editor-notice { margin: 10px 23px 0; padding: 10px 12px; border-radius: 7px; background: #e4ebdb; color: #496344; font-size: 12px; line-height: 1.5; max-height: 140px; overflow: auto; }
+.editor-notice p { margin: 0; }
+.editor-notice ul { margin: 6px 0 0; padding-left: 18px; }
+.editor-notice.error, .editor-notice.rejected { background: #f3e5d7; color: #855d38; }
+.object-inspector { padding: 14px 0 18px; margin-bottom: 16px; border-bottom: 1px solid #dce1d2; }
+.inspector-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.inspector-heading h3 { font-size: 16px; font-weight: 500; text-transform: capitalize; margin: 0; }
+.inspector-help, .edit-restriction { font-size: 12px; line-height: 1.6; margin: 10px 0; color: #78836e; }
+.edit-restriction { color: #886943; }
+.edit-mode { display: flex; gap: 6px; margin-bottom: 12px; }
+.edit-mode button { flex: 1; padding: 8px; border: 1px solid #d1dbc7; border-radius: 6px; }
+.edit-mode button[aria-pressed='true'] { background: #e7edde; }
+.object-inspector label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #69785f; min-width: 0; }
+.object-inspector input { width: 100%; min-height: 36px; padding: 7px; border: 1px solid #ccd6c2; border-radius: 5px; background: #fffef9; color: #34472f; font: inherit; }
+.object-inspector input:focus-visible { outline: 2px solid #496751; outline-offset: 2px; }
+.object-inspector input:disabled { opacity: 0.55; }
+.position-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.apply-edit { width: 100%; margin: 8px 0 14px; padding: 9px; border: 1px solid #b7c5aa; border-radius: 5px; }
+.object-inspector button:disabled { cursor: default; }
+.room-details:has(.object-inspector) .object-list { max-height: 180px; }
 .viewer-footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; padding: 16px 23px; border-top: 1px solid #dddfd2; font-size: 10px; color: #7b8271; }
 .viewer-footer p { margin: 0; }
 .viewer-footer > span { color: #8d9385; }
@@ -125,6 +152,9 @@ footer { margin-top: 30px; text-align: center; color: #858a7e; font-size: 10px; 
   .viewer-heading, .viewer-footer { padding-left: 14px; padding-right: 14px; }
   .viewer-toolbar button { min-height: 44px; }
   .wall-control select { min-height: 44px; }
+  .selection-strip { margin-left: 14px; margin-right: 14px; }
+  .editor-notice { margin-left: 14px; margin-right: 14px; }
+  .object-inspector input, .object-inspector button { min-height: 44px; }
   .room-measurements { grid-template-columns: repeat(4, 1fr); gap: 12px; }
   .room-measurements dd { font-size: 20px; }
 }

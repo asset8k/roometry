@@ -12,10 +12,11 @@ export interface ViewCommand {
   revision: number
 }
 
-export default function CameraControls({ room, command, zoom }: {
+export default function CameraControls({ room, command, zoom, enabled = true }: {
   room: RoomDimensions
   command: ViewCommand
   zoom: { revision: number; factor: number }
+  enabled?: boolean
 }) {
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null)
   const appliedZoom = useRef(0)
@@ -49,6 +50,7 @@ export default function CameraControls({ room, command, zoom }: {
   return (
     <OrbitControls
       ref={controls}
+      enabled={enabled}
       makeDefault
       minDistance={minDistance}
       maxDistance={maxDistance}

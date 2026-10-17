@@ -6,13 +6,16 @@ interface ObjectListProps {
   hasColorPreviews: boolean
   onColorChange: (id: string, color: string) => void
   onResetColors: () => void
+  selectedId: string | null
+  disabledSelection: boolean
+  onSelect: (id: string) => void
 }
 
-export default function ObjectList({ scene, hasColorPreviews, onColorChange, onResetColors }: ObjectListProps) {
+export default function ObjectList({ scene, hasColorPreviews, onColorChange, onResetColors, selectedId, disabledSelection, onSelect }: ObjectListProps) {
   return (
     <section className="object-colors" aria-label="Object color previews">
       <div className="objects-heading">
-        <h3>Object colors</h3>
+        <h3>Objects & colors</h3>
         <button type="button" disabled={!hasColorPreviews} onClick={onResetColors}>Reset colors</button>
       </div>
       <ul className="object-list">
@@ -20,14 +23,14 @@ export default function ObjectList({ scene, hasColorPreviews, onColorChange, onR
           const label = object.type.replaceAll('_', ' ')
           return (
             <li key={object.id}>
-              <div className="object-info">
+              <button className="object-info" type="button" aria-label={`Select ${label}`} aria-pressed={selectedId === object.id} disabled={disabledSelection} onClick={() => onSelect(object.id)}>
                 <strong>{label}</strong>
                 <span>
                   {object.placement}
                   {object.locked ? ' · Locked' : object.fixed ? ' · Fixed' : ''}
                   {getModelKind(object.asset_id) === 'placeholder' ? ' · Placeholder' : ''}
                 </span>
-              </div>
+              </button>
               <input
                 type="color"
                 aria-label={`Color for ${label}`}

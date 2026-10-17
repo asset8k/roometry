@@ -34,6 +34,19 @@ function materialColors(root: Object3D): Set<string> {
 }
 
 describe('procedural object models', () => {
+  it('selects protected objects, highlights bounds, and ignores orbit drags', async () => {
+    const onSelect = vi.fn()
+    const stopPropagation = vi.fn()
+    const renderer = await mount(<SceneObjects scene={loadExampleScene()} selectedId="bed_1" onSelect={onSelect} />)
+    const bed = renderer.scene.findByProps({ name: 'bed_1' })
+    expect(bed.instance.getObjectByName('selection_bounds')).toBeDefined()
+    await renderer.fireEvent(bed, 'click', { delta: 0, stopPropagation })
+    expect(onSelect).toHaveBeenCalledWith('bed_1')
+    await renderer.fireEvent(bed, 'click', { delta: 12, stopPropagation })
+    expect(onSelect).toHaveBeenCalledTimes(1)
+    expect(stopPropagation).toHaveBeenCalledTimes(2)
+  })
+
   it.each(loadExampleScene().objects)('$id stays inside its declared local bounds and uses its primary color', async object => {
     const renderer = await mount(
       <SceneObjectView object={{ ...object, position: { x: 0, y: 0, z: 0 }, rotation_y_rad: 0, dimensions_m: { width: 1, height: 1, depth: 1 } }} />,

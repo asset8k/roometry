@@ -1,6 +1,6 @@
 # Demo scene validation and edit API
 
-Day 3 Step 2 implements backend calculations. Frontend editing controls are the next checkpoint. No database, model provider, or MCP server is required.
+Day 3 Step 2 implements backend calculations; Step 3 connects them to the frontend editor. No database, model provider, or MCP server is required.
 
 | Endpoint | Request | Result |
 | --- | --- | --- |
@@ -88,3 +88,17 @@ curl --fail --silent --show-error \
 The result should have `accepted: true` and `changed_object_ids: ["computer_1", "desk_1"]`. This previews a desk move with its computer; it does not save anything. To continue editing, submit the returned accepted scene as the next request's base. To try rejection, change the desk's target X to `2.7` (overlaps the bed) or `-0.5` (outside the room).
 
 Run the backend checks with `uv run pytest -q`, or just these edit/API tests with `uv run pytest tests/test_scene_edits.py tests/test_scene_api.py -q`.
+
+## Using the editor
+
+Run both development servers and open the frontend. Select an object directly in the room or through the Objects list. A bounding-box highlight identifies the selection; clicking empty canvas space or pressing Escape while idle clears it. The inspector shows position and angle even for fixed, locked, or indirectly supported objects.
+
+For movable floor objects, choose Move or Rotate in the inspector. Move handles use world X/Z with 5 cm steps; the Y rotation ring uses 15° steps. Numeric inputs allow finer changes: X/Z are meters and the displayed angle is degrees, converted to radians for the API. On phone-sized layouts, use Edit values above the canvas to jump to the inspector. Direct wall/ceiling/surface transforms are deferred; moving or rotating a support carries its surface children instead.
+
+Dragging changes a temporary visual candidate, including its surface children. Releasing the handle or pressing Apply submits an absolute edit against the last accepted local scene. Orbit controls are disabled during a handle drag. While checking, the candidate is shown, selection/edit controls are held, and a Cancel edit action remains available. The backend's accepted scene replaces the working scene only after response shape and report consistency checks pass.
+
+Rejected edits restore the accepted scene and list the affected objects. Network failures, HTTP failures, invalid responses, and cancellation also restore it. Escape cancels an active drag/request; cancellation aborts the request and ignores any late response, including one arriving after another successful edit. The service indicator reflects edit-request failures and successful contact. These local states do not establish a saved revision or ownership.
+
+Color previews remain separate from the geometry working copy, so accepted/rejected/cancelled moves cannot discard them. Fixed colors are editable; locked colors remain protected. Refresh resets both geometry edits and color previews to the bundled fixture. Before/after switching and a layout-reset action belong to Step 4.
+
+Frontend contracts under `src/lib/edit-request.*` and `edit-response.*` are generated from Python with `npm run scene:generate`. Visual preview math has tests for the shared rotation convention and child propagation; Python remains the spatial authority. Controller/API tests cover acceptance, rollback, offline errors, cancellation, overlapping submissions, stale responses, and color compatibility. Run them with `npm test` from `frontend/`.

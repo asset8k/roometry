@@ -16,7 +16,7 @@ Planned capabilities:
 
 Planned stack: Python, FastAPI, Pydantic, LangGraph, MCP, PostgreSQL, React, TypeScript, and React Three Fiber / Three.js.
 
-**Status:** Day 2 is complete: scene schemas, fixtures, tests, a FastAPI health endpoint, and a React Three Fiber viewer with nine procedural object models, camera controls, wall display modes, and local color previews are implemented. Day 3 Steps 1–2 add backend geometry validation and a stateless move/rotate preview API. The broader model catalog, agent, and interactive editing are still in development. Target MVP: October 29, 2026.
+**Status:** Day 2 is complete: scene schemas, fixtures, tests, a FastAPI health endpoint, and a React Three Fiber viewer with nine procedural object models, camera controls, wall display modes, and local color previews are implemented. Day 3 Steps 1–3 add geometry validation, a stateless edit API, and interactive selection/movement/rotation with rejected-edit recovery. The broader catalog, agent, and before/after comparison are still in development. Target MVP: October 29, 2026.
 
 This is an Applied AI Engineering portfolio project focused on stateful agents, human-in-the-loop execution, structured scene editing, and verification. Room geometry is approximate; Roometry is not a precision measurement or building-code certification tool.
 
@@ -42,7 +42,7 @@ npm ci
 npm run dev
 ```
 
-Open `http://127.0.0.1:5173`. The room shell loads a bundled example scene and works without the backend. The connection indicator separately checks backend connectivity through Vite's `/api` development proxy. Optional overrides are documented in `frontend/.env.example`; copy it to `frontend/.env` to customize them. Backend `.env` settings and frontend `.env` settings are separate. Frontend variables prefixed with `VITE_` are public.
+Open `http://127.0.0.1:5173`. Viewing the bundled scene and previewing colors work without the backend; layout edits require the API for validation. The connection indicator checks backend connectivity through Vite's `/api` development proxy and reflects edit-request failures/recovery. Optional overrides are documented in `frontend/.env.example`; copy it to `frontend/.env` to customize them. Backend `.env` settings and frontend `.env` settings are separate. Frontend variables prefixed with `VITE_` are public.
 
 Checks:
 
@@ -71,9 +71,9 @@ Day 2 verification covers schema loading, coordinates, model bounds/transforms/c
 
 1. **Implemented:** backend geometry baseline in `scenes/geometry.py` and `scenes/validation.py`, with structured failures and 110 geometry tests. The nine-object bedroom fixture passes these checks. Run `uv run pytest tests/test_geometry.py -q`; see `docs/scene-contract.md` for usage and rule codes. Passing this baseline does not establish full physical acceptance.
 2. **Implemented:** deterministic move/rotate operations, fixed/locked protection, support-child transforms, and a stateless demo preview/validation API. Invalid candidates return the unchanged normalized base scene. See [the edit API guide](docs/scene-edit-api.md) for endpoints, response behavior, and a runnable example. HTTPX is a development-only dependency for API tests.
-3. **Pending:** frontend selection and transform controls, with backend validation and rejected-edit recovery.
+3. **Implemented:** scene/list selection and bounding highlights, floor movement and Y rotation through handles or numeric inputs, support-child previews, and backend validation on release/Apply. Protected objects remain inspectable. Rejected, disconnected, and cancelled edits restore the last accepted layout; overlapping submissions and stale responses cannot overwrite it. Colors remain independent local previews. See [the editor guide](docs/scene-edit-api.md#using-the-editor).
 4. **Pending:** before/after fixture switching and integration verification.
 
-Python remains the source of truth. After changing its schemas, asset metadata, or `data/fixtures/bedroom_scene.json`, run `npm run scene:generate` from `frontend/`, then review and commit the generated JSON Schema, TypeScript types, and frontend fixture. Frontend validation checks JSON shape; cross-field Python rules and physical geometry still require backend validation. Generated files are committed so ordinary frontend builds do not need Python.
+Python remains the source of truth. After changing scene/edit schemas, validation reports, asset metadata, or `data/fixtures/bedroom_scene.json`, run `npm run scene:generate` from `frontend/`, then review and commit the generated JSON Schemas, TypeScript types, and frontend fixture. Edit-response export uses serialization mode so computed validation fields are included. Frontend validation checks JSON shape and report consistency; cross-field Python rules and physical geometry still require backend validation. Generated files are committed so ordinary frontend builds do not need Python.
 
 Procedural models are defined in `frontend/src/components/room-viewer/ObjectModels.tsx`, with stable asset-to-family mapping in `model-registry.ts`. Models fit a normalized box with a bottom-center pivot; scene dimensions scale them into meters. Desk and table assets already share one model family. The future MCP furniture catalog will reference these same asset IDs with item dimensions and metadata; renderer assets do not imply purchasable catalog entries exist yet.

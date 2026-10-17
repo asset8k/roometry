@@ -1,9 +1,10 @@
-"""Export the Python scene schema and validated demo fixture for the frontend."""
+"""Export scene/edit contracts and the validated demo fixture for the frontend."""
 
 import json
 from pathlib import Path
 
 from roometry.scenes.schemas import RoomScene
+from roometry.scenes.edit_schemas import PreviewEditRequest, PreviewEditResponse
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -15,6 +16,8 @@ def main() -> None:
     outputs = {
         ROOT / "frontend/src/lib/scene.schema.json": RoomScene.model_json_schema(),
         ROOT / "frontend/src/data/bedroom_scene.json": scene.model_dump(mode="json"),
+        ROOT / "frontend/src/lib/edit-request.schema.json": PreviewEditRequest.model_json_schema(),
+        ROOT / "frontend/src/lib/edit-response.schema.json": PreviewEditResponse.model_json_schema(mode="serialization"),
     }
     for path, data in outputs.items():
         path.parent.mkdir(parents=True, exist_ok=True)

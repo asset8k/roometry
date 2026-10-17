@@ -201,7 +201,7 @@ Every object has its own `color`, independent of its asset ID. For example, the 
 
 The initial color model uses one primary color per object. Textures, arbitrary image uploads for picture frames, and separate per-part color controls are deferred. Color changes are deterministic manual edits, require no LLM call, and are preserved in later AI refinements unless the user asks to change them.
 
-The current viewer provides local, unsaved color previews for unlocked objects, including fixed fixtures. Preview overrides do not mutate the source fixture and disappear on refresh. Persisting these edits and preserving them across AI refinements require the later scene-edit/refinement APIs. The viewer's asset registry maps stable IDs to normalized model families; approved assets without a visual model use a dimensioned bounding-box fallback.
+The current viewer provides local, unsaved color previews for unlocked objects, including fixed fixtures. Preview overrides do not mutate the source fixture and disappear on refresh. They remain separate from the geometry working copy and survive accepted/rejected layout edits. Persisting these edits and preserving them across AI refinements require the later saved-project/refinement APIs. The viewer's asset registry maps stable IDs to normalized model families; approved assets without a visual model use a dimensioned bounding-box fallback.
 
 #### Placement and support
 
@@ -528,6 +528,12 @@ The bundled bedroom fixture passes these baseline checks without layout changes.
 `preview_edit(request)` in `scenes/service.py` first checks the supplied base's geometry, applies an edit to a copy, and checks the candidate's geometry. A rejected edit returns the unmodified normalized base with structured edit errors or candidate geometry errors. It never returns an invalid candidate as the accepted scene. If the base is already invalid, it is reported unchanged and no edit is attempted; this does not manufacture a valid recovery scene. Absolute requests can be retried without applying the movement or rotation twice.
 
 `scenes/router.py` exposes `POST /api/scenes/validate` and `POST /api/scenes/preview-edit`. These are stateless demo calculations. They do not establish ownership, store edits, or verify a saved revision. Protection checks compare with the supplied base; a client can alter that base between calls. Saved-project APIs must instead load an authorized previous scene from trusted storage and enforce revision concurrency. See [scene-edit-api.md](scene-edit-api.md) for request/response details and an executable example.
+
+### Implemented interactive editor — Day 3 Step 3
+
+The frontend owns a copied, accepted working scene and a separate temporary drag/request candidate. It supports scene/list selection, bounding highlights, world X/Z movement, and Y rotation. The visual candidate applies the same support-child transform convention as Python, including child orientation, but performs no authoritative geometry checks. Only a backend-accepted response replaces the local accepted scene. Invalid placements, API failures, and cancellations restore that scene; concurrent submissions are blocked and cancelled responses cannot overwrite a newer result.
+
+Protected objects remain inspectable with their movement controls disabled. Direct edits are limited to movable floor objects; surface children follow their support. Color previews are independent and cannot be discarded by geometry responses. Both layout and color changes are unsaved and reset on refresh. Before/after fixture switching is still the next checkpoint. See [the editor guide](scene-edit-api.md#using-the-editor) for controls and limitations.
 
 ### Full acceptance policy to implement
 
