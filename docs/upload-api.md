@@ -1,6 +1,6 @@
 # Temporary room-input API
 
-The backend accepts 1–10 still photos and optional room preferences. It validates and normalizes input without calling a model or creating a project/generation run. The photo-selection UI is a separate next step.
+The backend accepts 1–10 still photos and optional room preferences. It validates and normalizes input without calling a model or creating a project/generation run. The frontend's **Your room** workspace submits these inputs; **Explore example** keeps the fixture-based 3D editor separate.
 
 | Endpoint | Result |
 | --- | --- |
@@ -63,3 +63,23 @@ Failures return `UploadErrorResponse`: `detail` is a list of issues with a stabl
 | 503 | Temporary storage failure |
 
 The health endpoint remains liveness-only. Storage failures do not make unrelated viewer/edit features unavailable.
+
+## Browser form
+
+Select photos, choose goals or leave them blank for general analysis, and optionally add room details, partial dimensions, budget/currency, style, and constraints. The form loads the active policy from the API, performs early count/format/size checks, and checks dimensions for previews the browser can decode. The backend remains authoritative, including for animation and HEIC/HEIF decoding. Browsers without HEIC preview support show a file card and still allow uploading.
+
+Uploading shows indeterminate progress and a Cancel action. Inputs stay selected after rejection or disconnection; duplicate submissions are blocked and cancelled responses cannot overwrite a newer result. Successful submission shows accepted metadata and an expiry time. Editing files/options afterward marks the form as needing another upload. `Discard upload & clear` deletes the known accepted input before clearing local files; deletion failure keeps the handle and selections for retry. Unknown outcomes after interruption are labeled unconfirmed and may require expiry cleanup on the server.
+
+File objects, previews, form values, and the accepted handle live in memory. Preview object URLs are revoked on removal, failed preview, clearing, or unmount. Refresh clears the form; server copies expire according to backend policy. No local-storage or IndexedDB photo persistence is used. Switching to the example workspace preserves local form state and example edits. Uploading does not generate or replace the example scene.
+
+## Internal analysis handoff
+
+An analysis request should supply only the accepted `input_id`; obtain the owner scope from `session(request)` on the server. Resolve normalized options and ordered image IDs using `InputStorage.resolve(input_id, owner)`, then obtain JPEG bytes with `read_image(input_id, image_id, owner)`. Run filesystem reads outside the event loop. Never trust client-provided options, image metadata, paths, or an input ID as proof of ownership.
+
+Every image read checks ownership, membership in the accepted batch, and expiry again. A replacement, discard, or expiry between resolve and read can return `input_not_found`; stop preparation and discard any partially collected bytes. A metadata snapshot does not extend the input's lifetime. Persist references and analysis results only when that lifecycle is explicitly implemented; keep photo bytes out of logs and graph checkpoints. No analysis endpoint or model call is implemented by this upload flow.
+
+## Review checks
+
+Run `uv run pytest` from the repository root and `npm test` / `npm run build` from `frontend`. Contract export checks compare the Python models and source fixtures with the committed frontend copies.
+
+For browser review, select mixed PNG/HEIC/AVIF photos, upload partial dimensions and a zero budget, and inspect the accepted details. Add a corrupt photo and retry: selections and the previous accepted batch should remain. Remove it, retry successfully, then discard. Check that switching to the example preserves form values and example edits, and that Before remains read-only. Repeat at a narrow phone width; HEIC preview failure should show a file card without blocking upload. Cancel, disconnection, expiry, and storage-failure behavior also have automated regression coverage.

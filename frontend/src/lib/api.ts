@@ -3,6 +3,8 @@ import type { RoomScene } from './scene.generated'
 import type { PreviewEditResponse } from './edit-response.generated'
 import { parseEditPreview } from './scene-edits'
 import type { SceneEdit } from './scene-edits'
+import type { RoomInputOptions } from './room-input-options.generated'
+import { parseInputLimits, parsePreparedInput, parseUploadIssues, RoomInputError } from './room-input'
 
 const baseUrl = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '')
 
@@ -37,4 +39,48 @@ export async function requestEditPreview(scene: RoomScene, edit: SceneEdit, sign
   })
   if (!response.ok) throw new Error(`Edit preview failed: ${response.status}`)
   return parseEditPreview(await response.json())
+}
+
+async function uploadResponse(response: Response): Promise<unknown> {
+  let data: unknown
+  try { data = await response.json() } catch {
+    throw new RoomInputError('The service returned an unreadable response. Please try again.', [], true, true)
+  }
+  if (!response.ok) {
+    const issues = parseUploadIssues(data)
+    throw new RoomInputError(issues[0]?.message ?? 'The upload service could not complete this request. Please try again.', issues, true, !issues.length)
+  }
+  return data
+}
+
+export async function fetchUploadLimits(signal: AbortSignal) {
+  const response = await fetch(`${baseUrl}/rooms/input-limits`, {
+    credentials: 'include', cache: 'no-store', signal: AbortSignal.any([signal, AbortSignal.timeout(10000)]),
+  })
+  return parseInputLimits(await uploadResponse(response))
+}
+
+export async function uploadRoomInput(files: readonly File[], options: RoomInputOptions, signal: AbortSignal) {
+  const body = new FormData()
+  for (const file of files) body.append('images', file, file.name)
+  body.append('options', JSON.stringify(options))
+  const response = await fetch(`${baseUrl}/rooms/inputs`, {
+    method: 'POST', body, credentials: 'include', cache: 'no-store',
+    signal: AbortSignal.any([signal, AbortSignal.timeout(120000)]),
+  })
+  const result = parsePreparedInput(await uploadResponse(response))
+  if (result.images.length !== files.length || result.images.some((image, index) => image.original_bytes !== files[index].size)) {
+    throw new RoomInputError('The upload response does not match your selected photos. Please try again.', [], true, true)
+  }
+  return result
+}
+
+export async function discardRoomInput(inputId: string, signal: AbortSignal): Promise<void> {
+  const response = await fetch(`${baseUrl}/rooms/inputs/${encodeURIComponent(inputId)}`, {
+    method: 'DELETE', credentials: 'include', cache: 'no-store',
+    signal: AbortSignal.any([signal, AbortSignal.timeout(10000)]),
+  })
+  if (response.status === 204 || response.status === 404) return
+  if (response.ok) throw new RoomInputError('The service did not confirm deletion. Please try again.', [], true)
+  await uploadResponse(response)
 }

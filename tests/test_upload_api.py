@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from io import BytesIO
 import json
 from threading import Event
+from uuid import uuid4
 
 import anyio
 import httpx
@@ -297,3 +298,137 @@ async def test_oversized_part_headers_and_content_type_are_rejected(client):
     raw = b'--x\r\nContent-Disposition: form-data; name="images"; filename="' + b"x" * 9000 + b'.png"\r\n\r\nbad\r\n--x--\r\n'
     assert (await client.post("/api/rooms/inputs", content=raw, headers={"content-type": "multipart/form-data; boundary=x"})).status_code == 400
     assert (await client.post("/api/rooms/inputs", content=b"", headers={"content-type": "multipart/form-data; boundary=" + "x" * 600})).status_code == 400
+
+
+async def test_analysis_handoff_checks_scope_membership_expiry_and_copies(client, app, photo):
+    """Future analysis uses scoped storage reads, never a client-supplied path."""
+    storage = app.state.upload_service.storage
+    now = datetime(2026, 10, 18, tzinfo=timezone.utc)
+    storage.now = lambda: now
+    data = (await client.post("/api/rooms/inputs", files=batch(photo, options='{"description":"Original"}'))).json()
+    input_id, image_id, scope = data["input_id"], data["images"][0]["image_id"], owner(client)
+    snapshot = storage.resolve(input_id, scope)
+    snapshot.options.description = "Changed by consumer"
+    snapshot.images.clear()
+    assert storage.resolve(input_id, scope).options.description == "Original"
+    assert storage.read_image(input_id, image_id, scope).startswith(b"\xff\xd8")
+    for wrong_input, wrong_image, wrong_scope in (
+        (input_id, image_id, "another session"),
+        (input_id, str(uuid4()), scope),
+        (input_id, "../../outside", scope),
+        (str(uuid4()), image_id, scope),
+    ):
+        with pytest.raises(UploadFailure) as failure:
+            storage.read_image(wrong_input, wrong_image, wrong_scope)
+        assert failure.value.status == 404
+    storage.now = lambda: now + timedelta(hours=1)
+    # Expiry is enforced on every read, before the cleanup task removes bytes.
+    assert (storage.root / input_id).exists()
+    with pytest.raises(UploadFailure) as failure:
+        storage.read_image(input_id, image_id, scope)
+    assert failure.value.status == 404
+
+
+async def test_private_permissions_and_unmanaged_files_survive_cleanup(client, app, photo):
+    storage = app.state.upload_service.storage
+    data = (await client.post("/api/rooms/inputs", files=batch(photo))).json()
+    directory = storage.root / data["input_id"]
+    assert storage.root.stat().st_mode & 0o777 == 0o700
+    assert directory.stat().st_mode & 0o777 == 0o700
+    assert next(directory.iterdir()).stat().st_mode & 0o777 == 0o600
+    sentinel = storage.root / "keep.txt"
+    sentinel.write_text("unmanaged")
+    active = storage.stage()
+    await app.state.upload_service.cleanup()
+    assert active.exists() and sentinel.read_text() == "unmanaged"
+    storage.discard_stage(active)
+    await client.delete(f'/api/rooms/inputs/{data["input_id"]}')
+    assert list(storage.root.iterdir()) == [sentinel]
+
+
+async def test_commit_failure_preserves_previous_batch(client, app, photo, monkeypatch):
+    storage = app.state.upload_service.storage
+    previous = (await client.post("/api/rooms/inputs", files=batch(photo))).json()
+    def fail_commit(*_args):
+        raise OSError("private storage details")
+    monkeypatch.setattr(storage, "commit", fail_commit)
+    response = await client.post("/api/rooms/inputs", files=batch(photo))
+    assert response.status_code == 503 and "private storage details" not in response.text
+    assert storage.resolve(previous["input_id"], owner(client))
+    assert [path.name for path in storage.root.iterdir()] == [previous["input_id"]]
+
+
+@pytest.mark.parametrize("operation", ["delete", "replace"])
+async def test_failed_byte_deletion_revokes_access_and_cleanup_retries(client, app, photo, monkeypatch, operation):
+    storage = app.state.upload_service.storage
+    previous = (await client.post("/api/rooms/inputs", files=batch(photo))).json()
+    old_directory = storage.root / previous["input_id"]
+    original_remove = storage._remove
+    def fail_old_delete(path):
+        if path == old_directory:
+            raise OSError("temporary disk failure")
+        original_remove(path)
+    with monkeypatch.context() as patch:
+        patch.setattr(storage, "_remove", fail_old_delete)
+        if operation == "delete":
+            response = await client.delete(f'/api/rooms/inputs/{previous["input_id"]}')
+            assert response.status_code == 503
+        else:
+            response = await client.post("/api/rooms/inputs", files=batch(photo))
+            assert response.status_code == 201
+            assert storage.resolve(response.json()["input_id"], owner(client))
+        assert old_directory.exists()
+        with pytest.raises(UploadFailure):
+            storage.read_image(previous["input_id"], previous["images"][0]["image_id"], owner(client))
+    await app.state.upload_service.cleanup()
+    assert not old_directory.exists()
+
+
+async def test_disconnect_during_multipart_closes_originals(client, app, photo, monkeypatch):
+    from starlette import formparsers
+    handles = []
+    original = formparsers.SpooledTemporaryFile
+    def tracked(*args, **kwargs):
+        handle = original(*args, **kwargs)
+        handles.append(handle)
+        return handle
+    monkeypatch.setattr(formparsers, "SpooledTemporaryFile", tracked)
+    request = client.build_request("POST", "/api/rooms/inputs", files=batch(photo))
+    raw = request.read()
+    messages = iter([
+        {"type": "http.request", "body": raw[:-40], "more_body": True},
+        {"type": "http.disconnect"},
+    ])
+    sent = []
+    async def receive():
+        return next(messages)
+    async def send(message):
+        sent.append(message)
+    await app({"type": "http", "asgi": {"version": "3.0"}, "http_version": "1.1",
+               "method": "POST", "scheme": "http", "path": "/api/rooms/inputs", "query_string": b"",
+               "headers": [(b"host", b"testserver"), (b"content-type", request.headers["content-type"].encode())],
+               "server": ("testserver", 80), "client": ("127.0.0.1", 1234)}, receive, send)
+    assert sent[0]["status"] == 400
+    assert handles and all(handle.closed for handle in handles)
+    assert not list(app.state.upload_service.storage.root.iterdir())
+
+
+async def test_periodic_cleanup_removes_expired_input_without_another_request(tmp_path, photo, monkeypatch):
+    app = create_app(Settings(_env_file=None, app_environment="test", upload_storage_dir=tmp_path / "periodic",
+                              upload_cleanup_interval_seconds=1))
+    storage = app.state.upload_service.storage
+    now = datetime(2026, 10, 18, tzinfo=timezone.utc)
+    storage.now = lambda: now
+    removed = anyio.Event()
+    original_remove = storage._remove
+    def observe_remove(path):
+        original_remove(path)
+        anyio.from_thread.run_sync(removed.set)
+    async with app.router.lifespan_context(app):
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://testserver") as client:
+            data = (await client.post("/api/rooms/inputs", files=batch(photo))).json()
+            monkeypatch.setattr(storage, "_remove", observe_remove)
+            storage.now = lambda: now + timedelta(hours=1)
+            with anyio.fail_after(5):
+                await removed.wait()
+            assert not (storage.root / data["input_id"]).exists()

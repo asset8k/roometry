@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fetchHealth } from './lib/api'
 import { loadExampleScene, loadAlternativeScene } from './lib/scene'
 import SceneWorkspace from './components/room-viewer/SceneWorkspace'
+import RoomInputWorkspace from './components/room-input/RoomInputWorkspace'
 
 type ServiceStatus = 'checking' | 'online' | 'offline'
 
@@ -14,6 +15,8 @@ const statusLabels: Record<ServiceStatus, string> = {
 export default function App() {
   const [status, setStatus] = useState<ServiceStatus>('checking')
   const [attempt, setAttempt] = useState(0)
+  const [workspace, setWorkspace] = useState<'input' | 'example'>('input')
+  const [exampleOpened, setExampleOpened] = useState(false)
   const sceneLoad = useMemo(() => {
     try {
       return { scene: loadExampleScene(), afterScene: loadAlternativeScene(), error: null }
@@ -63,14 +66,23 @@ export default function App() {
             <p className="eyebrow">A little room for possibility</p>
             <h1>A new perspective<span> on your space.</span></h1>
           </div>
-          <span className="development-badge">Example room</span>
+          <span className="development-badge">{workspace === 'input' ? 'One room, new possibilities' : 'Example room'}</span>
         </div>
 
-        {!sourceScene && <div className="viewer-message" role="alert"><p>{sceneLoad.error}</p></div>}
+        <div className="workspace-navigation" role="group" aria-label="Workspace">
+          <button type="button" aria-pressed={workspace === 'input'} aria-controls="your-room-input" onClick={() => setWorkspace('input')}>Your room</button>
+          <button type="button" aria-pressed={workspace === 'example'} aria-controls="example-room-workspace" onClick={() => { setExampleOpened(true); setWorkspace('example') }}>Explore example</button>
+        </div>
+        <section id="your-room-input" hidden={workspace !== 'input'} aria-label="Prepare your room"><RoomInputWorkspace onConnectionChange={onConnectionChange} /></section>
+
+        {exampleOpened && <section id="example-room-workspace" hidden={workspace !== 'example'} aria-label="Example room workspace">
+          <p className="example-notice">An authored example bedroom. It is separate from your uploaded photos.</p>
+          {!sourceScene && <div className="viewer-message" role="alert"><p>{sceneLoad.error}</p></div>}
 
         {sourceScene && sceneLoad.afterScene && (
           <SceneWorkspace beforeScene={sourceScene} initialScene={sceneLoad.afterScene} onConnectionChange={onConnectionChange} />
         )}
+        </section>}
       </main>
 
       <footer>Roometry · Thoughtful spaces, new possibilities.</footer>
