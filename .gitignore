@@ -32,5 +32,5 @@ artifacts/*
 !artifacts/.gitkeep
 
 # Local uploads and OS files
-uploads/
+/uploads/
 .DS_Store

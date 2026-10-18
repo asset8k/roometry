@@ -9,8 +9,11 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.143.3",
+    "pillow>=13.0.0",
+    "pillow-heif>=1.8.1",
     "pydantic>=2.12,<3",
     "pydantic-settings>=2.16.0",
+    "python-multipart>=0.0.32",
     "uvicorn>=0.54.0",
 ]
 

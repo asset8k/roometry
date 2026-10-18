@@ -1,0 +1,154 @@
+{
+  "additionalProperties": false,
+  "description": "Public policy DTO. Upload handlers enforce the active settings.",
+  "properties": {
+    "min_images": {
+      "const": 1,
+      "default": 1,
+      "title": "Min Images",
+      "type": "integer"
+    },
+    "max_images": {
+      "maximum": 10,
+      "minimum": 1,
+      "title": "Max Images",
+      "type": "integer"
+    },
+    "allowed_media_types": {
+      "items": {
+        "enum": [
+          "image/jpeg",
+          "image/png",
+          "image/webp",
+          "image/heic",
+          "image/heif",
+          "image/avif"
+        ],
+        "type": "string"
+      },
+      "title": "Allowed Media Types",
+      "type": "array"
+    },
+    "allowed_extensions": {
+      "items": {
+        "enum": [
+          ".jpg",
+          ".jpeg",
+          ".png",
+          ".webp",
+          ".heic",
+          ".heif",
+          ".avif"
+        ],
+        "type": "string"
+      },
+      "title": "Allowed Extensions",
+      "type": "array"
+    },
+    "max_file_bytes": {
+      "exclusiveMinimum": 0,
+      "title": "Max File Bytes",
+      "type": "integer"
+    },
+    "max_total_file_bytes": {
+      "exclusiveMinimum": 0,
+      "title": "Max Total File Bytes",
+      "type": "integer"
+    },
+    "max_body_bytes": {
+      "exclusiveMinimum": 0,
+      "title": "Max Body Bytes",
+      "type": "integer"
+    },
+    "min_edge_px": {
+      "exclusiveMinimum": 0,
+      "title": "Min Edge Px",
+      "type": "integer"
+    },
+    "max_edge_px": {
+      "exclusiveMinimum": 0,
+      "title": "Max Edge Px",
+      "type": "integer"
+    },
+    "max_pixels": {
+      "exclusiveMinimum": 0,
+      "title": "Max Pixels",
+      "type": "integer"
+    },
+    "prepared_max_edge_px": {
+      "exclusiveMinimum": 0,
+      "title": "Prepared Max Edge Px",
+      "type": "integer"
+    },
+    "prepared_max_bytes": {
+      "exclusiveMinimum": 0,
+      "title": "Prepared Max Bytes",
+      "type": "integer"
+    },
+    "options_max_bytes": {
+      "const": 16384,
+      "default": 16384,
+      "title": "Options Max Bytes",
+      "type": "integer"
+    },
+    "ttl_seconds": {
+      "exclusiveMinimum": 0,
+      "title": "Ttl Seconds",
+      "type": "integer"
+    },
+    "max_description_chars": {
+      "const": 2000,
+      "default": 2000,
+      "title": "Max Description Chars",
+      "type": "integer"
+    },
+    "max_goal_text_chars": {
+      "const": 2000,
+      "default": 2000,
+      "title": "Max Goal Text Chars",
+      "type": "integer"
+    },
+    "max_constraints_chars": {
+      "const": 1000,
+      "default": 1000,
+      "title": "Max Constraints Chars",
+      "type": "integer"
+    },
+    "max_style_chars": {
+      "const": 100,
+      "default": 100,
+      "title": "Max Style Chars",
+      "type": "integer"
+    },
+    "max_budget_amount": {
+      "const": 1000000,
+      "default": 1000000,
+      "title": "Max Budget Amount",
+      "type": "integer"
+    },
+    "max_room_side_m": {
+      "default": 30.0,
+      "title": "Max Room Side M",
+      "type": "number"
+    },
+    "max_room_height_m": {
+      "default": 10.0,
+      "title": "Max Room Height M",
+      "type": "number"
+    }
+  },
+  "required": [
+    "max_images",
+    "max_file_bytes",
+    "max_total_file_bytes",
+    "max_body_bytes",
+    "min_edge_px",
+    "max_edge_px",
+    "max_pixels",
+    "prepared_max_edge_px",
+    "prepared_max_bytes",
+    "ttl_seconds"
+  ],
+  "title": "UploadLimits",
+  "type": "object"
+}

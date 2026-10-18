@@ -1,0 +1,87 @@
+{
+  "$defs": {
+    "UploadIssue": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "enum": [
+            "invalid_multipart",
+            "unexpected_field",
+            "invalid_options",
+            "invalid_image_count",
+            "file_too_large",
+            "total_files_too_large",
+            "request_too_large",
+            "unsupported_image_type",
+            "invalid_image",
+            "animated_image",
+            "image_resolution",
+            "prepared_image_too_large",
+            "input_not_found",
+            "storage_unavailable",
+            "forbidden_origin"
+          ],
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "maxLength": 500,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Message",
+          "type": "string"
+        },
+        "file_index": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "File Index"
+        },
+        "field": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Field"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "UploadIssue",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "detail": {
+      "items": {
+        "$ref": "#/$defs/UploadIssue"
+      },
+      "maxItems": 16,
+      "minItems": 1,
+      "title": "Detail",
+      "type": "array"
+    }
+  },
+  "required": [
+    "detail"
+  ],
+  "title": "UploadErrorResponse",
+  "type": "object"
+}

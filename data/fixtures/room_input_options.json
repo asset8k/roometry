@@ -1,0 +1,15 @@
+{
+  "room_type": "bedroom",
+  "description": "A small bedroom that also needs to work as a home office.",
+  "goals": ["more_storage", "workspace"],
+  "goal_text": "Make better use of the existing furniture.",
+  "dimensions": {
+    "width_m": 4.0,
+    "length_m": 3.5,
+    "height_m": null,
+    "measurements_source": "estimated"
+  },
+  "style": "Simple and practical",
+  "budget": {"amount": 0.0, "currency": "USD"},
+  "constraints": "Keep the bed and leave the window clear."
+}

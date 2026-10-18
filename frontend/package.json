@@ -9,7 +9,8 @@
     "build": "npm run typecheck && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "scene:generate": "uv run --project .. python ../scripts/export_scene_contract.py && json2ts -i src/lib/scene.schema.json -o src/lib/scene.generated.ts && json2ts -i src/lib/edit-request.schema.json -o src/lib/edit-request.generated.ts && json2ts -i src/lib/edit-response.schema.json -o src/lib/edit-response.generated.ts"
+    "scene:generate": "npm run contracts:generate",
+    "contracts:generate": "uv run --project .. python ../scripts/export_scene_contract.py && json2ts -i src/lib/scene.schema.json -o src/lib/scene.generated.ts && json2ts -i src/lib/edit-request.schema.json -o src/lib/edit-request.generated.ts && json2ts -i src/lib/edit-response.schema.json -o src/lib/edit-response.generated.ts && json2ts -i src/lib/room-input-options.schema.json -o src/lib/room-input-options.generated.ts && json2ts -i src/lib/room-input-limits.schema.json -o src/lib/room-input-limits.generated.ts && json2ts -i src/lib/room-input-response.schema.json -o src/lib/room-input-response.generated.ts && json2ts -i src/lib/room-input-error.schema.json -o src/lib/room-input-error.generated.ts"
   },
   "engines": {
     "node": "^22.12.0 || >=24.0.0"

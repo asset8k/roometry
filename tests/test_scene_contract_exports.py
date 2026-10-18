@@ -12,6 +12,7 @@ from roometry.scenes.edit_schemas import PreviewEditRequest, PreviewEditResponse
 from roometry.scenes.schemas import RoomScene
 from roometry.scenes.validation import validate_geometry
 from roometry.scenes.service import preview_edit
+from roometry.uploads.schemas import RoomInputOptions, UploadLimits, PreparedRoomInput, UploadErrorResponse
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -20,6 +21,10 @@ ROOT = Path(__file__).resolve().parents[1]
     ("scene.schema.json", RoomScene, "validation"),
     ("edit-request.schema.json", PreviewEditRequest, "validation"),
     ("edit-response.schema.json", PreviewEditResponse, "serialization"),
+    ("room-input-options.schema.json", RoomInputOptions, "validation"),
+    ("room-input-limits.schema.json", UploadLimits, "serialization"),
+    ("room-input-response.schema.json", PreparedRoomInput, "serialization"),
+    ("room-input-error.schema.json", UploadErrorResponse, "serialization"),
 ])
 def test_frontend_contract_matches_python(filename, model, mode):
     exported = json.loads((ROOT / "frontend/src/lib" / filename).read_text())
@@ -32,6 +37,12 @@ def test_frontend_fixture_matches_validated_source(filename):
     exported = json.loads((ROOT / "frontend/src/data" / filename).read_text())
     assert exported == source.model_dump(mode="json")
     assert validate_geometry(source).valid
+
+
+def test_frontend_input_fixture_matches_validated_source():
+    source = RoomInputOptions.model_validate_json((ROOT / "data/fixtures/room_input_options.json").read_text())
+    exported = json.loads((ROOT / "frontend/src/data/room_input_options.json").read_text())
+    assert exported == source.model_dump(mode="json")
 
 
 def test_comparison_preserves_identity_room_openings_and_protected_objects():

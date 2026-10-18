@@ -1,0 +1,314 @@
+{
+  "$defs": {
+    "InputBudget": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "maximum": 1000000,
+          "minimum": 0,
+          "title": "Amount",
+          "type": "number"
+        },
+        "currency": {
+          "pattern": "^[A-Z]{3}$",
+          "title": "Currency",
+          "type": "string"
+        }
+      },
+      "required": [
+        "amount",
+        "currency"
+      ],
+      "title": "InputBudget",
+      "type": "object"
+    },
+    "InputDimensions": {
+      "additionalProperties": false,
+      "description": "Partial user measurements; omission never manufactures scene dimensions.",
+      "properties": {
+        "width_m": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 30.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Width M"
+        },
+        "length_m": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 30.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Length M"
+        },
+        "height_m": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 10.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Height M"
+        },
+        "measurements_source": {
+          "default": "estimated",
+          "enum": [
+            "estimated",
+            "user_confirmed"
+          ],
+          "title": "Measurements Source",
+          "type": "string"
+        }
+      },
+      "title": "InputDimensions",
+      "type": "object"
+    },
+    "PreparedImage": {
+      "additionalProperties": false,
+      "description": "Safe public metadata; originals may rotate before prepared dimensions are measured.",
+      "properties": {
+        "image_id": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "title": "Image Id",
+          "type": "string"
+        },
+        "original_media_type": {
+          "enum": [
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/heic",
+            "image/heif",
+            "image/avif"
+          ],
+          "title": "Original Media Type",
+          "type": "string"
+        },
+        "original_bytes": {
+          "exclusiveMinimum": 0,
+          "title": "Original Bytes",
+          "type": "integer"
+        },
+        "original_width_px": {
+          "exclusiveMinimum": 0,
+          "title": "Original Width Px",
+          "type": "integer"
+        },
+        "original_height_px": {
+          "exclusiveMinimum": 0,
+          "title": "Original Height Px",
+          "type": "integer"
+        },
+        "prepared_media_type": {
+          "const": "image/jpeg",
+          "title": "Prepared Media Type",
+          "type": "string"
+        },
+        "prepared_bytes": {
+          "exclusiveMinimum": 0,
+          "title": "Prepared Bytes",
+          "type": "integer"
+        },
+        "prepared_width_px": {
+          "exclusiveMinimum": 0,
+          "title": "Prepared Width Px",
+          "type": "integer"
+        },
+        "prepared_height_px": {
+          "exclusiveMinimum": 0,
+          "title": "Prepared Height Px",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "image_id",
+        "original_media_type",
+        "original_bytes",
+        "original_width_px",
+        "original_height_px",
+        "prepared_media_type",
+        "prepared_bytes",
+        "prepared_width_px",
+        "prepared_height_px"
+      ],
+      "title": "PreparedImage",
+      "type": "object"
+    },
+    "RoomInputOptions": {
+      "additionalProperties": false,
+      "properties": {
+        "room_type": {
+          "anyOf": [
+            {
+              "enum": [
+                "bedroom",
+                "living_room",
+                "kitchen",
+                "bathroom",
+                "office",
+                "dining_room",
+                "entryway",
+                "laundry_room",
+                "other"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Room Type"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "goals": {
+          "items": {
+            "enum": [
+              "general_analysis",
+              "more_storage",
+              "workspace",
+              "more_open_space",
+              "better_layout"
+            ],
+            "type": "string"
+          },
+          "maxItems": 5,
+          "title": "Goals",
+          "type": "array"
+        },
+        "goal_text": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Goal Text"
+        },
+        "dimensions": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InputDimensions"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "style": {
+          "anyOf": [
+            {
+              "maxLength": 100,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Style"
+        },
+        "budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InputBudget"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "constraints": {
+          "anyOf": [
+            {
+              "maxLength": 1000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Constraints"
+        }
+      },
+      "title": "RoomInputOptions",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "input_id": {
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "title": "Input Id",
+      "type": "string"
+    },
+    "status": {
+      "const": "ready",
+      "title": "Status",
+      "type": "string"
+    },
+    "options": {
+      "$ref": "#/$defs/RoomInputOptions"
+    },
+    "images": {
+      "items": {
+        "$ref": "#/$defs/PreparedImage"
+      },
+      "maxItems": 10,
+      "minItems": 1,
+      "title": "Images",
+      "type": "array"
+    },
+    "expires_at": {
+      "format": "date-time",
+      "title": "Expires At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "input_id",
+    "status",
+    "options",
+    "images",
+    "expires_at"
+  ],
+  "title": "PreparedRoomInput",
+  "type": "object"
+}

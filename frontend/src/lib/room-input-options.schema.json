@@ -1,0 +1,202 @@
+{
+  "$defs": {
+    "InputBudget": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "maximum": 1000000,
+          "minimum": 0,
+          "title": "Amount",
+          "type": "number"
+        },
+        "currency": {
+          "pattern": "^[A-Z]{3}$",
+          "title": "Currency",
+          "type": "string"
+        }
+      },
+      "required": [
+        "amount",
+        "currency"
+      ],
+      "title": "InputBudget",
+      "type": "object"
+    },
+    "InputDimensions": {
+      "additionalProperties": false,
+      "description": "Partial user measurements; omission never manufactures scene dimensions.",
+      "properties": {
+        "width_m": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 30.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Width M"
+        },
+        "length_m": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 30.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Length M"
+        },
+        "height_m": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 10.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Height M"
+        },
+        "measurements_source": {
+          "default": "estimated",
+          "enum": [
+            "estimated",
+            "user_confirmed"
+          ],
+          "title": "Measurements Source",
+          "type": "string"
+        }
+      },
+      "title": "InputDimensions",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "room_type": {
+      "anyOf": [
+        {
+          "enum": [
+            "bedroom",
+            "living_room",
+            "kitchen",
+            "bathroom",
+            "office",
+            "dining_room",
+            "entryway",
+            "laundry_room",
+            "other"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Room Type"
+    },
+    "description": {
+      "anyOf": [
+        {
+          "maxLength": 2000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Description"
+    },
+    "goals": {
+      "items": {
+        "enum": [
+          "general_analysis",
+          "more_storage",
+          "workspace",
+          "more_open_space",
+          "better_layout"
+        ],
+        "type": "string"
+      },
+      "maxItems": 5,
+      "title": "Goals",
+      "type": "array"
+    },
+    "goal_text": {
+      "anyOf": [
+        {
+          "maxLength": 2000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Goal Text"
+    },
+    "dimensions": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/InputDimensions"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "style": {
+      "anyOf": [
+        {
+          "maxLength": 100,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Style"
+    },
+    "budget": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/InputBudget"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "constraints": {
+      "anyOf": [
+        {
+          "maxLength": 1000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Constraints"
+    }
+  },
+  "title": "RoomInputOptions",
+  "type": "object"
+}
