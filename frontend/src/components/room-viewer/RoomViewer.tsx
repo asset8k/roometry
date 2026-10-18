@@ -57,7 +57,7 @@ export default function RoomViewer({ scene, editor, state, onSelect }: {
   const [contextLost, setContextLost] = useState(false)
   const suppressMissUntil = useRef(0)
   const selected = scene.objects.find(object => object.id === state.selectedId)
-  const editable = selected && !editRestriction(state.scene, selected)
+  const editable = state.view === 'after' && selected && !editRestriction(state.scene, selected)
   const onInteraction = () => { suppressMissUntil.current = performance.now() + 250 }
   const onLost = useCallback(() => { editor.cancel(false); setContextLost(true) }, [editor])
   const retry = () => {
@@ -96,8 +96,8 @@ export default function RoomViewer({ scene, editor, state, onSelect }: {
       <div className="selection-strip">
         {selected ? <>
           <strong>{objectLabel(selected)}</strong>
-          <span>{editable ? `${state.mode === 'move' ? 'Move handles · 5 cm steps' : 'Rotate ring · 15° steps'}` : 'Inspecting · position protected'}</span>
-          <a href="#object-inspector" onClick={() => onSelect(selected.id)}>Edit values</a>
+          <span>{editable ? `${state.mode === 'move' ? 'Move handles · 5 cm steps' : 'Rotate ring · 15° steps'}` : state.view === 'before' ? 'Inspecting · Before is read-only' : 'Inspecting · position protected'}</span>
+          <a href="#object-inspector" onClick={() => onSelect(selected.id)}>{state.view === 'before' ? 'Inspect values' : 'Edit values'}</a>
         </> : <span>Select an object in the room or the Objects list.</span>}
         {(state.busy || state.dragging) && <button type="button" onClick={() => editor.cancel()}>Cancel edit</button>}
       </div>

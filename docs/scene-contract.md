@@ -533,7 +533,13 @@ The bundled bedroom fixture passes these baseline checks without layout changes.
 
 The frontend owns a copied, accepted working scene and a separate temporary drag/request candidate. It supports scene/list selection, bounding highlights, world X/Z movement, and Y rotation. The visual candidate applies the same support-child transform convention as Python, including child orientation, but performs no authoritative geometry checks. Only a backend-accepted response replaces the local accepted scene. Invalid placements, API failures, and cancellations restore that scene; concurrent submissions are blocked and cancelled responses cannot overwrite a newer result.
 
-Protected objects remain inspectable with their movement controls disabled. Direct edits are limited to movable floor objects; surface children follow their support. Color previews are independent and cannot be discarded by geometry responses. Both layout and color changes are unsaved and reset on refresh. Before/after fixture switching is still the next checkpoint. See [the editor guide](scene-edit-api.md#using-the-editor) for controls and limitations.
+Protected objects remain inspectable with their movement controls disabled. Direct edits are limited to movable floor objects; surface children follow their support. Color previews are independent and cannot be discarded by geometry responses. Both layout and color changes are unsaved and reset on refresh. See [the editor guide](scene-edit-api.md#using-the-editor) for controls and limitations.
+
+### Implemented comparison — Day 3 Step 4
+
+`bedroom_scene.json` is the immutable, read-only Before example; `bedroom_after_scene.json` supplies the initial editable After layout. Both are authored synthetic fixtures, validated against the schema and baseline geometry during export. They preserve room geometry, openings, object IDs, asset metadata, dimensions, colors, and all fixed/locked objects. Movable desk/computer, wardrobe, and rug poses differ.
+
+After uses a separate working copy. Switching preserves its accepted edits and color previews, clears selection/notices, and cancels pending edits so late responses cannot replace the visible scene. Before remains inspectable with geometry and color controls disabled. Reset layout restores After's authored poses while preserving its color previews; Reset colors changes only its previews. Refresh resets both. Camera and wall settings survive switching. See [comparison behavior](scene-edit-api.md#beforeafter-comparison).
 
 ### Full acceptance policy to implement
 

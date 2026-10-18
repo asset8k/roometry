@@ -1,6 +1,6 @@
 # Demo scene validation and edit API
 
-Day 3 Step 2 implements backend calculations; Step 3 connects them to the frontend editor. No database, model provider, or MCP server is required.
+Day 3 Step 2 implements backend calculations; Step 3 connects them to the frontend editor; Step 4 adds Before/After comparison and layout reset. No database, model provider, or MCP server is required.
 
 | Endpoint | Request | Result |
 | --- | --- | --- |
@@ -99,6 +99,16 @@ Dragging changes a temporary visual candidate, including its surface children. R
 
 Rejected edits restore the accepted scene and list the affected objects. Network failures, HTTP failures, invalid responses, and cancellation also restore it. Escape cancels an active drag/request; cancellation aborts the request and ignores any late response, including one arriving after another successful edit. The service indicator reflects edit-request failures and successful contact. These local states do not establish a saved revision or ownership.
 
-Color previews remain separate from the geometry working copy, so accepted/rejected/cancelled moves cannot discard them. Fixed colors are editable; locked colors remain protected. Refresh resets both geometry edits and color previews to the bundled fixture. Before/after switching and a layout-reset action belong to Step 4.
+Color previews remain separate from the geometry working copy, so accepted/rejected/cancelled moves cannot discard them. Fixed colors are editable in After; locked colors remain protected. Refresh resets both geometry edits and color previews to the bundled After fixture.
 
 Frontend contracts under `src/lib/edit-request.*` and `edit-response.*` are generated from Python with `npm run scene:generate`. Visual preview math has tests for the shared rotation convention and child propagation; Python remains the spatial authority. Controller/API tests cover acceptance, rollback, offline errors, cancellation, overlapping submissions, stale responses, and color compatibility. Run them with `npm test` from `frontend/`.
+
+## Before/After comparison
+
+The viewer starts in **After**, an authored alternative from `data/fixtures/bedroom_after_scene.json`. **Before** displays the original `bedroom_scene.json` read-only: objects can be selected and inspected, but movement, rotation, color changes, and layout reset are disabled. These are two synthetic examples, not AI recommendations. They share the same room dimensions, openings, stable object IDs, assets, dimensions, colors, and fixed/locked objects. Only movable poses differ; the computer remains on its desk.
+
+Switching preserves accepted After edits and its independent color previews. Before always shows the original poses and colors. Selection and old notices clear when switching, while camera and wall-display settings stay in place. Switching during a drag or validation request cancels the candidate, aborts the request, and ignores late responses.
+
+**Reset layout** restores the authored After geometry, clears selection, and keeps After color previews. It also cancels active edits safely. **Reset colors** restores After's fixture colors without changing geometry. Neither action changes Before. All changes are local and unsaved; refreshing returns to the authored After layout and colors. Comparison and reset work without a backend; new geometry edits require it.
+
+Both fixtures pass schema and baseline geometry checks during export. Tests verify stable identity and protected-object preservation, support-child movement and collision rollback on After, independent source copies, read-only guards, switching/reset during active edits, and stale-response handling. This baseline still does not validate door swings, walking clearance, headroom, or room-specific planning rules.

@@ -12,6 +12,7 @@ export interface EditorNotice {
 }
 
 export interface EditorState {
+  view: 'before' | 'after'
   scene: RoomScene
   draft: RoomScene | null
   selectedId: string | null
@@ -29,10 +30,16 @@ export class SceneEditor {
   private listeners = new Set<() => void>()
   private revision = 0
   private pending: AbortController | null = null
+  private beforeScene: RoomScene | null
+  private afterBaseline: RoomScene
+  private afterScene: RoomScene
 
-  constructor(scene: RoomScene, private client: PreviewClient = requestEditPreview) {
+  constructor(scene: RoomScene, private client: PreviewClient = requestEditPreview, beforeScene?: RoomScene) {
+    this.beforeScene = beforeScene ? structuredClone(beforeScene) : null
+    this.afterBaseline = structuredClone(scene)
+    this.afterScene = structuredClone(scene)
     this.state = {
-      scene: structuredClone(scene), draft: null, selectedId: null,
+      view: 'after', scene: this.afterScene, draft: null, selectedId: null,
       mode: 'move', dragging: false, busy: false, notice: null,
     }
   }
@@ -47,6 +54,27 @@ export class SceneEditor {
     this.listeners.forEach(listener => listener())
   }
 
+  switchView = (view: EditorState['view']) => {
+    const scene = view === 'before' ? this.beforeScene : this.afterScene
+    if (view === this.state.view || !scene) return
+    this.cancel(false)
+    this.update({
+      view, scene,
+      selectedId: null, draft: null, notice: null,
+    })
+  }
+
+  /** Reset only After geometry; independent color previews belong to the workspace. */
+  resetLayout = () => {
+    if (this.state.view === 'before') return
+    this.cancel(false)
+    this.afterScene = structuredClone(this.afterBaseline)
+    this.update({
+      scene: this.afterScene, selectedId: null, draft: null,
+      notice: { kind: 'info', text: 'After layout restored. Your color previews are kept.' },
+    })
+  }
+
   select = (id: string | null) => {
     if (this.state.busy || this.state.dragging) return
     const selectedId = this.state.scene.objects.some(object => object.id === id) ? id : null
@@ -54,9 +82,10 @@ export class SceneEditor {
     this.update({ selectedId, notice: null, draft: null })
   }
   setMode = (mode: EditMode) => {
-    if (!this.state.busy && !this.state.dragging) this.update({ mode })
+    if (this.state.view === 'after' && !this.state.busy && !this.state.dragging) this.update({ mode })
   }
   private allowed(edit?: SceneEdit) {
+    if (this.state.view === 'before') return false
     const object = this.state.scene.objects.find(item => item.id === this.state.selectedId)
     return Boolean(object && (!edit || edit.object_id === object.id) && !editRestriction(this.state.scene, object))
   }
@@ -105,8 +134,9 @@ export class SceneEditor {
       const result = await this.client(base, edit, controller.signal)
       if (revision !== this.revision || controller.signal.aborted) return false
       if (result.accepted) {
+        this.afterScene = structuredClone(result.scene)
         this.update({
-          scene: structuredClone(result.scene), draft: null, busy: false,
+          scene: this.afterScene, draft: null, busy: false,
           notice: { kind: 'success', connection: true, text: 'Layout updated. Changes stay here until you refresh.' },
         })
         return true

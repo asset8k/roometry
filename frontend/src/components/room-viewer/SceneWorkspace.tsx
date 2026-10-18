@@ -7,12 +7,13 @@ import ObjectInspector from './ObjectInspector'
 
 const RoomViewer = lazy(() => import('./RoomViewer'))
 
-export default function SceneWorkspace({ initialScene, onConnectionChange }: { initialScene: RoomScene; onConnectionChange: (online: boolean) => void }) {
-  const editor = useMemo(() => new SceneEditor(initialScene), [initialScene])
+export default function SceneWorkspace({ initialScene, beforeScene, onConnectionChange }: { initialScene: RoomScene; beforeScene: RoomScene; onConnectionChange: (online: boolean) => void }) {
+  const editor = useMemo(() => new SceneEditor(initialScene, undefined, beforeScene), [initialScene, beforeScene])
   const state = useSyncExternalStore(editor.subscribe, editor.getSnapshot)
   const [detailsView, setDetailsView] = useState<'room' | 'objects'>('room')
   const [previewColors, setPreviewColors] = useState<Record<string, string>>({})
-  const scene = useMemo(() => applyColorPreviews(state.draft ?? state.scene, previewColors), [state.draft, state.scene, previewColors])
+  const readOnly = state.view === 'before'
+  const scene = useMemo(() => readOnly ? state.scene : applyColorPreviews(state.draft ?? state.scene, previewColors), [readOnly, state.draft, state.scene, previewColors])
   const selected = state.scene.objects.find(object => object.id === state.selectedId)
   const select = useCallback((id: string | null) => {
     editor.select(id)
@@ -40,7 +41,7 @@ export default function SceneWorkspace({ initialScene, onConnectionChange }: { i
         <div className="room-title">
           <span className="section-label">Your space</span>
           <h2>Example bedroom</h2>
-          <p>A simple room to explore from every angle.</p>
+          <p>{readOnly ? 'Before · Original layout, read-only.' : 'After · Try your own arrangement.'}</p>
         </div>
 
         <div className="details-switch" role="group" aria-label="Details view">
@@ -71,7 +72,7 @@ export default function SceneWorkspace({ initialScene, onConnectionChange }: { i
 
             <div className="scene-note">
               <strong>Make it yours</strong>
-              <p>Open Objects to select furniture, edit its layout, and try colors. Changes stay here until you refresh.</p>
+              <p>{readOnly ? 'Explore the original room. Switch to After to move furniture and try colors.' : 'Open Objects to select furniture, edit its layout, and try colors. Changes stay here until you refresh.'}</p>
             </div>
             <p className="approximation-note">An approximate model. Opening positions are estimated; verify measurements in your room.</p>
           </>
@@ -81,25 +82,34 @@ export default function SceneWorkspace({ initialScene, onConnectionChange }: { i
         {detailsView === 'objects' && (
           <ObjectList
             scene={scene}
-            hasColorPreviews={Object.keys(previewColors).length > 0}
+            hasColorPreviews={!readOnly && Object.keys(previewColors).length > 0}
+            readOnly={readOnly}
             selectedId={state.selectedId}
             disabledSelection={state.busy || state.dragging}
             onSelect={select}
-            onColorChange={(id, color) => setPreviewColors(current => ({ ...current, [id]: color }))}
-            onResetColors={() => setPreviewColors({})}
+            onColorChange={(id, color) => { if (!readOnly) setPreviewColors(current => ({ ...current, [id]: color })) }}
+            onResetColors={() => { if (!readOnly) setPreviewColors({}) }}
           />
         )}
       </aside>
 
       <section className="viewer-card" aria-label="3D room viewer">
         <div className="viewer-heading"><h2>Room overview</h2><span>{scene.objects.length} objects</span></div>
+        <div className="comparison-bar">
+          <div className="comparison-switch" role="group" aria-label="Layout comparison">
+            <button type="button" aria-pressed={readOnly} onClick={() => editor.switchView('before')}>Before <span>Original</span></button>
+            <button type="button" aria-pressed={!readOnly} onClick={() => editor.switchView('after')}>After <span>Editable</span></button>
+          </div>
+          <button className="reset-layout" type="button" disabled={readOnly} onClick={editor.resetLayout}>Reset layout</button>
+          <p>Two authored example layouts. After edits stay when you switch.</p>
+        </div>
         <div className="room-canvas">
           <Suspense fallback={<div className="viewer-message" role="status">Loading your room…</div>}>
             <RoomViewer scene={scene} editor={editor} state={state} onSelect={select} />
           </Suspense>
         </div>
         <div className="viewer-footer">
-          <p>Layout changes are checked before applying. Edits reset on refresh.</p>
+          <p>{readOnly ? 'Before is read-only. Switch to After to edit.' : 'Layout changes are checked before applying. Reset layout keeps your colors.'} Edits reset on refresh.</p>
           <span>Openings shown as markers</span>
         </div>
       </section>

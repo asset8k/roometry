@@ -9,7 +9,7 @@ export default function ObjectInspector({ scene, object, editor, state }: {
   const [x, setX] = useState(String(object.position.x))
   const [z, setZ] = useState(String(object.position.z))
   const [angle, setAngle] = useState(String(object.rotation_y_rad * 180 / Math.PI))
-  const restriction = editRestriction(scene, object)
+  const restriction = state.view === 'before' ? 'Before is read-only. Switch to After to edit.' : editRestriction(scene, object)
   const disabled = Boolean(restriction) || state.busy || state.dragging
 
   useEffect(() => {

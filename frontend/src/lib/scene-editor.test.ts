@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { SceneEditor } from './scene-editor'
-import { loadExampleScene } from './scene'
+import { loadExampleScene, loadAlternativeScene } from './scene'
 import type { PreviewEditResponse } from './edit-response.generated'
 import { acceptedMove, rejectedMove } from './test-support/edit-responses'
 import { applyColorPreviews } from './color-previews'
@@ -163,5 +163,92 @@ describe('working scene editor', () => {
     expect(await editor.submit({ ...move, position: { x: NaN, z: 2 } })).toBe(false)
     expect(editor.getSnapshot().notice?.kind).toBe('error')
     expect(client).not.toHaveBeenCalled()
+  })
+})
+
+describe('before/after comparison', () => {
+  it('starts in After, preserves accepted edits across switches, and leaves both sources untouched', async () => {
+    const before = loadExampleScene(), after = loadAlternativeScene()
+    const originalBefore = structuredClone(before), originalAfter = structuredClone(after)
+    const client = vi.fn(async () => acceptedMove(after, 0.7))
+    const editor = new SceneEditor(after, client, before)
+    expect(editor.getSnapshot().view).toBe('after')
+    editor.select('desk_1')
+    await editor.submit({ ...move, position: { x: 0.7, z: 1.35 } })
+    const edited = editor.getSnapshot().scene
+    editor.switchView('before')
+    expect(editor.getSnapshot()).toMatchObject({ view: 'before', scene: before, selectedId: null, notice: null, draft: null })
+    editor.select('desk_1')
+    editor.switchView('after')
+    expect(editor.getSnapshot()).toMatchObject({ view: 'after', scene: edited, selectedId: null, notice: null })
+    expect(before).toEqual(originalBefore)
+    expect(after).toEqual(originalAfter)
+  })
+
+  it('allows Before inspection but blocks drag, numeric edits, modes, and layout reset', async () => {
+    const before = loadExampleScene(), after = loadAlternativeScene(), client = vi.fn()
+    const editor = new SceneEditor(after, client, before)
+    editor.switchView('before')
+    editor.select('desk_1')
+    expect(editor.getSnapshot().selectedId).toBe('desk_1')
+    expect(editor.beginDrag()).toBe(false)
+    editor.previewDrag(move)
+    expect(await editor.finishDrag(move)).toBe(false)
+    expect(await editor.submit(move)).toBe(false)
+    editor.setMode('rotate')
+    editor.resetLayout()
+    expect(editor.getSnapshot()).toMatchObject({ scene: before, mode: 'move', draft: null, selectedId: 'desk_1' })
+    expect(client).not.toHaveBeenCalled()
+  })
+
+  it.each(['switch', 'reset'])('cancels a drag on %s and ignores its release', async action => {
+    const after = loadAlternativeScene(), client = vi.fn()
+    const editor = new SceneEditor(after, client, loadExampleScene())
+    editor.select('desk_1')
+    editor.beginDrag()
+    editor.previewDrag(move)
+    if (action === 'switch') editor.switchView('before')
+    else editor.resetLayout()
+    expect(editor.getSnapshot()).toMatchObject({ draft: null, selectedId: null, busy: false, dragging: false })
+    expect(await editor.finishDrag(move)).toBe(false)
+    expect(client).not.toHaveBeenCalled()
+    editor.switchView('after')
+    expect(editor.getSnapshot().scene).toEqual(after)
+  })
+
+  it.each(['switch-success', 'switch-error', 'reset-success', 'reset-error'])('ignores a stale response after %s', async action => {
+    const after = loadAlternativeScene(), before = loadExampleScene(), pending = deferred()
+    const client = vi.fn<NonNullable<ConstructorParameters<typeof SceneEditor>[1]>>(() => pending.promise)
+    const editor = new SceneEditor(after, client, before)
+    editor.select('desk_1')
+    const completion = editor.submit(move)
+    const signal = client.mock.calls[0][2] as AbortSignal
+    if (action.startsWith('switch')) {
+      editor.switchView('before')
+      editor.switchView('after')
+    } else editor.resetLayout()
+    expect(signal.aborted).toBe(true)
+    const snapshot = editor.getSnapshot()
+    if (action.endsWith('success')) pending.resolve(acceptedMove(after))
+    else pending.reject(new Error('Late request failure'))
+    expect(await completion).toBe(false)
+    expect(editor.getSnapshot()).toBe(snapshot)
+    expect(editor.getSnapshot().scene).toEqual(after)
+  })
+
+  it('resets to the authored After poses while keeping color previews independent', async () => {
+    const after = loadAlternativeScene(), before = loadExampleScene()
+    const editor = new SceneEditor(after, async () => acceptedMove(after), before)
+    const colors = { desk_1: '#204080', rug_1: '#DD8855' }
+    editor.select('desk_1')
+    await editor.submit(move)
+    editor.resetLayout()
+    expect(editor.getSnapshot()).toMatchObject({ scene: after, selectedId: null, draft: null, busy: false })
+    expect(applyColorPreviews(editor.getSnapshot().scene, colors).objects.find(object => object.id === 'desk_1')!.color).toBe('#204080')
+    editor.switchView('before')
+    expect(editor.getSnapshot().scene).toEqual(before)
+    editor.switchView('after')
+    expect(applyColorPreviews(editor.getSnapshot().scene, colors).objects.find(object => object.id === 'rug_1')!.color).toBe('#DD8855')
+    expect(applyColorPreviews(editor.getSnapshot().scene, {})).toEqual(after)
   })
 })

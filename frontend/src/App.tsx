@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fetchHealth } from './lib/api'
-import { loadExampleScene } from './lib/scene'
+import { loadExampleScene, loadAlternativeScene } from './lib/scene'
 import SceneWorkspace from './components/room-viewer/SceneWorkspace'
 
 type ServiceStatus = 'checking' | 'online' | 'offline'
@@ -16,9 +16,9 @@ export default function App() {
   const [attempt, setAttempt] = useState(0)
   const sceneLoad = useMemo(() => {
     try {
-      return { scene: loadExampleScene(), error: null }
+      return { scene: loadExampleScene(), afterScene: loadAlternativeScene(), error: null }
     } catch {
-      return { scene: null, error: 'The example room could not be loaded. Please refresh the page.' }
+      return { scene: null, afterScene: null, error: 'The example room could not be loaded. Please refresh the page.' }
     }
   }, [])
   const sourceScene = sceneLoad.scene
@@ -68,8 +68,8 @@ export default function App() {
 
         {!sourceScene && <div className="viewer-message" role="alert"><p>{sceneLoad.error}</p></div>}
 
-        {sourceScene && (
-          <SceneWorkspace initialScene={sourceScene} onConnectionChange={onConnectionChange} />
+        {sourceScene && sceneLoad.afterScene && (
+          <SceneWorkspace beforeScene={sourceScene} initialScene={sceneLoad.afterScene} onConnectionChange={onConnectionChange} />
         )}
       </main>
 
