@@ -35,7 +35,7 @@ export default function ObjectList({ scene, hasColorPreviews, onColorChange, onR
               <input
                 type="color"
                 aria-label={`Color for ${label}`}
-                title={readOnly ? 'Before is read-only' : object.locked ? 'This object is locked' : `Preview ${label} color`}
+                title={readOnly ? 'This layout is read-only' : object.locked ? 'This object is locked' : `Preview ${label} color`}
                 value={object.color}
                 disabled={readOnly || object.locked}
                 onChange={event => onColorChange(object.id, event.target.value)}
@@ -44,7 +44,7 @@ export default function ObjectList({ scene, hasColorPreviews, onColorChange, onR
           )
         })}
       </ul>
-      <p className="color-preview-note">{readOnly ? 'Original colors are read-only. Switch to After to try colors; your After previews are kept.' : "Color changes are local previews and aren't saved. Fixed objects can be recolored; locked objects stay protected. Orbit the room to see items on the opposite wall."}</p>
+      <p className="color-preview-note">{readOnly ? 'Original colors are read-only. Switch to the editable layout to try colors; your previews are kept.' : "Color changes are local previews and aren't saved. Fixed objects can be recolored; locked objects stay protected. Orbit the room to see items on the opposite wall."}</p>
     </section>
   )
 }

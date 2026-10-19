@@ -16,7 +16,7 @@ describe('comparison inspection controls', () => {
     const inputs = html.match(/<input\b[^>]*>/g)!
     expect(inputs).toHaveLength(3)
     expect(inputs.every(input => input.includes('disabled=""'))).toBe(view === 'before')
-    if (view === 'before') expect(html).toContain('Before is read-only. Switch to After to edit.')
+    if (view === 'before') expect(html).toContain('This layout is read-only. Switch to the editable layout to make changes.')
   })
 
   it.each([true, false])('protects original colors when readOnly=%s while retaining locked protection', readOnly => {

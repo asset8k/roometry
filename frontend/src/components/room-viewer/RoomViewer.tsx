@@ -96,7 +96,7 @@ export default function RoomViewer({ scene, editor, state, onSelect }: {
       <div className="selection-strip">
         {selected ? <>
           <strong>{objectLabel(selected)}</strong>
-          <span>{editable ? `${state.mode === 'move' ? 'Move handles · 5 cm steps' : 'Rotate ring · 15° steps'}` : state.view === 'before' ? 'Inspecting · Before is read-only' : 'Inspecting · position protected'}</span>
+          <span>{editable ? `${state.mode === 'move' ? 'Move handles · 5 cm steps' : 'Rotate ring · 15° steps'}` : state.view === 'before' ? 'Inspecting · layout is read-only' : 'Inspecting · position protected'}</span>
           <a href="#object-inspector" onClick={() => onSelect(selected.id)}>{state.view === 'before' ? 'Inspect values' : 'Edit values'}</a>
         </> : <span>Select an object in the room or the Objects list.</span>}
         {(state.busy || state.dragging) && <button type="button" onClick={() => editor.cancel()}>Cancel edit</button>}

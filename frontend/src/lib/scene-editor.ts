@@ -71,7 +71,7 @@ export class SceneEditor {
     this.afterScene = structuredClone(this.afterBaseline)
     this.update({
       scene: this.afterScene, selectedId: null, draft: null,
-      notice: { kind: 'info', text: 'After layout restored. Your color previews are kept.' },
+      notice: { kind: 'info', text: 'Editable layout restored. Your color previews are kept.' },
     })
   }
 

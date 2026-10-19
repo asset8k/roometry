@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react'
+import RoomAnalysisWorkspace from '../room-analysis/RoomAnalysisWorkspace'
+import { RoomAnalysisController } from '../../lib/room-analysis-controller'
 import { RoomInputController } from '../../lib/room-input-controller'
 import type { RoomInputState } from '../../lib/room-input-controller'
 import { formatBytes } from '../../lib/room-input'
@@ -17,7 +19,18 @@ const roomLabel = (type: string | null | undefined) => roomTypes.find(([value]) 
 
 export default function RoomInputWorkspace({ onConnectionChange }: { onConnectionChange: (online: boolean) => void }) {
   const controller = useMemo(() => new RoomInputController(), [])
+  const analysisController = useMemo(() => new RoomAnalysisController(), [])
+  const analysisState = useSyncExternalStore(analysisController.subscribe, analysisController.getSnapshot, analysisController.getSnapshot)
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot)
+  useEffect(() => {
+    const sync = () => {
+      const current = controller.getSnapshot()
+      analysisController.setInput(current.accepted, !current.dirty && !current.uncertain && !current.busy)
+    }
+    sync()
+    const unsubscribe = controller.subscribe(sync)
+    return () => { unsubscribe(); analysisController.release() }
+  }, [controller, analysisController])
   useEffect(() => {
     void controller.loadLimits()
     const timer = window.setInterval(controller.checkExpiry, 5000)
@@ -26,10 +39,16 @@ export default function RoomInputWorkspace({ onConnectionChange }: { onConnectio
   useEffect(() => {
     if (state.notice?.connected !== undefined) onConnectionChange(state.notice.connected)
   }, [state.notice, onConnectionChange])
-  return <RoomInputForm state={state} controller={controller} />
+  useEffect(() => {
+    if (analysisState.notice?.connected !== undefined) onConnectionChange(analysisState.notice.connected)
+  }, [analysisState.notice, onConnectionChange])
+  return <>
+    <RoomInputForm state={state} controller={controller} locked={Boolean(analysisState.busy)} />
+    <RoomAnalysisWorkspace state={analysisState} controller={analysisController} onConnectionChange={onConnectionChange} />
+  </>
 }
 
-export function RoomInputForm({ state, controller }: { state: RoomInputState; controller: RoomInputController }) {
+export function RoomInputForm({ state, controller, locked = false }: { state: RoomInputState; controller: RoomInputController; locked?: boolean }) {
   const { limits, draft, photos, busy, accepted } = state
   const total = photos.reduce((bytes, photo) => bytes + photo.file.size, 0)
   const set = controller.change
@@ -37,6 +56,7 @@ export function RoomInputForm({ state, controller }: { state: RoomInputState; co
   return (
     <div className="input-workspace">
       <form className="room-input-form" onSubmit={event => { event.preventDefault(); void controller.submit() }}>
+        <fieldset className="input-edit-lock" disabled={locked}>
         <div className="input-section-title"><span className="section-label">Start with your space</span><h2>A few photos. A little context.</h2><p>Capture different angles of one room, then tell us what you’d like to improve.</p></div>
         <section className="photo-section" aria-labelledby="photo-heading">
           <div className="input-section-heading"><h3 id="photo-heading">1. Room photos</h3><span>{photos.length}{limits ? ` / ${limits.max_images}` : ''} selected</span></div>
@@ -106,6 +126,7 @@ export function RoomInputForm({ state, controller }: { state: RoomInputState; co
           {busy ? <button type="button" onClick={() => controller.cancel()}>Cancel</button> : <button type="button" onClick={() => void controller.discard()} disabled={!photos.length && !accepted && !state.dirty && !state.uncertain}>{accepted ? 'Discard upload & clear' : 'Clear inputs'}</button>}
         </div>
         <p className="input-help privacy-note">Photos stay private and temporary. Refresh clears this form; uploaded copies expire automatically. Nothing is shared publicly.</p>
+        </fieldset>
       </form>
 
       <aside className="input-summary" aria-label="Your room input summary">
