@@ -253,6 +253,7 @@ AnalysisErrorCode = Literal[
     "unsupported_media_type",
     "forbidden_origin",
     "input_not_found",
+    "analysis_not_found",
     "storage_unavailable",
     "analysis_unavailable",
     "analysis_busy",

@@ -21,7 +21,7 @@ from roometry.uploads.service import UploadService
 from roometry.uploads.storage import LocalInputStorage
 from roometry.vision.analyzer import PhotoAnalyzer
 from roometry.vision.errors import AnalysisFailure
-from roometry.vision.middleware import ANALYSIS_PATH, AnalysisRequestLimitMiddleware
+from roometry.vision.middleware import ANALYSIS_PATHS, AnalysisRequestLimitMiddleware
 from roometry.vision.router import router as analysis_router
 from roometry.vision.service import AnalysisService
 
@@ -116,7 +116,7 @@ def create_app(
         _request: Request,
         error: RequestValidationError,
     ) -> JSONResponse:
-        if _request.url.path == ANALYSIS_PATH:
+        if _request.url.path in ANALYSIS_PATHS:
             return await analysis_error(
                 _request,
                 AnalysisFailure(

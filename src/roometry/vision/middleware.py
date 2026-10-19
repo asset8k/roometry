@@ -8,6 +8,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from roometry.vision.errors import AnalysisFailure
 
 ANALYSIS_PATH = "/api/rooms/analyze"
+ANALYSIS_PATHS = {ANALYSIS_PATH, "/api/rooms/propose-scene"}
 
 
 class AnalysisRequestLimitMiddleware:
@@ -17,7 +18,7 @@ class AnalysisRequestLimitMiddleware:
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if (
             scope["type"] != "http"
-            or scope["path"] != ANALYSIS_PATH
+            or scope["path"] not in ANALYSIS_PATHS
             or scope["method"] != "POST"
         ):
             await self.app(scope, receive, send)
@@ -54,7 +55,7 @@ class AnalysisRequestLimitMiddleware:
         )
         if content_type.split(b";", 1)[0].strip().lower() != b"application/json":
             failure = AnalysisFailure(
-                415, "unsupported_media_type", "Send the analysis input_id as JSON."
+                415, "unsupported_media_type", "Send the room analysis request as JSON."
             )
         body = bytearray()
         while failure is None:
@@ -89,7 +90,7 @@ class AnalysisRequestLimitMiddleware:
                 failure = AnalysisFailure(
                     422,
                     "invalid_request",
-                    "Send only a valid input_id from your current room upload.",
+                    "Send a valid room analysis request as JSON.",
                 )
         if failure is not None:
             await JSONResponse(

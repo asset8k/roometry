@@ -12,6 +12,7 @@ from roometry.uploads.schemas import (
     UploadErrorResponse,
     UploadLimits,
 )
+from roometry.vision.proposal_schemas import SceneProposalRequest, SceneProposalResponse
 from roometry.vision.schemas import (
     AnalysisErrorResponse,
     AnalyzeRoomRequest,
@@ -24,6 +25,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def main() -> None:
     outputs = {
+        ROOT
+        / "frontend/src/lib/scene-proposal-request.schema.json": SceneProposalRequest.model_json_schema(),
+        ROOT
+        / "frontend/src/lib/scene-proposal-response.schema.json": SceneProposalResponse.model_json_schema(
+            mode="serialization"
+        ),
         ROOT
         / "frontend/src/lib/room-analysis-error.schema.json": AnalysisErrorResponse.model_json_schema(
             mode="serialization"
@@ -76,6 +83,14 @@ def main() -> None:
         (ROOT / "data/fixtures/room_analysis.json").read_text()
     )
     outputs[ROOT / "frontend/src/data/room_analysis.json"] = analysis.model_dump(
+        mode="json"
+    )
+    proposal = SceneProposalResponse.model_validate_json(
+        (ROOT / "data/fixtures/room_scene_proposal.json").read_text()
+    )
+    if proposal.scene is None or not validate_geometry(proposal.scene).valid:
+        raise ValueError("The proposal fixture must contain a valid base scene.")
+    outputs[ROOT / "frontend/src/data/room_scene_proposal.json"] = proposal.model_dump(
         mode="json"
     )
     for path, data in outputs.items():

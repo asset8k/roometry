@@ -128,9 +128,7 @@ class PhotoAnalyzer:
             await self._client.close()
 
 
-def parse_observations(
-    response: Response, image_ids: list[str], max_bytes: int
-) -> RoomObservations:
+def response_json(response: Response, max_bytes: int) -> object:
     output = getattr(response, "output", None)
     if not isinstance(output, list):
         raise AnalysisFailure(
@@ -148,15 +146,15 @@ def parse_observations(
             raise AnalysisFailure(
                 422,
                 "analysis_refused",
-                "The model could not analyze these photos. Try different room photos.",
+                "The model could not complete this room request. Review the room input.",
             )
-    if response.status == "incomplete":
+    if getattr(response, "status", None) == "incomplete":
         raise AnalysisFailure(
             502,
             "analysis_incomplete",
-            "The analysis did not finish within its output limits. Try fewer room photos.",
+            "The model result did not finish within its output limits.",
         )
-    if response.status != "completed":
+    if getattr(response, "status", None) != "completed":
         raise AnalysisFailure(
             503,
             "provider_unavailable",
@@ -201,9 +199,21 @@ def parse_observations(
                 result[key] = value
             return result
 
-        observations = RoomObservations.model_validate(
-            json.loads(texts[0], object_pairs_hook=unique_keys)
-        )
+        return json.loads(texts[0], object_pairs_hook=unique_keys)
+    except (ValidationError, ValueError, RecursionError):
+        raise AnalysisFailure(
+            502,
+            "invalid_analysis",
+            "The model returned an invalid analysis. Please try again.",
+        ) from None
+
+
+def parse_observations(
+    response: Response, image_ids: list[str], max_bytes: int
+) -> RoomObservations:
+    decoded = response_json(response, max_bytes)
+    try:
+        observations = RoomObservations.model_validate(decoded)
         if observations.image_ids != image_ids:
             raise ValueError("Image evidence mismatch")
         return observations

@@ -4,9 +4,10 @@ The local cache shares the uploads adapter's one-worker/restart limitations.
 It stores observations, never image bytes. Generation quotas remain separate.
 """
 
+import json
 import logging
 from collections import deque
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from time import perf_counter
 from uuid import uuid4
@@ -14,13 +15,23 @@ from uuid import uuid4
 import anyio
 from openai import APIConnectionError, APIError, APIStatusError, APITimeoutError
 from openai.types.responses import Response, ResponseUsage
+from pydantic import ValidationError
 
 from roometry.config import Settings
 from roometry.uploads.errors import UploadFailure
 from roometry.uploads.schemas import PreparedRoomInput
 from roometry.uploads.storage import InputStorage
-from roometry.vision.analyzer import PhotoAnalyzer, parse_observations
+from roometry.vision.analyzer import PhotoAnalyzer, parse_observations, response_json
 from roometry.vision.errors import AnalysisFailure
+from roometry.vision.proposal_request import build_proposal_request
+from roometry.vision.proposal_schemas import (
+    AXES,
+    DimensionName,
+    SceneDraft,
+    SceneProposalRequest,
+    SceneProposalResponse,
+)
+from roometry.vision.proposals import assemble, issue, preflight, resolve_measurements
 from roometry.vision.schemas import RoomAnalysisResponse, RoomObservations
 
 
@@ -31,6 +42,10 @@ class AnalysisState:
     analysis_id: str
     attempts: int = 0
     result: RoomAnalysisResponse | None = None
+    confirmed_dimensions: dict[DimensionName, float] = field(default_factory=dict)
+    scene_attempts: int = 0
+    proposal_key: str | None = None
+    proposal: SceneProposalResponse | None = None
 
 
 @dataclass(frozen=True)
@@ -39,6 +54,7 @@ class AttemptUsage:
     model: str
     attempt: int
     outcome: str
+    stage: str
     latency_ms: int
     input_tokens: int | None
     output_tokens: int | None
@@ -117,6 +133,7 @@ class AnalysisService:
         started: float,
         outcome: str,
         response: Response | None,
+        stage: str = "analysis",
     ) -> None:
         usage = getattr(response, "usage", None)
         usage = usage if isinstance(usage, ResponseUsage) else None
@@ -130,7 +147,8 @@ class AnalysisService:
         record = AttemptUsage(
             analysis_id=state.analysis_id,
             model=self.settings.model_name,
-            attempt=state.attempts,
+            attempt=state.attempts if stage == "analysis" else state.scene_attempts,
+            stage=stage,
             outcome=outcome,
             latency_ms=round((perf_counter() - started) * 1000),
             input_tokens=count(getattr(usage, "input_tokens", None)),
@@ -320,3 +338,216 @@ class AnalysisService:
             "analysis_limit_reached",
             "This upload has reached its analysis attempt limit.",
         )
+
+    async def _owned_analysis(self, analysis_id: str, owner: str) -> AnalysisState:
+        for input_id, state in list(self._states.items()):
+            if (
+                state.owner == owner
+                and state.analysis_id == analysis_id
+                and state.result is not None
+            ):
+                await anyio.to_thread.run_sync(self._resolve, input_id, owner)
+                if self.storage.now() >= state.expires_at:
+                    break
+                return state
+        raise AnalysisFailure(
+            404, "analysis_not_found", "This analysis is unavailable or has expired."
+        )
+
+    async def propose(
+        self, request: SceneProposalRequest, owner: str
+    ) -> SceneProposalResponse:
+        try:
+            self._capacity.acquire_nowait()
+        except anyio.WouldBlock:
+            raise AnalysisFailure(
+                429, "analysis_busy", "Another room analysis or proposal is running."
+            ) from None
+        try:
+            with anyio.fail_after(self.settings.analysis_timeout_seconds):
+                return await self._propose(request, owner)
+        except TimeoutError:
+            raise AnalysisFailure(
+                504,
+                "analysis_timeout",
+                "Scene proposal timed out. Your observations remain cached until expiry.",
+            ) from None
+        finally:
+            self._capacity.release()
+
+    async def _propose(
+        self, request: SceneProposalRequest, owner: str
+    ) -> SceneProposalResponse:
+        state = await self._owned_analysis(request.analysis_id, owner)
+        analysis = state.result
+        assert analysis is not None
+        if request.dimensions is not None:
+            for axis in AXES:
+                value = getattr(request.dimensions, axis)
+                if value is not None:
+                    state.confirmed_dimensions[axis] = value
+        measurements = resolve_measurements(
+            analysis, state.confirmed_dimensions, request.allow_estimated_dimensions
+        )
+        base = {
+            "analysis_id": analysis.analysis_id,
+            "input_id": analysis.input_id,
+            "dimensions": measurements.dimensions,
+            "dimensions_to_confirm": measurements.to_confirm,
+            "estimated_axes": measurements.estimated,
+            "expires_at": analysis.expires_at,
+            "warnings": [
+                "This is an approximate base scene; review estimated sizes, layout, and uncertain identities."
+            ],
+        }
+        if measurements.to_confirm:
+            return SceneProposalResponse.model_validate(
+                {
+                    **base,
+                    "status": "needs_dimensions",
+                    "scene": None,
+                    "validation": None,
+                    "issues": [],
+                }
+            )
+        problems = preflight(analysis)
+        if problems:
+            return SceneProposalResponse.model_validate(
+                {
+                    **base,
+                    "status": "incomplete",
+                    "scene": None,
+                    "validation": None,
+                    "issues": problems,
+                }
+            )
+        cache_key = json.dumps(
+            {
+                "dimensions": measurements.dimensions.model_dump(),
+                "estimated": measurements.estimated,
+            },
+            sort_keys=True,
+        )
+        if state.proposal_key == cache_key and state.proposal is not None:
+            return state.proposal.model_copy(deep=True)
+        # Initial proposal plus one repair, shared across HTTP retries and dimension
+        # revisions. New flags or measurements cannot reset the paid-call budget.
+        if state.scene_attempts >= 2:
+            return SceneProposalResponse.model_validate(
+                {
+                    **base,
+                    "status": "incomplete",
+                    "scene": None,
+                    "validation": None,
+                    "issues": [
+                        issue(
+                            "proposal_limit_reached",
+                            "This analysis has used its initial scene attempt and repair allowance.",
+                        )
+                    ],
+                }
+            )
+        key = self.settings.openai_api_key
+        if (
+            not self.settings.analysis_enabled
+            or key is None
+            or not key.get_secret_value().strip()
+        ):
+            raise AnalysisFailure(
+                503,
+                "analysis_unavailable",
+                "Scene proposal is disabled or not configured.",
+            )
+        draft, report, scene = None, None, None
+        problems = []
+        while state.scene_attempts < 2:
+            payload = await anyio.to_thread.run_sync(
+                build_proposal_request,
+                self.settings,
+                analysis,
+                measurements,
+                draft,
+                problems,
+            )
+            await self._owned_analysis(analysis.analysis_id, owner)
+            state.scene_attempts += 1
+            started, outcome, response = perf_counter(), "interrupted", None
+            try:
+                response = await self.analyzer.request(payload)
+                try:
+                    decoded = response_json(
+                        response, self.settings.analysis_max_output_bytes
+                    )
+                except AnalysisFailure as error:
+                    if error.code != "invalid_analysis":
+                        raise
+                    decoded = None
+                try:
+                    draft = SceneDraft.model_validate(decoded)
+                except (ValidationError, ValueError, RecursionError):
+                    draft = None
+                    scene, report = None, None
+                    problems = [
+                        issue(
+                            "draft_schema",
+                            "Return exactly the requested scene draft schema with finite, valid geometry fields.",
+                        )
+                    ]
+                else:
+                    scene, report, problems = await anyio.to_thread.run_sync(
+                        assemble, analysis, measurements, draft
+                    )
+                outcome = "success" if scene is not None else "invalid_proposal"
+            except APITimeoutError:
+                outcome = "analysis_timeout"
+                raise AnalysisFailure(
+                    504, "analysis_timeout", "The scene provider timed out."
+                ) from None
+            except APIStatusError as error:
+                outcome = (
+                    "provider_rate_limited"
+                    if error.status_code == 429
+                    else "provider_unavailable"
+                )
+                raise AnalysisFailure(
+                    429 if error.status_code == 429 else 503,
+                    "provider_rate_limited"
+                    if error.status_code == 429
+                    else "provider_unavailable",
+                    "Scene proposal is temporarily unavailable.",
+                ) from None
+            except APIError:
+                outcome = "provider_unavailable"
+                raise AnalysisFailure(
+                    503,
+                    "provider_unavailable",
+                    "The scene provider could not complete this request.",
+                ) from None
+            except AnalysisFailure as error:
+                outcome = error.code
+                raise
+            except ValueError:
+                outcome = "invalid_analysis"
+                raise AnalysisFailure(
+                    502,
+                    "invalid_analysis",
+                    "The scene provider returned an invalid response.",
+                ) from None
+            finally:
+                self._record(state, started, outcome, response, stage="scene_proposal")
+            # Deletion/replacement/expiry while awaiting a paid call revokes results
+            # and prevents repair from sending the observations again.
+            await self._owned_analysis(analysis.analysis_id, owner)
+            if scene is not None:
+                break
+        result = SceneProposalResponse.model_validate(
+            {
+                **base,
+                "status": "ready" if scene is not None else "incomplete",
+                "scene": scene,
+                "validation": report,
+                "issues": problems,
+            }
+        )
+        state.proposal_key, state.proposal = cache_key, result.model_copy(deep=True)
+        return result

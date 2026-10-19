@@ -1,4 +1,4 @@
-"""Analyze an existing private upload; no scene proposal or generation run yet."""
+"""Owned photo observations and validated approximate base-scene proposals."""
 
 from typing import cast
 
@@ -8,6 +8,7 @@ from roometry.config import Settings
 from roometry.uploads.errors import UploadFailure
 from roometry.uploads.session import check_origin, session
 from roometry.vision.errors import AnalysisFailure
+from roometry.vision.proposal_schemas import SceneProposalRequest, SceneProposalResponse
 from roometry.vision.schemas import (
     AnalysisErrorResponse,
     AnalyzeRoomRequest,
@@ -40,6 +41,33 @@ async def analyze_room(
     _, owner = session(request)
     result = await cast(AnalysisService, request.app.state.analysis_service).analyze(
         body.input_id, owner
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return result
+
+
+@router.post(
+    "/propose-scene",
+    response_model=SceneProposalResponse,
+    summary="Confirm dimensions and propose a validated approximate base scene",
+    description="Uses the current session's cached observations without repeating photo analysis. Requires confirmed room measurements unless estimates are explicitly accepted. At most two scene calls per analysis (initial attempt and one repair), including retries and dimension revisions. Invalid geometry is never returned as an accepted scene.",
+    responses={
+        code: {"model": AnalysisErrorResponse}
+        for code in (400, 403, 404, 413, 415, 422, 429, 502, 503, 504)
+    },
+)
+async def propose_scene(
+    body: SceneProposalRequest, request: Request, response: Response
+) -> SceneProposalResponse:
+    try:
+        check_origin(request, cast(Settings, request.app.state.settings))
+    except UploadFailure:
+        raise AnalysisFailure(
+            403, "forbidden_origin", "This origin cannot propose room scenes."
+        ) from None
+    _, owner = session(request)
+    result = await cast(AnalysisService, request.app.state.analysis_service).propose(
+        body, owner
     )
     response.headers["Cache-Control"] = "no-store"
     return result
