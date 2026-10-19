@@ -6,11 +6,12 @@ import type { GoalChoice } from '../../lib/room-input'
 
 const roomTypes = [
   ['bedroom', 'Bedroom'], ['living_room', 'Living room'], ['kitchen', 'Kitchen'], ['bathroom', 'Bathroom'],
-  ['office', 'Office'], ['dining_room', 'Dining room'], ['entryway', 'Entryway'], ['laundry_room', 'Laundry room'], ['other', 'Other'],
+  ['office', 'Office'], ['entryway', 'Entryway'], ['other', 'Other'],
 ] as const
 const goals: { value: GoalChoice; label: string }[] = [
   { value: 'more_storage', label: 'More storage' }, { value: 'workspace', label: 'A better workspace' },
-  { value: 'more_open_space', label: 'More open space' }, { value: 'better_layout', label: 'Better furniture placement' },
+  { value: 'more_open_space', label: 'More open space' },
+  { value: 'better_aesthetics', label: 'Better aesthetics' },
 ]
 const roomLabel = (type: string | null | undefined) => roomTypes.find(([value]) => value === type)?.[1] ?? 'Not specified'
 
@@ -66,7 +67,7 @@ export function RoomInputForm({ state, controller }: { state: RoomInputState; co
         </section>
 
         <fieldset className="room-preferences" disabled={Boolean(busy)}>
-          <legend>2. What would make this room work better?</legend>
+          <legend>2. How would you like to improve this room?</legend>
           <label>Room type<select value={draft.roomType ?? ''} onChange={event => set({ roomType: event.target.value as typeof draft.roomType })}>
             <option value="">Not sure yet</option>{roomTypes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select></label>
@@ -75,7 +76,7 @@ export function RoomInputForm({ state, controller }: { state: RoomInputState; co
           </label>)}</div>
           <p className="input-help">No specific goal? Leave these blank for a general room analysis.</p>
           <label>Anything you want to improve? <span className="optional">Optional</span><textarea value={draft.goalText} maxLength={limits?.max_goal_text_chars} rows={3}
-            placeholder="More space to work, better storage, a calmer layout…" onChange={event => set({ goalText: event.target.value })} /></label>
+            placeholder="A cozier look, better storage, a calmer layout… Tell us what to keep or avoid." onChange={event => set({ goalText: event.target.value })} /></label>
 
           <details className="optional-room-details"><summary>Room details & preferences <span>Optional</span></summary>
             <label>Describe the room<textarea value={draft.description} maxLength={limits?.max_description_chars} rows={3} placeholder="How do you use this room?"
@@ -91,8 +92,6 @@ export function RoomInputForm({ state, controller }: { state: RoomInputState; co
               <label>Currency<input type="text" maxLength={3} value={draft.currency} autoCapitalize="characters" onChange={event => set({ currency: event.target.value.toUpperCase() })} aria-describedby="budget-hint" /></label></div>
             <p id="budget-hint" className="input-help">Use a three-letter code, such as USD, EUR or KZT. A budget of 0 means no purchase budget.</p>
             <label>Style preference<input type="text" value={draft.style} maxLength={limits?.max_style_chars} placeholder="Simple, cozy, minimalist…" onChange={event => set({ style: event.target.value })} /></label>
-            <label>Anything to keep or avoid?<textarea value={draft.constraints} maxLength={limits?.max_constraints_chars} rows={3} placeholder="Keep the bed. Leave the window clear. Avoid new purchases."
-              onChange={event => set({ constraints: event.target.value })} /></label>
           </details>
         </fieldset>
 

@@ -13,13 +13,14 @@ async function setup() {
 }
 
 describe('room input form', () => {
-  it('exposes optional preferences and all supported room categories with an accessible file picker', async () => {
+  it('offers common room categories, aesthetics, and one improvement note with an accessible file picker', async () => {
     const { render } = await setup()
     const html = render()
     expect(html).toContain('aria-label="Choose room photos"')
     expect(html).toContain('multiple=""')
     expect(html).toContain('.heic')
-    for (const label of ['Kitchen', 'Bathroom', 'Laundry room', 'Budget', 'Currency', 'Width (m)', 'Height (m)', 'Anything to keep or avoid?']) expect(html).toContain(label)
+    for (const label of ['Kitchen', 'Bathroom', 'Other', 'Budget', 'Currency', 'Width (m)', 'Height (m)', 'Better aesthetics', 'Anything you want to improve?', 'Tell us what to keep or avoid.']) expect(html).toContain(label)
+    for (const label of ['Dining room', 'Laundry room', 'Anything to keep or avoid?', 'Better furniture placement']) expect(html).not.toContain(label)
     expect(html).toContain('Room details &amp; preferences')
     expect(html).toContain('Upload photos')
   })

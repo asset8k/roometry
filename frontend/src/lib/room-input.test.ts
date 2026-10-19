@@ -14,6 +14,9 @@ describe('photo input boundaries', () => {
     expect(options.budget).toEqual({ amount: 0, currency: 'KZT' })
     expect(options.goals).toEqual(['general_analysis'])
     expect(options.goal_text).toBe('keep desk')
+    expect(draftOptions({ ...emptyDraft(), goals: ['better_aesthetics'], goalText: 'Keep the bed; make the room cozier.' }, limits)).toMatchObject({
+      goals: ['better_aesthetics'], goal_text: 'Keep the bed; make the room cozier.',
+    })
     expect(draftOptions({ ...emptyDraft(), width: '4', length: '4', confirmed: true }, limits).dimensions?.measurements_source).toBe('user_confirmed')
     expect(draftOptions(emptyDraft(), limits).dimensions).toBeNull()
   })
@@ -21,7 +24,7 @@ describe('photo input boundaries', () => {
     expect(() => draftOptions({ ...emptyDraft(), width }, limits)).toThrow()
   })
   it('checks combined UTF-8 metadata bytes as well as character lengths', () => {
-    expect(() => draftOptions({ ...emptyDraft(), description: '😀'.repeat(2000), goalText: '😀'.repeat(2000), constraints: '😀'.repeat(1000) }, limits)).toThrow()
+    expect(() => draftOptions({ ...emptyDraft(), description: '😀'.repeat(2000), goalText: '😀'.repeat(2000), style: '😀'.repeat(100) }, limits)).toThrow()
     expect(() => draftOptions({ ...emptyDraft(), goals: ['workspace', 'workspace'] }, limits)).toThrow()
     expect(() => draftOptions({ ...emptyDraft(), budget: '1', currency: 'US' }, limits)).toThrow()
   })

@@ -22,7 +22,8 @@ MAX_BUDGET_AMOUNT = 1_000_000
 MIB = 1024 * 1024
 
 Goal = Literal[
-    "general_analysis", "more_storage", "workspace", "more_open_space", "better_layout"
+    "general_analysis", "more_storage", "workspace", "more_open_space",
+    "better_aesthetics",
 ]
 # Source formats; the upload decoder normalizes all accepted photos to JPEG.
 SourceMediaType = Literal[

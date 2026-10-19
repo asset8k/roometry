@@ -24,28 +24,28 @@ export type Description = string | null;
  */
 export type Goals =
   | []
-  | ["general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_layout"]
+  | ["general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_aesthetics"]
   | [
-      "general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_layout",
-      "general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_layout"
+      "general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_aesthetics",
+      "general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_aesthetics"
     ]
   | [
-      "general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_layout",
-      "general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_layout",
-      "general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_layout"
+      "general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_aesthetics",
+      "general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_aesthetics",
+      "general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_aesthetics"
     ]
   | [
-      "general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_layout",
-      "general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_layout",
-      "general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_layout",
-      "general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_layout"
+      "general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_aesthetics",
+      "general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_aesthetics",
+      "general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_aesthetics",
+      "general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_aesthetics"
     ]
   | [
-      "general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_layout",
-      "general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_layout",
-      "general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_layout",
-      "general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_layout",
-      "general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_layout"
+      "general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_aesthetics",
+      "general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_aesthetics",
+      "general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_aesthetics",
+      "general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_aesthetics",
+      "general_analysis" | "more_storage" | "workspace" | "more_open_space" | "better_aesthetics"
     ];
 export type GoalText = string | null;
 export type WidthM = number | null;

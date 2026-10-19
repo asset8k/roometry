@@ -14,11 +14,11 @@ export type GoalChoice = Goals[number]
 export interface InputDraft {
   roomType: RoomType | ''; description: string; goals: GoalChoice[]; goalText: string
   width: string; length: string; height: string; confirmed: boolean
-  style: string; budget: string; currency: string; constraints: string
+  style: string; budget: string; currency: string
 }
 export const emptyDraft = (): InputDraft => ({
   roomType: '', description: '', goals: [], goalText: '', width: '', length: '', height: '',
-  confirmed: false, style: '', budget: '', currency: 'USD', constraints: '',
+  confirmed: false, style: '', budget: '', currency: 'USD',
 })
 const ajv = new Ajv2020({ allErrors: true, strict: true })
 addFormats(ajv)
@@ -85,7 +85,7 @@ export function draftOptions(draft: InputDraft, limits: InputLimits): RoomInputO
   const options = {
     room_type: draft.roomType || null, description: draft.description.trim() || null,
     goals: draft.goals.length ? draft.goals : ['general_analysis'], goal_text: draft.goalText.trim() || null,
-    dimensions, style: draft.style.trim() || null, constraints: draft.constraints.trim() || null,
+    dimensions, style: draft.style.trim() || null,
     budget: budget === null ? null : { amount: budget, currency: draft.currency.trim().toUpperCase() },
   }
   if (!validOptions(options) || new Set(options.goals).size !== options.goals.length) {

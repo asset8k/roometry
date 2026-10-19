@@ -64,11 +64,12 @@ async def test_limits_health_and_openapi(client):
 
 
 async def test_private_metadata_and_owned_delete(client, app, photo):
-    response = await client.post("/api/rooms/inputs", files=batch(photo, options=json.dumps({"dimensions": {"width_m": 4}})))
+    response = await client.post("/api/rooms/inputs", files=batch(photo, options=json.dumps({"dimensions": {"width_m": 4}, "goals": ["better_aesthetics"], "goal_text": "Keep the bed; make the room cozier."})))
     assert response.status_code == 201
     data = response.json()
     assert data["status"] == "ready" and data["options"]["dimensions"]["height_m"] is None
-    assert data["options"]["goals"] == ["general_analysis"]
+    assert data["options"]["goals"] == ["better_aesthetics"]
+    assert data["options"]["goal_text"] == "Keep the bed; make the room cozier."
     assert "HttpOnly" in response.headers["set-cookie"] and "SameSite=lax" in response.headers["set-cookie"]
     assert response.headers["cache-control"] == "no-store"
     assert set(data) == {"input_id", "status", "options", "images", "expires_at"}
