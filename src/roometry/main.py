@@ -9,6 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from openai import AsyncOpenAI
 from pydantic import BaseModel
 
 from roometry.config import Settings, get_settings
@@ -18,6 +19,11 @@ from roometry.uploads.middleware import UploadBodyLimitMiddleware
 from roometry.uploads.router import router as uploads_router
 from roometry.uploads.service import UploadService
 from roometry.uploads.storage import LocalInputStorage
+from roometry.vision.analyzer import PhotoAnalyzer
+from roometry.vision.errors import AnalysisFailure
+from roometry.vision.middleware import ANALYSIS_PATH, AnalysisRequestLimitMiddleware
+from roometry.vision.router import router as analysis_router
+from roometry.vision.service import AnalysisService
 
 
 class HealthResponse(BaseModel):
@@ -25,17 +31,22 @@ class HealthResponse(BaseModel):
     service: Literal["roometry"] = "roometry"
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None, *, analysis_client: AsyncOpenAI | None = None
+) -> FastAPI:
     settings = settings if settings is not None else get_settings()
     service = UploadService(
         settings.public_upload_limits(), LocalInputStorage(settings.upload_storage_dir)
     )
+    analyzer = PhotoAnalyzer(settings, analysis_client)
+    analysis_service = AnalysisService(settings, service.storage, analyzer)
 
     async def periodic_cleanup() -> None:
         while True:
             await anyio.sleep(settings.upload_cleanup_interval_seconds)
             try:
                 await service.cleanup()
+                await analysis_service.cleanup()
             except OSError:
                 logging.getLogger(__name__).warning(
                     "Temporary upload cleanup will be retried."
@@ -57,12 +68,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 yield
             finally:
                 tasks.cancel_scope.cancel()
+                with anyio.CancelScope(shield=True):
+                    await analyzer.close()
 
     application = FastAPI(title="Roometry API", version="0.1.0", lifespan=lifespan)
     application.state.settings = settings
     application.state.upload_service = service
+    application.state.analysis_service = analysis_service
     application.add_middleware(
         UploadBodyLimitMiddleware, max_bytes=settings.upload_max_body_bytes
+    )
+    application.add_middleware(
+        AnalysisRequestLimitMiddleware, max_bytes=settings.analysis_max_body_bytes
     )
 
     if settings.cors_origins:
@@ -76,6 +93,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     application.include_router(scenes_router)
     application.include_router(uploads_router)
+    application.include_router(analysis_router)
+
+    @application.exception_handler(AnalysisFailure)
+    async def analysis_error(_request: Request, error: AnalysisFailure) -> JSONResponse:
+        return JSONResponse(
+            error.response.model_dump(mode="json"),
+            status_code=error.status,
+            headers={"Cache-Control": "no-store"},
+        )
 
     @application.exception_handler(UploadFailure)
     async def upload_error(_request: Request, error: UploadFailure) -> JSONResponse:
@@ -90,6 +116,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         _request: Request,
         error: RequestValidationError,
     ) -> JSONResponse:
+        if _request.url.path == ANALYSIS_PATH:
+            return await analysis_error(
+                _request,
+                AnalysisFailure(
+                    422,
+                    "invalid_request",
+                    "Send only a valid input_id from your current room upload.",
+                ),
+            )
         # Raw error input may contain NaN/Infinity or exception context that
         # JSONResponse cannot encode. Return the useful, JSON-safe error fields.
         return JSONResponse(

@@ -245,3 +245,31 @@ class RoomAnalysisResponse(AnalysisModel):
         if self.expires_at <= self.created_at:
             raise ValueError("Analysis expiry must follow its creation time.")
         return self
+
+
+AnalysisErrorCode = Literal[
+    "invalid_request",
+    "request_too_large",
+    "unsupported_media_type",
+    "forbidden_origin",
+    "input_not_found",
+    "storage_unavailable",
+    "analysis_unavailable",
+    "analysis_busy",
+    "analysis_limit_reached",
+    "provider_unavailable",
+    "provider_rate_limited",
+    "analysis_timeout",
+    "analysis_refused",
+    "analysis_incomplete",
+    "invalid_analysis",
+]
+
+
+class AnalysisIssue(AnalysisModel):
+    code: AnalysisErrorCode
+    message: Annotated[str, Field(min_length=1, max_length=500, pattern=r"\S")]
+
+
+class AnalysisErrorResponse(AnalysisModel):
+    detail: Annotated[list[AnalysisIssue], Field(min_length=1, max_length=16)]

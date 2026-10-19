@@ -13,7 +13,7 @@ from roometry.scenes.schemas import RoomScene
 from roometry.scenes.validation import validate_geometry
 from roometry.scenes.service import preview_edit
 from roometry.uploads.schemas import RoomInputOptions, UploadLimits, PreparedRoomInput, UploadErrorResponse
-from roometry.vision.schemas import AnalyzeRoomRequest, RoomAnalysisResponse, RoomObservations
+from roometry.vision.schemas import AnalysisErrorResponse, AnalyzeRoomRequest, RoomAnalysisResponse, RoomObservations
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -29,6 +29,7 @@ ROOT = Path(__file__).resolve().parents[1]
     ("room-analysis-request.schema.json", AnalyzeRoomRequest, "validation"),
     ("room-observations.schema.json", RoomObservations, "validation"),
     ("room-analysis-response.schema.json", RoomAnalysisResponse, "serialization"),
+    ("room-analysis-error.schema.json", AnalysisErrorResponse, "serialization"),
 ])
 def test_frontend_contract_matches_python(filename, model, mode):
     exported = json.loads((ROOT / "frontend/src/lib" / filename).read_text())

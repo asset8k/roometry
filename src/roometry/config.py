@@ -4,14 +4,16 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from roometry.uploads.schemas import MAX_IMAGES, MIB, UploadLimits
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+    )
 
     app_environment: Literal["development", "test", "production"] = "development"
     cors_origins: list[str] = Field(default_factory=list)
@@ -27,23 +29,57 @@ class Settings(BaseSettings):
     upload_prepared_max_edge_px: int = Field(default=2048, gt=0)
     upload_prepared_max_bytes: int = Field(default=4 * MIB, gt=0)
     upload_ttl_seconds: int = Field(default=3600, gt=0)
-    upload_storage_dir: Path = Path(__file__).resolve().parents[2] / "uploads" / "room-inputs"
+    upload_storage_dir: Path = (
+        Path(__file__).resolve().parents[2] / "uploads" / "room-inputs"
+    )
     upload_cleanup_interval_seconds: int = Field(default=60, gt=0)
+
+    # Opt-in paid analysis. Missing configuration never breaks the viewer/API health.
+    analysis_enabled: bool = False
+    openai_api_key: SecretStr | None = None
+    model_name: str = Field(default="gpt-6-luna", min_length=1, max_length=128)
+    analysis_timeout_seconds: float = Field(
+        default=90, gt=0, le=300, allow_inf_nan=False
+    )
+    analysis_max_body_bytes: int = Field(default=4096, ge=128, le=16384)
+    analysis_max_request_bytes: int = Field(default=45_000_000, ge=1024, le=50_000_000)
+    analysis_max_output_tokens: int = Field(default=8192, ge=128, le=32768)
+    analysis_max_output_bytes: int = Field(default=262144, ge=1024, le=1048576)
+    analysis_max_provider_attempts: int = Field(default=2, ge=1, le=3)
+    analysis_max_cached_inputs: int = Field(default=128, ge=1, le=1024)
+
+    @field_validator("model_name", mode="before")
+    @classmethod
+    def default_blank_model(cls, value: object) -> object:
+        # Older .env templates included an empty placeholder.
+        if isinstance(value, str):
+            return value.strip() or "gpt-6-luna"
+        return value
 
     @model_validator(mode="after")
     def consistent_upload_policy(self) -> "Settings":
         if "*" in self.cors_origins:
-            raise ValueError("Credentialed upload requests require explicit CORS origins.")
+            raise ValueError(
+                "Credentialed upload requests require explicit CORS origins."
+            )
         if self.upload_max_file_bytes > self.upload_max_total_file_bytes:
-            raise ValueError("The combined upload limit must accommodate one maximum-sized file.")
+            raise ValueError(
+                "The combined upload limit must accommodate one maximum-sized file."
+            )
         if self.upload_max_body_bytes <= self.upload_max_total_file_bytes + 16384:
-            raise ValueError("The HTTP body limit must allow file bytes, options, and multipart overhead.")
+            raise ValueError(
+                "The HTTP body limit must allow file bytes, options, and multipart overhead."
+            )
         if self.upload_min_edge_px > self.upload_max_edge_px:
             raise ValueError("The minimum image edge cannot exceed the maximum.")
-        if self.upload_max_pixels < self.upload_min_edge_px ** 2:
-            raise ValueError("The pixel limit must accommodate the minimum image dimensions.")
+        if self.upload_max_pixels < self.upload_min_edge_px**2:
+            raise ValueError(
+                "The pixel limit must accommodate the minimum image dimensions."
+            )
         if self.upload_prepared_max_edge_px > self.upload_max_edge_px:
-            raise ValueError("The prepared image edge cannot exceed the source edge limit.")
+            raise ValueError(
+                "The prepared image edge cannot exceed the source edge limit."
+            )
         return self
 
     def public_upload_limits(self) -> UploadLimits:

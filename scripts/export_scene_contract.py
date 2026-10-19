@@ -13,6 +13,7 @@ from roometry.uploads.schemas import (
     UploadLimits,
 )
 from roometry.vision.schemas import (
+    AnalysisErrorResponse,
     AnalyzeRoomRequest,
     RoomAnalysisResponse,
     RoomObservations,
@@ -23,6 +24,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def main() -> None:
     outputs = {
+        ROOT
+        / "frontend/src/lib/room-analysis-error.schema.json": AnalysisErrorResponse.model_json_schema(
+            mode="serialization"
+        ),
         ROOT / "frontend/src/lib/scene.schema.json": RoomScene.model_json_schema(),
         ROOT
         / "frontend/src/lib/edit-request.schema.json": PreviewEditRequest.model_json_schema(),

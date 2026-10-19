@@ -1,0 +1,60 @@
+{
+  "$defs": {
+    "AnalysisIssue": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "enum": [
+            "invalid_request",
+            "request_too_large",
+            "unsupported_media_type",
+            "forbidden_origin",
+            "input_not_found",
+            "storage_unavailable",
+            "analysis_unavailable",
+            "analysis_busy",
+            "analysis_limit_reached",
+            "provider_unavailable",
+            "provider_rate_limited",
+            "analysis_timeout",
+            "analysis_refused",
+            "analysis_incomplete",
+            "invalid_analysis"
+          ],
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "maxLength": 500,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "AnalysisIssue",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "detail": {
+      "items": {
+        "$ref": "#/$defs/AnalysisIssue"
+      },
+      "maxItems": 16,
+      "minItems": 1,
+      "title": "Detail",
+      "type": "array"
+    }
+  },
+  "required": [
+    "detail"
+  ],
+  "title": "AnalysisErrorResponse",
+  "type": "object"
+}
