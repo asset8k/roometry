@@ -13,6 +13,7 @@ from roometry.scenes.schemas import RoomScene
 from roometry.scenes.validation import validate_geometry
 from roometry.scenes.service import preview_edit
 from roometry.uploads.schemas import RoomInputOptions, UploadLimits, PreparedRoomInput, UploadErrorResponse
+from roometry.vision.schemas import AnalyzeRoomRequest, RoomAnalysisResponse, RoomObservations
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -25,6 +26,9 @@ ROOT = Path(__file__).resolve().parents[1]
     ("room-input-limits.schema.json", UploadLimits, "serialization"),
     ("room-input-response.schema.json", PreparedRoomInput, "serialization"),
     ("room-input-error.schema.json", UploadErrorResponse, "serialization"),
+    ("room-analysis-request.schema.json", AnalyzeRoomRequest, "validation"),
+    ("room-observations.schema.json", RoomObservations, "validation"),
+    ("room-analysis-response.schema.json", RoomAnalysisResponse, "serialization"),
 ])
 def test_frontend_contract_matches_python(filename, model, mode):
     exported = json.loads((ROOT / "frontend/src/lib" / filename).read_text())
@@ -43,6 +47,30 @@ def test_frontend_input_fixture_matches_validated_source():
     source = RoomInputOptions.model_validate_json((ROOT / "data/fixtures/room_input_options.json").read_text())
     exported = json.loads((ROOT / "frontend/src/data/room_input_options.json").read_text())
     assert exported == source.model_dump(mode="json")
+
+
+def test_frontend_analysis_fixture_matches_validated_source():
+    source = RoomAnalysisResponse.model_validate_json((ROOT / "data/fixtures/room_analysis.json").read_text())
+    exported = json.loads((ROOT / "frontend/src/data/room_analysis.json").read_text())
+    assert exported == source.model_dump(mode="json")
+
+
+def test_export_refuses_inconsistent_analysis_before_writing_any_output(tmp_path, monkeypatch):
+    fixtures = tmp_path / "data/fixtures"
+    fixtures.mkdir(parents=True)
+    for name in ("bedroom_scene.json", "bedroom_after_scene.json", "room_input_options.json", "room_analysis.json"):
+        data = json.loads((ROOT / "data/fixtures" / name).read_text())
+        if name == "room_analysis.json":
+            data["observations"]["objects"][0]["source_image_ids"] = ["44444444-4444-4444-8444-444444444444"]
+        (fixtures / name).write_text(json.dumps(data))
+    sentinel = tmp_path / "frontend/src/lib/scene.schema.json"
+    sentinel.parent.mkdir(parents=True)
+    sentinel.write_text("unchanged contract")
+    monkeypatch.setattr(export_scene_contract, "ROOT", tmp_path)
+    with pytest.raises(ValidationError):
+        export_scene_contract.main()
+    assert sentinel.read_text() == "unchanged contract"
+    assert not (tmp_path / "frontend/src/data").exists()
 
 
 def test_comparison_preserves_identity_room_openings_and_protected_objects():

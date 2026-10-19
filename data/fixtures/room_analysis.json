@@ -1,0 +1,211 @@
+{
+  "analysis_id": "33333333-3333-4333-8333-333333333333",
+  "input_id": "11111111-1111-4111-8111-111111111111",
+  "status": "analyzed",
+  "created_at": "2026-10-19T10:00:00Z",
+  "expires_at": "2026-10-19T11:00:00Z",
+  "input_options": {
+    "room_type": "bedroom",
+    "description": "A bedroom used as a workspace.",
+    "goals": [
+      "more_storage",
+      "better_aesthetics"
+    ],
+    "goal_text": "Keep the bed and avoid new purchases.",
+    "dimensions": {
+      "width_m": 4.0,
+      "length_m": 4.0,
+      "height_m": null,
+      "measurements_source": "user_confirmed"
+    },
+    "style": "Cozy",
+    "budget": {
+      "amount": 0.0,
+      "currency": "USD"
+    },
+    "constraints": null
+  },
+  "observations": {
+    "schema_version": 1,
+    "image_ids": [
+      "22222222-2222-4222-8222-222222222221",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "room_type": "bedroom",
+    "room_type_confidence": "high",
+    "room_shape": "rectangular",
+    "floor_visible": true,
+    "ceiling_visible": null,
+    "estimated_dimensions": null,
+    "walls": [
+      {
+        "id": "window_wall",
+        "label": "Wall with a window",
+        "source_image_ids": [
+          "22222222-2222-4222-8222-222222222221",
+          "22222222-2222-4222-8222-222222222222"
+        ],
+        "confidence": "high",
+        "notes": []
+      },
+      {
+        "id": "door_wall",
+        "label": "Wall with the doorway",
+        "source_image_ids": [
+          "22222222-2222-4222-8222-222222222221"
+        ],
+        "confidence": "medium",
+        "notes": []
+      }
+    ],
+    "objects": [
+      {
+        "id": "bed_observed",
+        "type": "bed",
+        "label": "Bed",
+        "source_image_ids": [
+          "22222222-2222-4222-8222-222222222221",
+          "22222222-2222-4222-8222-222222222222"
+        ],
+        "confidence": "medium",
+        "relative_location": "Against the wall opposite the window wall.",
+        "wall_id": null,
+        "placement": "floor",
+        "support_object_id": null,
+        "appears_fixed": false,
+        "color": null,
+        "estimated_dimensions_m": {
+          "width": 1.4,
+          "depth": 2.0,
+          "height": null
+        },
+        "notes": [
+          "Bed size is a rough visual estimate."
+        ]
+      },
+      {
+        "id": "desk_observed",
+        "type": "desk",
+        "label": "Desk",
+        "source_image_ids": [
+          "22222222-2222-4222-8222-222222222221",
+          "22222222-2222-4222-8222-222222222222"
+        ],
+        "confidence": "medium",
+        "relative_location": "Near the window wall.",
+        "wall_id": "window_wall",
+        "placement": "floor",
+        "support_object_id": null,
+        "appears_fixed": false,
+        "color": null,
+        "estimated_dimensions_m": null,
+        "notes": []
+      },
+      {
+        "id": "computer_observed",
+        "type": "computer",
+        "label": "Desktop computer",
+        "source_image_ids": [
+          "22222222-2222-4222-8222-222222222222"
+        ],
+        "confidence": "medium",
+        "relative_location": "On the desk.",
+        "wall_id": null,
+        "placement": "surface",
+        "support_object_id": "desk_observed",
+        "appears_fixed": false,
+        "color": "#000000",
+        "estimated_dimensions_m": null,
+        "notes": []
+      },
+      {
+        "id": "chair_a",
+        "type": "chair",
+        "label": "Chair seen from the doorway",
+        "source_image_ids": [
+          "22222222-2222-4222-8222-222222222221"
+        ],
+        "confidence": "medium",
+        "relative_location": null,
+        "wall_id": null,
+        "placement": "floor",
+        "support_object_id": null,
+        "appears_fixed": false,
+        "color": null,
+        "estimated_dimensions_m": null,
+        "notes": []
+      },
+      {
+        "id": "chair_b",
+        "type": "chair",
+        "label": "Chair seen from the window",
+        "source_image_ids": [
+          "22222222-2222-4222-8222-222222222222"
+        ],
+        "confidence": "medium",
+        "relative_location": null,
+        "wall_id": null,
+        "placement": "floor",
+        "support_object_id": null,
+        "appears_fixed": false,
+        "color": null,
+        "estimated_dimensions_m": null,
+        "notes": []
+      }
+    ],
+    "openings": [
+      {
+        "id": "window_observed",
+        "type": "window",
+        "source_image_ids": [
+          "22222222-2222-4222-8222-222222222221",
+          "22222222-2222-4222-8222-222222222222"
+        ],
+        "confidence": "high",
+        "wall_id": "window_wall",
+        "relative_location": "Near the middle of the window wall.",
+        "estimated_width_m": 1.2,
+        "estimated_height_m": 1.2,
+        "estimated_sill_height_m": null,
+        "notes": [
+          "Opening sizes are visual estimates."
+        ]
+      },
+      {
+        "id": "door_observed",
+        "type": "door",
+        "source_image_ids": [
+          "22222222-2222-4222-8222-222222222221"
+        ],
+        "confidence": "medium",
+        "wall_id": "door_wall",
+        "relative_location": null,
+        "estimated_width_m": null,
+        "estimated_height_m": null,
+        "estimated_sill_height_m": 0.0,
+        "notes": []
+      }
+    ],
+    "possible_duplicates": [
+      {
+        "entity_ids": [
+          "chair_a",
+          "chair_b"
+        ],
+        "reason": "These may be the same chair seen from different angles; retain both observations until resolved."
+      }
+    ],
+    "unknowns": [
+      "Ceiling height has not been supplied.",
+      "The number of distinct chairs is uncertain.",
+      "The relationship between the doorway and window walls is unclear."
+    ],
+    "assumptions": [
+      "Synthetic example for contract development; not a model result."
+    ],
+    "warnings": [
+      "Photos do not establish exact dimensions.",
+      "A scene has not been generated or geometrically validated."
+    ]
+  }
+}
