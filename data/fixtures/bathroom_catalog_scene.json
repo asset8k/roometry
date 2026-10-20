@@ -1,0 +1,219 @@
+{
+  "schema_version": 1,
+  "room": {
+    "room_type": "bathroom",
+    "width_m": 3.2,
+    "length_m": 3.0,
+    "height_m": 2.6,
+    "measurements_source": "estimated"
+  },
+  "openings": [],
+  "objects": [
+    {
+      "id": "bathtub",
+      "type": "bathtub",
+      "asset_id": "bathtub_standard_01",
+      "position": {
+        "x": 1.0,
+        "y": 0.0,
+        "z": 0.4
+      },
+      "rotation_y_rad": 0.0,
+      "dimensions_m": {
+        "width": 1.7,
+        "depth": 0.78,
+        "height": 0.62
+      },
+      "color": "#D4D8CF",
+      "placement": "floor",
+      "support_object_id": null,
+      "wall": null,
+      "opening_id": null,
+      "fixed": true,
+      "locked": false,
+      "provenance": "user_added",
+      "measurements_source": "catalog"
+    },
+    {
+      "id": "shower",
+      "type": "shower",
+      "asset_id": "shower_standard_01",
+      "position": {
+        "x": 2.65,
+        "y": 0.0,
+        "z": 0.45
+      },
+      "rotation_y_rad": 0.0,
+      "dimensions_m": {
+        "width": 0.9,
+        "depth": 0.9,
+        "height": 2.1
+      },
+      "color": "#D4D8CF",
+      "placement": "floor",
+      "support_object_id": null,
+      "wall": null,
+      "opening_id": null,
+      "fixed": true,
+      "locked": false,
+      "provenance": "user_added",
+      "measurements_source": "catalog"
+    },
+    {
+      "id": "vanity",
+      "type": "vanity",
+      "asset_id": "vanity_standard_01",
+      "position": {
+        "x": 0.25,
+        "y": 0.0,
+        "z": 1.65
+      },
+      "rotation_y_rad": 1.5707963267948966,
+      "dimensions_m": {
+        "width": 0.8,
+        "depth": 0.5,
+        "height": 1.1
+      },
+      "color": "#A8B09D",
+      "placement": "floor",
+      "support_object_id": null,
+      "wall": null,
+      "opening_id": null,
+      "fixed": true,
+      "locked": false,
+      "provenance": "user_added",
+      "measurements_source": "catalog"
+    },
+    {
+      "id": "toilet",
+      "type": "toilet",
+      "asset_id": "toilet_standard_01",
+      "position": {
+        "x": 1.6,
+        "y": 0.0,
+        "z": 2.65
+      },
+      "rotation_y_rad": 3.141592653589793,
+      "dimensions_m": {
+        "width": 0.39,
+        "depth": 0.7,
+        "height": 0.8
+      },
+      "color": "#D4D8CF",
+      "placement": "floor",
+      "support_object_id": null,
+      "wall": null,
+      "opening_id": null,
+      "fixed": true,
+      "locked": false,
+      "provenance": "user_added",
+      "measurements_source": "catalog"
+    },
+    {
+      "id": "water_heater",
+      "type": "water_heater",
+      "asset_id": "water_heater_standard_01",
+      "position": {
+        "x": 2.6,
+        "y": 1.4,
+        "z": 2.785
+      },
+      "rotation_y_rad": 3.141592653589793,
+      "dimensions_m": {
+        "width": 0.43,
+        "depth": 0.43,
+        "height": 0.85
+      },
+      "color": "#C5C9C1",
+      "placement": "wall",
+      "support_object_id": null,
+      "wall": "south",
+      "opening_id": null,
+      "fixed": true,
+      "locked": false,
+      "provenance": "user_added",
+      "measurements_source": "catalog"
+    },
+    {
+      "id": "towel_rack",
+      "type": "towel_rack",
+      "asset_id": "towel_rack_standard_01",
+      "position": {
+        "x": 3.125,
+        "y": 1.2,
+        "z": 1.6
+      },
+      "rotation_y_rad": 4.71238898038469,
+      "dimensions_m": {
+        "width": 0.6,
+        "depth": 0.15,
+        "height": 0.35
+      },
+      "color": "#BCC3BC",
+      "placement": "wall",
+      "support_object_id": null,
+      "wall": "east",
+      "opening_id": null,
+      "fixed": true,
+      "locked": false,
+      "provenance": "user_added",
+      "measurements_source": "catalog"
+    },
+    {
+      "id": "laundry_stack",
+      "type": "washing_machine",
+      "asset_id": "washing_machine_stack_01",
+      "position": {
+        "x": 2.6,
+        "y": 0.0,
+        "z": 2.2
+      },
+      "rotation_y_rad": 0.0,
+      "dimensions_m": {
+        "width": 0.6,
+        "depth": 0.64,
+        "height": 1.72
+      },
+      "color": "#C5C9C1",
+      "placement": "floor",
+      "support_object_id": null,
+      "wall": null,
+      "opening_id": null,
+      "fixed": true,
+      "locked": false,
+      "provenance": "user_added",
+      "measurements_source": "catalog"
+    },
+    {
+      "id": "ceiling_light",
+      "type": "ceiling_light",
+      "asset_id": "ceiling_light_standard_01",
+      "position": {
+        "x": 1.6,
+        "y": 2.47,
+        "z": 1.5
+      },
+      "rotation_y_rad": 0.0,
+      "dimensions_m": {
+        "width": 0.4,
+        "depth": 0.4,
+        "height": 0.13
+      },
+      "color": "#B8BDB6",
+      "placement": "ceiling",
+      "support_object_id": null,
+      "wall": null,
+      "opening_id": null,
+      "fixed": true,
+      "locked": false,
+      "provenance": "user_added",
+      "measurements_source": "catalog"
+    }
+  ],
+  "assumptions": [
+    "Authored arrangement for reviewing catalog models together; dimensions are illustrative catalog examples."
+  ],
+  "warnings": [
+    "This example is not a proposed installation or a clearance assessment."
+  ]
+}

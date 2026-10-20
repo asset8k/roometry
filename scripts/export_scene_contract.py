@@ -4,6 +4,10 @@ import json
 from pathlib import Path
 
 from roometry.scenes.edit_schemas import PreviewEditRequest, PreviewEditResponse
+from roometry.scenes.decor import DECOR_CATALOG
+from roometry.scenes.equipment import EQUIPMENT_CATALOG
+from roometry.scenes.fixture_models import FIXTURE_CATALOG
+from roometry.scenes.furniture import FURNITURE_CATALOG
 from roometry.scenes.schemas import RoomScene
 from roometry.scenes.validation import validate_geometry
 from roometry.uploads.schemas import (
@@ -21,6 +25,7 @@ from roometry.vision.schemas import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
+SCENE_FIXTURES = ("bedroom_scene.json", "bedroom_after_scene.json", "kitchen_catalog_scene.json", "bathroom_catalog_scene.json", "decor_catalog_scene.json")
 
 
 def main() -> None:
@@ -65,7 +70,7 @@ def main() -> None:
             mode="serialization"
         ),
     }
-    for filename in ("bedroom_scene.json", "bedroom_after_scene.json"):
+    for filename in SCENE_FIXTURES:
         scene = RoomScene.model_validate_json(
             (ROOT / "data/fixtures" / filename).read_text()
         )
@@ -97,6 +102,24 @@ def main() -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(data, indent=2, allow_nan=False) + "\n")
         print(f"Exported {path.relative_to(ROOT)}")
+    for filename, catalog in (
+        ("core-furniture.generated.json", FURNITURE_CATALOG),
+        ("equipment.generated.json", EQUIPMENT_CATALOG),
+        ("fixtures.generated.json", FIXTURE_CATALOG),
+        ("decor.generated.json", DECOR_CATALOG),
+    ):
+        # One compact entry per asset avoids excessive generated-file churn.
+        catalog_path = ROOT / "frontend/src/data" / filename
+        catalog_path.write_text(
+            "[\n"
+            + ",\n".join(
+                "  "
+                + json.dumps(asset.to_dict(), separators=(",", ":"), allow_nan=False)
+                for asset in catalog.values()
+            )
+            + "\n]\n"
+        )
+        print(f"Exported {catalog_path.relative_to(ROOT)}")
 
 
 if __name__ == "__main__":

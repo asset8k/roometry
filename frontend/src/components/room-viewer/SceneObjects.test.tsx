@@ -4,6 +4,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer'
 import { Box3, Mesh, MeshStandardMaterial, Vector3 } from 'three'
 import type { Object3D } from 'three'
 import { loadExampleScene } from '../../lib/scene'
+import type { SceneObject } from '../../lib/scene.generated'
 import { getModelKind } from './model-registry'
 import SceneObjects, { SceneObjectView } from './SceneObjects'
 
@@ -79,10 +80,10 @@ describe('procedural object models', () => {
     expect(source).toEqual(before)
   })
 
-  it('applies dimensions and a quarter turn to an approved asset without a visual model', async () => {
+  it('applies dimensions and a quarter turn to an unknown asset fallback', async () => {
     const object = {
-      ...loadExampleScene().objects[0], id: 'chair_1', type: 'chair' as const,
-      asset_id: 'chair_standard_01' as const,
+      ...loadExampleScene().objects[0], id: 'plant_1', type: 'plant' as const,
+      asset_id: 'unknown_asset' as SceneObject['asset_id'],
       position: { x: 3, y: 0, z: 2 }, rotation_y_rad: Math.PI / 2,
       dimensions_m: { width: 2, height: 0.7, depth: 1 },
     }
@@ -125,9 +126,9 @@ describe('procedural object models', () => {
   })
 
   it('reuses a table family and falls back safely for missing models', () => {
-    expect(getModelKind('desk_standard_01')).toBe('table')
-    expect(getModelKind('coffee_table_standard_01')).toBe('table')
-    expect(getModelKind('wardrobe_standard_01')).toBe('wardrobe')
+    expect(getModelKind('desk_standard_01')).toBe('furniture')
+    expect(getModelKind('coffee_table_standard_01')).toBe('furniture')
+    expect(getModelKind('wardrobe_standard_01')).toBe('furniture')
     expect(getModelKind('unknown_asset')).toBe('placeholder')
     expect(getModelKind('__proto__')).toBe('placeholder')
   })

@@ -62,7 +62,7 @@ def test_frontend_analysis_fixture_matches_validated_source():
 def test_export_refuses_inconsistent_analysis_before_writing_any_output(tmp_path, monkeypatch):
     fixtures = tmp_path / "data/fixtures"
     fixtures.mkdir(parents=True)
-    for name in ("bedroom_scene.json", "bedroom_after_scene.json", "room_input_options.json", "room_analysis.json"):
+    for name in (*export_scene_contract.SCENE_FIXTURES, "room_input_options.json", "room_analysis.json"):
         data = json.loads((ROOT / "data/fixtures" / name).read_text())
         if name == "room_analysis.json":
             data["observations"]["objects"][0]["source_image_ids"] = ["44444444-4444-4444-8444-444444444444"]

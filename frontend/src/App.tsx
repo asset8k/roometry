@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { fetchHealth } from './lib/api'
 import { loadExampleScene, loadAlternativeScene } from './lib/scene'
 import SceneWorkspace from './components/room-viewer/SceneWorkspace'
 import RoomInputWorkspace from './components/room-input/RoomInputWorkspace'
+
+const FurnitureGallery = lazy(() => import('./components/room-viewer/FurnitureGallery'))
 
 type ServiceStatus = 'checking' | 'online' | 'offline'
 
@@ -15,7 +17,7 @@ const statusLabels: Record<ServiceStatus, string> = {
 export default function App() {
   const [status, setStatus] = useState<ServiceStatus>('checking')
   const [attempt, setAttempt] = useState(0)
-  const [workspace, setWorkspace] = useState<'input' | 'example'>('input')
+  const [workspace, setWorkspace] = useState<'input' | 'example' | 'furniture'>('input')
   const [exampleOpened, setExampleOpened] = useState(false)
   const sceneLoad = useMemo(() => {
     try {
@@ -66,12 +68,13 @@ export default function App() {
             <p className="eyebrow">A little room for possibility</p>
             <h1>A new perspective<span> on your space.</span></h1>
           </div>
-          <span className="development-badge">{workspace === 'input' ? 'One room, new possibilities' : 'Example room'}</span>
+          <span className="development-badge">{workspace === 'input' ? 'One room, new possibilities' : workspace === 'example' ? 'Example room' : 'Object collection'}</span>
         </div>
 
         <div className="workspace-navigation" role="group" aria-label="Workspace">
           <button type="button" aria-pressed={workspace === 'input'} aria-controls="your-room-input" onClick={() => setWorkspace('input')}>Your room</button>
           <button type="button" aria-pressed={workspace === 'example'} aria-controls="example-room-workspace" onClick={() => { setExampleOpened(true); setWorkspace('example') }}>Explore example</button>
+          <button type="button" aria-pressed={workspace === 'furniture'} aria-controls="furniture-catalog" onClick={() => setWorkspace('furniture')}>Object catalog</button>
         </div>
         <section id="your-room-input" hidden={workspace !== 'input'} aria-label="Prepare your room"><RoomInputWorkspace onConnectionChange={onConnectionChange} /></section>
 
@@ -82,6 +85,9 @@ export default function App() {
         {sourceScene && sceneLoad.afterScene && (
           <SceneWorkspace beforeScene={sourceScene} initialScene={sceneLoad.afterScene} onConnectionChange={onConnectionChange} />
         )}
+        </section>}
+        {workspace === 'furniture' && <section id="furniture-catalog" aria-label="Object catalog">
+          <Suspense fallback={<p role="status">Loading objects…</p>}><FurnitureGallery /></Suspense>
         </section>}
       </main>
 

@@ -137,7 +137,7 @@ h2, h3, p { margin-top: 0; }
 footer { margin-top: 30px; text-align: center; color: #858a7e; font-size: 10px; }
 
 [hidden] { display: none !important; }
-.workspace-navigation { display: flex; gap: 6px; margin: 0 0 22px; }
+.workspace-navigation { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 22px; }
 .workspace-navigation button { padding: 11px 16px; border: 1px solid #d2d9c9; border-radius: 8px; }
 .workspace-navigation button[aria-pressed='true'] { background: #496751; color: #fcfbf7; border-color: #496751; }
 .example-notice { margin: 0 0 16px; color: #74806b; font-size: 12px; }
