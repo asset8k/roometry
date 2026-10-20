@@ -6,6 +6,7 @@ parse so usage is available even when a completed output fails semantic validati
 
 import base64
 import json
+from copy import deepcopy
 
 from openai import AsyncOpenAI
 from openai.types.responses import (
@@ -23,6 +24,7 @@ from pydantic import ValidationError
 
 from roometry.config import Settings
 from roometry.uploads.schemas import PreparedRoomInput
+from roometry.vision.diagnostics import validation_diagnostics
 from roometry.vision.errors import AnalysisFailure
 from roometry.vision.prompts import OBSERVATION_INSTRUCTIONS, observation_context
 from roometry.vision.schemas import RoomObservations
@@ -119,7 +121,10 @@ class PhotoAnalyzer:
         ).responses.create(**payload)
         if not isinstance(response, Response):
             raise AnalysisFailure(
-                502, "invalid_analysis", "The model returned an unexpected analysis."
+                502,
+                "invalid_analysis",
+                "The model returned an unexpected analysis.",
+                diagnostics={"reason": "unexpected_output_type"},
             )
         return response
 
@@ -135,6 +140,7 @@ def response_json(response: Response, max_bytes: int) -> object:
             502,
             "invalid_analysis",
             "The analysis provider returned an invalid response.",
+            diagnostics={"reason": "missing_output"},
         )
     for item in output:
         content = getattr(item, "content", None)
@@ -177,13 +183,25 @@ def response_json(response: Response, max_bytes: int) -> object:
                     502,
                     "invalid_analysis",
                     "The model returned an unexpected analysis.",
+                    diagnostics={"reason": "unexpected_output"},
                 )
             texts.extend(getattr(part, "text", None) for part in content)
         elif not isinstance(item, ResponseReasoningItem):
             raise AnalysisFailure(
-                502, "invalid_analysis", "The model returned an unexpected analysis."
+                502,
+                "invalid_analysis",
+                "The model returned an unexpected analysis.",
+                diagnostics={"reason": "unexpected_output_type"},
             )
+    reason = "output_validation"
     try:
+        reason = (
+            "output_count"
+            if len(texts) != 1
+            else "output_text_type"
+            if not isinstance(texts[0], str)
+            else "output_too_large"
+        )
         if (
             len(texts) != 1
             or not isinstance(texts[0], str)
@@ -191,10 +209,14 @@ def response_json(response: Response, max_bytes: int) -> object:
         ):
             raise ValueError("Unexpected output size")
 
+        reason = "invalid_json"
+
         def unique_keys(pairs):
+            nonlocal reason
             result = {}
             for key, value in pairs:
                 if key in result:
+                    reason = "duplicate_json_field"
                     raise ValueError("Duplicate JSON field")
                 result[key] = value
             return result
@@ -205,7 +227,40 @@ def response_json(response: Response, max_bytes: int) -> object:
             502,
             "invalid_analysis",
             "The model returned an invalid analysis. Please try again.",
+            diagnostics={"reason": reason},
         ) from None
+
+
+def _normalize_unknown_dimensions(decoded: object) -> object:
+    """An exact all-null measurement record means the same thing as no estimate.
+
+    JSON Schema cannot express our model validators. Normalize only this lossless
+    representation; unknown fields, partial dictionaries and real values still
+    pass through strict Pydantic validation unchanged.
+    """
+    if not isinstance(decoded, dict):
+        return decoded
+    normalized = deepcopy(decoded)
+
+    def unknown(value: object, keys: set[str]) -> bool:
+        return (
+            isinstance(value, dict)
+            and set(value) == keys
+            and all(item is None for item in value.values())
+        )
+
+    if unknown(
+        normalized.get("estimated_dimensions"), {"width_m", "length_m", "height_m"}
+    ):
+        normalized["estimated_dimensions"] = None
+    objects = normalized.get("objects")
+    if isinstance(objects, list):
+        for obj in objects:
+            if isinstance(obj, dict) and unknown(
+                obj.get("estimated_dimensions_m"), {"width", "depth", "height"}
+            ):
+                obj["estimated_dimensions_m"] = None
+    return normalized
 
 
 def parse_observations(
@@ -213,13 +268,28 @@ def parse_observations(
 ) -> RoomObservations:
     decoded = response_json(response, max_bytes)
     try:
-        observations = RoomObservations.model_validate(decoded)
-        if observations.image_ids != image_ids:
-            raise ValueError("Image evidence mismatch")
-        return observations
-    except (ValidationError, ValueError, RecursionError):
+        observations = RoomObservations.model_validate(
+            _normalize_unknown_dimensions(decoded)
+        )
+    except ValidationError as error:
+        raise AnalysisFailure(
+            502,
+            "invalid_analysis",
+            "The model returned inconsistent room observations. Please try again.",
+            diagnostics=validation_diagnostics(error, RoomObservations),
+        ) from None
+    except (ValueError, RecursionError):
         raise AnalysisFailure(
             502,
             "invalid_analysis",
             "The model returned an invalid analysis. Please try again.",
+            diagnostics={"reason": "invalid_observations"},
         ) from None
+    if observations.image_ids != image_ids:
+        raise AnalysisFailure(
+            502,
+            "invalid_analysis",
+            "The model returned observations for unexpected photos. Please try again.",
+            diagnostics={"reason": "image_evidence_mismatch"},
+        )
+    return observations

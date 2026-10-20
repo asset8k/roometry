@@ -16,7 +16,11 @@ people, or include personal information visible in the photos.
 Use every supplied image ID exactly once in image_ids, in the supplied order.
 Evidence source_image_ids must refer only to supplied images. Keep observations
 grounded in visible evidence; do not add furniture requested but not visible.
-Use null for unknown values. An unrecognized object uses type=null and a short
+Use null for unknown values. If no size is known, estimated_dimensions or
+estimated_dimensions_m must be null, not an object whose dimensions are all null.
+A support_object_id requires placement="surface" and must name an existing object;
+wall_id must name an entry in walls. Never create dangling references or cycles.
+An unrecognized object uses type=null and a short
 descriptive label. Confidence is qualitative, not a calibrated probability.
 
 Use one stable observation ID for a physical object confidently seen in several
@@ -27,7 +31,13 @@ principle to walls and openings. Every entity ID must be unique across kinds.
 
 Name walls descriptively (such as window_wall), not geographic north/south inferred
 from the camera. Relative locations must identify their reference or be null.
-Surface objects may reference an observed support; use null when it is occluded.
+Represent a visible architectural ledge that supports objects (for example a
+window sill carrying plants) as a separate wall_shelf observation, labeled with
+its actual purpose. Link the supported objects to that observation. Do not invent
+a supporting shelf when the surface is not visible. Ordinary small accessories
+such as candles, cups, and trays can use household_accessory rather than an
+unknown category. Surface objects may reference an observed support; use null
+when it is occluded.
 appears_fixed is a hypothesis, never a user lock or permission to move plumbing.
 
 Ordinary photos do not establish accurate metric dimensions. Prefer null over
@@ -71,6 +81,13 @@ Opening offset runs along x for north/south and z for east/west; door sill=0.
 Only window_covering uses opening_id, pointing to its observed window on same wall.
 Only wall placement has wall; only surface placement has support_object_id.
 Allowed placements and surfaces come from server asset_bindings. Never invent assets.
+A known observed placement and support_object_id are immutable. A wall shelf
+identified as a window sill should end at its window's sill_height_m, below the
+opening; objects on it must fit its footprint. A support_object_id identifies an
+observed approved support object, never a window/opening or an invented shelf.
+Check every object's asset placement, nullable wall field, and support reference
+before submitting. The server derives floor, ceiling, wall-depth, and support
+height attachment coordinates; do not change free layout positions to evade errors.
 If repair feedback is supplied, correct those errors while preserving the same
 identities, measurements and evidence. Do not claim success or safety in notes.
 """

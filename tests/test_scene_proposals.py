@@ -314,6 +314,7 @@ async def test_one_bounded_repair_preserves_authority(harness, defect):
 
 async def test_failed_repair_returns_incomplete_and_never_exposes_invalid_scene(
     harness,
+    caplog,
 ):
     _app, client, calls, actions = harness
     analysis = await analyzed(harness)
@@ -326,6 +327,9 @@ async def test_failed_repair_returns_incomplete_and_never_exposes_invalid_scene(
     assert data["status"] == "incomplete" and data["scene"] is None
     assert data["validation"]["valid"] is False
     assert data["issues"][0]["code"] == "geometry"
+    assert response.status_code == 200
+    assert '"stage": "scene_proposal"' in caplog.text
+    assert "object_outside_room" in caplog.text
     assert len(calls) == 3
     assert (await client.post("/api/rooms/propose-scene", json=req)).json() == data
     # Revising a dimension cannot reset the repair/paid-call budget.
@@ -651,12 +655,42 @@ async def test_proposal_timeout_consumes_attempt_and_releases_capacity(harness):
     )
     state = app.state.analysis_service._states[analysis["input_id"]]
     assert state.scene_attempts == 1
-    assert app.state.analysis_service.usage_records[-1].outcome == "interrupted"
+    assert app.state.analysis_service.usage_records[-1].outcome == "analysis_timeout"
     app.state.settings.analysis_timeout_seconds = 90
     actions.append(scene_action())
     response = await client.post("/api/rooms/propose-scene", json=req)
     assert response.json()["status"] == "ready"
     assert len(calls) == 3
+
+
+async def test_slow_first_scene_attempt_does_not_starve_repair(harness):
+    app, client, calls, actions = harness
+    analysis = await analyzed(harness)
+    app.state.settings.analysis_timeout_seconds = 0.4
+    bad = draft_data()
+    bad["openings"][0]["wall"] = "south"
+
+    def delayed(data):
+        async def action(request, payload):
+            await anyio.sleep(0.25)
+            return await scene_action(data)(request, payload)
+
+        return action
+
+    actions.extend([delayed(bad), delayed(draft_data())])
+    response = await client.post(
+        "/api/rooms/propose-scene",
+        json=body(analysis, dimensions=confirmed(length_m=4, height_m=2.6)),
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["status"] == "ready"
+    assert len(calls) == 3
+    feedback = json.loads(calls[-1]["input"][0]["content"][0]["text"])[
+        "validation_feedback"
+    ]
+    assert feedback[0]["code"] == "wall_mapping"
+    assert feedback[0]["entity_ids"] == ["window_observed"]
+    assert "north" in feedback[0]["message"]
 
 
 async def test_expired_analysis_cleanup_removes_proposal_and_confirmations(
@@ -675,3 +709,138 @@ async def test_expired_analysis_cleanup_removes_proposal_and_confirmations(
     monkeypatch.setattr(storage, "now", lambda: expired)
     await app.state.analysis_service.cleanup()
     assert not app.state.analysis_service._states
+
+
+@pytest.mark.parametrize("placement", ["floor", "surface", "wall", "ceiling"])
+async def test_attachment_coordinates_are_derived_without_repairing_free_layout(
+    placement,
+):
+    analysis, data = source(), draft_data()
+    if placement == "surface":
+        data["objects"][2]["position"]["y"] = 0.76
+        object_id = "computer_observed"
+    else:
+        observed = analysis.observations.objects[0]
+        obj = data["objects"][0]
+        object_id = obj["id"]
+        if placement == "floor":
+            obj["position"]["y"] = 0.1
+        else:
+            observed.type = "clock" if placement == "wall" else "chandelier"
+            observed.placement = placement
+            observed.estimated_dimensions_m = None
+            obj["placement"] = placement
+            obj["dimensions_m"] = {"width": 0.3, "depth": 0.1, "height": 0.3}
+            if placement == "wall":
+                observed.wall_id = "window_wall"
+                obj["wall"] = "north"
+                obj["position"] = {"x": 3, "y": 2, "z": 0.12}
+                obj["rotation_y_rad"] = 0.1
+            else:
+                obj["position"] = {"x": 2, "y": 2, "z": 3.5}
+    draft = SceneDraft.model_validate(data)
+    original = draft.model_dump()
+    scene, report, problems = assemble(analysis, measurements(analysis), draft)
+    assert scene is not None and report is not None and report.valid and not problems
+    obj = next(obj for obj in scene.objects if obj.id == object_id)
+    assert (
+        obj.dimensions_m.model_dump()
+        == original["objects"][2 if placement == "surface" else 0]["dimensions_m"]
+    )
+    if placement == "surface":
+        assert obj.position.y == 0.75
+    if placement == "floor":
+        assert obj.position.y == 0
+    if placement == "wall":
+        assert obj.position.z == 0.05 and obj.rotation_y_rad == 0
+    if placement == "ceiling":
+        assert obj.position.y == pytest.approx(2.3)
+    assert draft.model_dump() == original
+
+
+async def test_attachment_normalization_keeps_outside_objects_rejected():
+    analysis, data = source(), draft_data()
+    data["objects"][2]["position"] = {"x": 20, "y": 0.76, "z": 0.6}
+    scene, report, _problems = assemble(
+        analysis, measurements(analysis), SceneDraft.model_validate(data)
+    )
+    assert scene is None and report is not None and not report.valid
+    assert {"object_outside_room", "surface_support"} <= {
+        error.code for error in report.errors
+    }
+
+
+async def test_unknown_surface_support_returns_specific_repair_feedback():
+    analysis, data = source(), draft_data()
+    # An occluded or architectural support has not yet been identified.
+    analysis.observations.objects[2].support_object_id = None
+    data["objects"][2]["support_object_id"] = None
+    scene, report, issues = assemble(
+        analysis, measurements(analysis), SceneDraft.model_validate(data)
+    )
+    assert scene is None and report is None
+    assert issues[0].entity_ids == ["computer_observed"]
+    assert "support" in issues[0].message
+
+
+async def test_visible_window_sill_can_use_existing_shelf_asset_as_support():
+    analysis = source()
+    source_data = analysis.observations.model_dump()
+    example = source_data["objects"][0]
+    source_data["objects"] = [
+        {
+            **example,
+            "id": "window_sill",
+            "type": "wall_shelf",
+            "label": "Visible window sill",
+            "placement": "wall",
+            "wall_id": "window_wall",
+            "support_object_id": None,
+            "estimated_dimensions_m": None,
+        },
+        {
+            **example,
+            "id": "plant_on_sill",
+            "type": "plant",
+            "label": "Plant on window sill",
+            "placement": "surface",
+            "wall_id": "window_wall",
+            "support_object_id": "window_sill",
+            "estimated_dimensions_m": None,
+        },
+    ]
+    source_data["possible_duplicates"] = []
+    source_data["openings"] = [source_data["openings"][0]]
+    from roometry.vision.schemas import RoomObservations
+
+    analysis.observations = RoomObservations.model_validate(source_data)
+    data = draft_data()
+    data["objects"] = [
+        {
+            "id": "window_sill",
+            "position": {"x": 1.1, "y": 1.06, "z": 0.12},
+            "rotation_y_rad": 0.01,
+            "dimensions_m": {"width": 1.2, "depth": 0.24, "height": 0.04},
+            "placement": "wall",
+            "wall": "north",
+            "support_object_id": None,
+            "opening_id": None,
+        },
+        {
+            "id": "plant_on_sill",
+            "position": {"x": 1.1, "y": 1.11, "z": 0.12},
+            "rotation_y_rad": 0,
+            "dimensions_m": {"width": 0.15, "depth": 0.15, "height": 0.3},
+            "placement": "surface",
+            "wall": None,
+            "support_object_id": "window_sill",
+            "opening_id": None,
+        },
+    ]
+    data["openings"] = [data["openings"][0]]
+    scene, report, problems = assemble(
+        analysis, measurements(analysis), SceneDraft.model_validate(data)
+    )
+    assert scene is not None and report is not None and report.valid and not problems
+    assert scene.objects[0].asset_id == "wall_shelf_standard_01"
+    assert scene.objects[1].position.y == pytest.approx(1.1)

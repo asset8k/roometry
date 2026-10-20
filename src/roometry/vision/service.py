@@ -22,6 +22,11 @@ from roometry.uploads.errors import UploadFailure
 from roometry.uploads.schemas import PreparedRoomInput
 from roometry.uploads.storage import InputStorage
 from roometry.vision.analyzer import PhotoAnalyzer, parse_observations, response_json
+from roometry.vision.diagnostics import (
+    provider_id,
+    response_diagnostics,
+    validation_diagnostics,
+)
 from roometry.vision.errors import AnalysisFailure
 from roometry.vision.proposal_request import build_proposal_request
 from roometry.vision.proposal_schemas import (
@@ -134,6 +139,7 @@ class AnalysisService:
         outcome: str,
         response: Response | None,
         stage: str = "analysis",
+        details: dict[str, object] | None = None,
     ) -> None:
         usage = getattr(response, "usage", None)
         usage = usage if isinstance(usage, ResponseUsage) else None
@@ -158,9 +164,20 @@ class AnalysisService:
             reasoning_tokens=count(getattr(output_details, "reasoning_tokens", None)),
         )
         self.usage_records.append(record)
-        logging.getLogger(__name__).info(
-            "Room analysis provider attempt completed.",
-            extra={"analysis_usage": asdict(record)},
+        # Uvicorn's default text logger does not print `extra`, and INFO from
+        # application loggers is normally hidden. Render safe failure diagnostics
+        # at WARNING so a 200/incomplete proposal can actually be diagnosed.
+        diagnostic = {**response_diagnostics(response), **(details or {})}
+        logging.getLogger(__name__).log(
+            logging.INFO if outcome == "success" else logging.WARNING,
+            "Room model attempt completed: %s",
+            json.dumps(
+                {**asdict(record), "diagnostics": diagnostic}, ensure_ascii=True
+            ),
+            extra={
+                "analysis_usage": asdict(record),
+                "analysis_diagnostics": diagnostic,
+            },
         )
 
     async def analyze(self, input_id: str, owner: str) -> RoomAnalysisResponse:
@@ -236,6 +253,7 @@ class AnalysisService:
             await anyio.to_thread.run_sync(self._resolve, input_id, owner)
             state.attempts += 1
             started, outcome, response = perf_counter(), "interrupted", None
+            details: dict[str, object] | None = None
             observations: RoomObservations | None = None
             retry = False
             failure: AnalysisFailure | None = None
@@ -255,6 +273,10 @@ class AnalysisService:
                     "The analysis provider timed out. You can retry while the photos remain available.",
                 ) from None
             except APIStatusError as error:
+                details = {
+                    "provider_status": error.status_code,
+                    "provider_request_id": provider_id(error.request_id),
+                }
                 retry = error.status_code == 429 or error.status_code >= 500
                 if error.status_code == 429:
                     outcome = "provider_rate_limited"
@@ -287,6 +309,7 @@ class AnalysisService:
                     "The analysis provider returned an unexpected response.",
                 ) from None
             except AnalysisFailure as error:
+                details = error.diagnostics
                 outcome = error.code
                 raise
             except ValueError:
@@ -297,7 +320,7 @@ class AnalysisService:
                     "The analysis provider returned an invalid response.",
                 ) from None
             finally:
-                self._record(state, started, outcome, response)
+                self._record(state, started, outcome, response, details=details)
 
             if failure is not None:
                 if (
@@ -364,7 +387,10 @@ class AnalysisService:
                 429, "analysis_busy", "Another room analysis or proposal is running."
             ) from None
         try:
-            with anyio.fail_after(self.settings.analysis_timeout_seconds):
+            # Scene generation permits an initial call and one repair. Each gets
+            # the configured per-call deadline; a slow first call must not consume
+            # the repair's entire time budget. The total remains bounded.
+            with anyio.fail_after(2 * self.settings.analysis_timeout_seconds):
                 return await self._propose(request, owner)
         except TimeoutError:
             raise AnalysisFailure(
@@ -412,6 +438,18 @@ class AnalysisService:
             )
         problems = preflight(analysis)
         if problems:
+            logging.getLogger(__name__).warning(
+                "Scene proposal incomplete: %s",
+                json.dumps(
+                    {
+                        "analysis_id": analysis.analysis_id,
+                        "reason": "preflight",
+                        "issue_codes": list(
+                            dict.fromkeys(problem.code for problem in problems)
+                        ),
+                    }
+                ),
+            )
             return SceneProposalResponse.model_validate(
                 {
                     **base,
@@ -433,6 +471,15 @@ class AnalysisService:
         # Initial proposal plus one repair, shared across HTTP retries and dimension
         # revisions. New flags or measurements cannot reset the paid-call budget.
         if state.scene_attempts >= 2:
+            logging.getLogger(__name__).warning(
+                "Scene proposal incomplete: %s",
+                json.dumps(
+                    {
+                        "analysis_id": analysis.analysis_id,
+                        "reason": "proposal_limit_reached",
+                    }
+                ),
+            )
             return SceneProposalResponse.model_validate(
                 {
                     **base,
@@ -472,8 +519,10 @@ class AnalysisService:
             await self._owned_analysis(analysis.analysis_id, owner)
             state.scene_attempts += 1
             started, outcome, response = perf_counter(), "interrupted", None
+            details: dict[str, object] | None = None
             try:
-                response = await self.analyzer.request(payload)
+                with anyio.fail_after(self.settings.analysis_timeout_seconds):
+                    response = await self.analyzer.request(payload)
                 try:
                     decoded = response_json(
                         response, self.settings.analysis_max_output_bytes
@@ -481,10 +530,16 @@ class AnalysisService:
                 except AnalysisFailure as error:
                     if error.code != "invalid_analysis":
                         raise
+                    details = error.diagnostics
                     decoded = None
                 try:
                     draft = SceneDraft.model_validate(decoded)
-                except (ValidationError, ValueError, RecursionError):
+                except (ValidationError, ValueError, RecursionError) as error:
+                    details = details or (
+                        validation_diagnostics(error, SceneDraft)
+                        if isinstance(error, ValidationError)
+                        else {"reason": "draft_schema"}
+                    )
                     draft = None
                     scene, report = None, None
                     problems = [
@@ -497,13 +552,29 @@ class AnalysisService:
                     scene, report, problems = await anyio.to_thread.run_sync(
                         assemble, analysis, measurements, draft
                     )
+                if problems and details is None:
+                    details = {
+                        "reason": "proposal_validation",
+                        "issue_codes": list(
+                            dict.fromkeys(problem.code for problem in problems)
+                        ),
+                        "geometry_codes": list(
+                            dict.fromkeys(error.code for error in report.errors)
+                        )[:12]
+                        if report
+                        else [],
+                    }
                 outcome = "success" if scene is not None else "invalid_proposal"
-            except APITimeoutError:
+            except (APITimeoutError, TimeoutError):
                 outcome = "analysis_timeout"
                 raise AnalysisFailure(
                     504, "analysis_timeout", "The scene provider timed out."
                 ) from None
             except APIStatusError as error:
+                details = {
+                    "provider_status": error.status_code,
+                    "provider_request_id": provider_id(error.request_id),
+                }
                 outcome = (
                     "provider_rate_limited"
                     if error.status_code == 429
@@ -524,6 +595,7 @@ class AnalysisService:
                     "The scene provider could not complete this request.",
                 ) from None
             except AnalysisFailure as error:
+                details = error.diagnostics
                 outcome = error.code
                 raise
             except ValueError:
@@ -534,7 +606,14 @@ class AnalysisService:
                     "The scene provider returned an invalid response.",
                 ) from None
             finally:
-                self._record(state, started, outcome, response, stage="scene_proposal")
+                self._record(
+                    state,
+                    started,
+                    outcome,
+                    response,
+                    stage="scene_proposal",
+                    details=details,
+                )
             # Deletion/replacement/expiry while awaiting a paid call revokes results
             # and prevents repair from sending the observations again.
             await self._owned_analysis(analysis.analysis_id, owner)

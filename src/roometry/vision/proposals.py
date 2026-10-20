@@ -6,12 +6,14 @@ from math import isclose
 from pydantic import ValidationError
 
 from roometry.scenes.assets import ASSET_REGISTRY
+from roometry.scenes.geometry import WALL_ROTATIONS_RAD
 from roometry.scenes.schemas import Opening, RoomDimensions, RoomScene, SceneObject
 from roometry.scenes.validation import GeometryReport, validate_geometry
 from roometry.uploads.schemas import InputDimensions
 from roometry.vision.proposal_schemas import (
     AXES,
     DimensionName,
+    DraftObject,
     ProposalIssue,
     SceneDraft,
 )
@@ -118,6 +120,50 @@ def notes(*groups: list[str]) -> list[str]:
     return unique
 
 
+def _anchor_placements(
+    analysis: RoomAnalysisResponse, measurements: Measurements, draft: SceneDraft
+) -> list[DraftObject]:
+    """Derive attachment coordinates; leave free layout coordinates for validation.
+
+    These values follow the declared placement, not a model's approximate math.
+    Do not move objects sideways to hide collisions or change their dimensions.
+    """
+    objects = [obj.model_copy(deep=True) for obj in draft.objects]
+    room = measurements.dimensions
+    for obj in objects:
+        if obj.placement == "floor":
+            obj.position.y = 0.0
+        elif obj.placement == "ceiling" and room.height_m is not None:
+            obj.position.y = room.height_m - obj.dimensions_m.height
+        elif obj.placement == "wall" and obj.wall is not None:
+            obj.rotation_y_rad = WALL_ROTATIONS_RAD[obj.wall]
+            depth = obj.dimensions_m.depth / 2
+            if obj.wall == "north":
+                obj.position.z = depth
+            elif obj.wall == "south" and room.length_m is not None:
+                obj.position.z = room.length_m - depth
+            elif obj.wall == "west":
+                obj.position.x = depth
+            elif obj.wall == "east" and room.width_m is not None:
+                obj.position.x = room.width_m - depth
+    by_id = {obj.id: obj for obj in objects}
+    observations = {obj.id: obj for obj in analysis.observations.objects}
+    for obj in objects:
+        if obj.placement != "surface" or obj.support_object_id is None:
+            continue
+        support = by_id.get(obj.support_object_id)
+        source = observations.get(obj.support_object_id)
+        asset = ASSET_REGISTRY.get(f"{source.type}_standard_01") if source else None
+        if (
+            support is not None
+            and support.placement in {"floor", "wall"}
+            and asset is not None
+            and asset.supplies_surface
+        ):
+            obj.position.y = support.position.y + support.dimensions_m.height
+    return objects
+
+
 def assemble(
     analysis: RoomAnalysisResponse, measurements: Measurements, draft: SceneDraft
 ) -> tuple[RoomScene | None, GeometryReport | None, list[ProposalIssue]]:
@@ -155,11 +201,16 @@ def assemble(
     object_observations = {obj.id: obj for obj in obs.objects}
     opening_observations = {opening.id: opening for opening in obs.openings}
     objects, openings = [], []
-    for obj in draft.objects:
+    anchored_objects = _anchor_placements(analysis, measurements, draft)
+    for obj in anchored_objects:
         source = object_observations[obj.id]
         if source.placement is not None and obj.placement != source.placement:
             issues.append(
-                issue("placement_mismatch", "Preserve the observed placement.", obj.id)
+                issue(
+                    "placement_mismatch",
+                    f"Preserve the observed placement: {source.placement}.",
+                    obj.id,
+                )
             )
         if (
             source.support_object_id is not None
@@ -168,7 +219,7 @@ def assemble(
             issues.append(
                 issue(
                     "support_mismatch",
-                    "Preserve the observed support relationship.",
+                    f"Preserve the observed support_object_id: {source.support_object_id}.",
                     obj.id,
                 )
             )
@@ -178,7 +229,11 @@ def assemble(
             and obj.wall != wall_map.get(source.wall_id)
         ):
             issues.append(
-                issue("wall_mapping", "Use the assigned observed wall.", obj.id)
+                issue(
+                    "wall_mapping",
+                    f"Use wall {wall_map[source.wall_id]} assigned to observation {source.wall_id}.",
+                    obj.id,
+                )
             )
         if source.estimated_dimensions_m is not None:
             for axis in ("width", "depth", "height"):
@@ -195,6 +250,16 @@ def assemble(
                     )
         asset_id = f"{source.type}_standard_01"
         asset = ASSET_REGISTRY[asset_id]
+        if obj.placement not in asset.placements:
+            issues.append(
+                issue(
+                    "unsupported_placement",
+                    "This asset requires placement: "
+                    + ", ".join(sorted(asset.placements))
+                    + ".",
+                    obj.id,
+                )
+            )
         objects.append(
             {
                 **obj.model_dump(),
@@ -213,7 +278,11 @@ def assemble(
         source = opening_observations[opening.id]
         if source.wall_id is not None and opening.wall != wall_map.get(source.wall_id):
             issues.append(
-                issue("wall_mapping", "Use the assigned observed wall.", opening.id)
+                issue(
+                    "wall_mapping",
+                    f"Use wall {wall_map[source.wall_id]} assigned to observation {source.wall_id}.",
+                    opening.id,
+                )
             )
         for field in ("width_m", "height_m", "sill_height_m"):
             known = getattr(source, f"estimated_{field}")
@@ -242,6 +311,10 @@ def assemble(
     assumptions = [
         "Positions, orientations, object sizes, and opening geometry are approximate photo estimates."
     ]
+    if anchored_objects != draft.objects:
+        assumptions.append(
+            "Floor, ceiling, wall, and support attachment coordinates were derived from their declared relationships."
+        )
     if measurements.estimated:
         assumptions.append(
             "Unconfirmed room dimensions: " + ", ".join(measurements.estimated) + "."
@@ -258,6 +331,41 @@ def assemble(
             "Possible duplicate observations remain separate objects; their identities need human review."
         )
     warnings.extend(obs.unknowns)
+    parsed_objects = []
+    for raw in objects:
+        try:
+            parsed_objects.append(SceneObject.model_validate(raw))
+        except ValidationError:
+            issues.append(
+                issue(
+                    "support_mismatch"
+                    if raw["placement"] == "surface"
+                    and raw["support_object_id"] is None
+                    else "scene_schema",
+                    "Check this object's asset placement, required wall/opening reference, and support_object_id. Surface objects require an observed supporting object.",
+                    raw["id"],
+                )
+            )
+    if issues:
+        return None, None, issues[:50]
+    by_id = {obj.id: obj for obj in parsed_objects}
+    for obj in parsed_objects:
+        if obj.placement == "surface" and obj.support_object_id is not None:
+            support = by_id.get(obj.support_object_id)
+            if (
+                support is None
+                or support.placement not in {"floor", "wall"}
+                or not ASSET_REGISTRY[support.asset_id].supplies_surface
+            ):
+                issues.append(
+                    issue(
+                        "scene_schema",
+                        "Surface objects must reference an observed floor or wall object that supplies an approved supporting surface; windows and other surface objects cannot supply support.",
+                        obj.id,
+                    )
+                )
+    if issues:
+        return None, None, issues[:50]
     try:
         scene = RoomScene(
             schema_version=1,
@@ -265,7 +373,7 @@ def assemble(
                 room_type=analysis.input_options.room_type or obs.room_type or "other",
                 **measurements.dimensions.model_dump(),
             ),
-            objects=[SceneObject.model_validate(obj) for obj in objects],
+            objects=parsed_objects,
             openings=[Opening.model_validate(opening) for opening in openings],
             assumptions=notes(assumptions, obs.assumptions, draft.assumptions),
             warnings=notes(warnings, obs.warnings, draft.warnings),

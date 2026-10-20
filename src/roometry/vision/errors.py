@@ -8,8 +8,16 @@ from roometry.vision.schemas import (
 
 
 class AnalysisFailure(Exception):
-    def __init__(self, status: int, code: AnalysisErrorCode, message: str):
+    def __init__(
+        self,
+        status: int,
+        code: AnalysisErrorCode,
+        message: str,
+        *,
+        diagnostics: dict[str, object] | None = None,
+    ):
         super().__init__(code)
+        self.diagnostics = diagnostics
         self.status = status
         self.code = code
         self.response = AnalysisErrorResponse(

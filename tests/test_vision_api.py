@@ -1,17 +1,17 @@
 """Real uploads + actual OpenAI SDK over a mocked HTTP transport; no live calls."""
 
+import json
 from copy import deepcopy
 from datetime import UTC, datetime, timedelta
 from io import BytesIO
-import json
 from pathlib import Path
 
 import anyio
 import httpx
+import pytest
 from openai import AsyncOpenAI
 from PIL import Image
 from pydantic import ValidationError
-import pytest
 
 from roometry.config import Settings
 from roometry.main import create_app
@@ -779,3 +779,94 @@ async def test_analysis_configuration_is_bounded_and_secret_safe(patch):
     settings = Settings(_env_file=None, openai_api_key="PRIVATE_SECRET", model_name=" ")
     assert "PRIVATE_SECRET" not in repr(settings)
     assert settings.model_name == "gpt-6-luna"
+
+
+async def test_all_null_size_records_are_unknown_without_weakening_validation(harness):
+    _app, client, calls, actions = harness
+
+    async def unknown_dimensions(_request, payload):
+        data = provider_response(payload)
+        observations = observations_for(payload)
+        observations["estimated_dimensions"] = {
+            "width_m": None,
+            "length_m": None,
+            "height_m": None,
+        }
+        observations["objects"][0]["estimated_dimensions_m"] = {
+            "width": None,
+            "depth": None,
+            "height": None,
+        }
+        data["output"][0]["content"][0]["text"] = json.dumps(observations)
+        return httpx.Response(200, json=data)
+
+    actions.append(unknown_dimensions)
+    uploaded = await upload(client)
+    response = await client.post(
+        "/api/rooms/analyze", json={"input_id": uploaded["input_id"]}
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["observations"]["estimated_dimensions"] is None
+    assert (
+        response.json()["observations"]["objects"][0]["estimated_dimensions_m"] is None
+    )
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize(
+    "invalid",
+    [
+        {"width": None, "depth": None, "height": None, "PRIVATE_EXTRA": None},
+        {"width": None, "depth": None},
+        {"width": 0, "depth": None, "height": None},
+    ],
+)
+async def test_unknown_size_normalization_does_not_hide_invalid_fields(
+    harness, invalid
+):
+    _, client, _, actions = harness
+
+    async def bad_dimensions(_request, payload):
+        data = provider_response(payload)
+        observations = observations_for(payload)
+        observations["objects"][0]["estimated_dimensions_m"] = invalid
+        data["output"][0]["content"][0]["text"] = json.dumps(observations)
+        return httpx.Response(200, json=data)
+
+    actions.append(bad_dimensions)
+    uploaded = await upload(client)
+    assert_error(
+        await client.post(
+            "/api/rooms/analyze", json={"input_id": uploaded["input_id"]}
+        ),
+        502,
+        "invalid_analysis",
+    )
+
+
+async def test_failure_logs_include_safe_schema_reason_and_provider_ids(
+    harness, caplog
+):
+    _, client, _, actions = harness
+
+    async def bad_reference(_request, payload):
+        data = provider_response(payload)
+        observations = observations_for(payload)
+        observations["objects"][0]["wall_id"] = "private_missing_wall"
+        observations["PRIVATE_EXTRA_KEY"] = "PRIVATE_MODEL_OUTPUT"
+        data["output"][0]["content"][0]["text"] = json.dumps(observations)
+        return httpx.Response(
+            200, json=data, headers={"x-request-id": "req_diagnostic_test"}
+        )
+
+    actions.append(bad_reference)
+    uploaded = await upload(client)
+    with caplog.at_level("WARNING", logger="roometry.vision.service"):
+        response = await client.post(
+            "/api/rooms/analyze", json={"input_id": uploaded["input_id"]}
+        )
+    assert_error(response, 502, "invalid_analysis")
+    assert "schema_validation" in caplog.text and "extra_forbidden" in caplog.text
+    assert "req_diagnostic_test" in caplog.text and "resp_test" in caplog.text
+    assert "PRIVATE" not in caplog.text and "private_missing_wall" not in caplog.text
+    assert "diagnostics" not in response.text
