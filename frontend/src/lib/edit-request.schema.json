@@ -599,6 +599,20 @@
           ],
           "title": "Support Object Id"
         },
+        "support_surface_id": {
+          "anyOf": [
+            {
+              "maxLength": 96,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Support Surface Id"
+        },
         "wall": {
           "anyOf": [
             {

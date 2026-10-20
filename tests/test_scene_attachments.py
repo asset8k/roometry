@@ -9,6 +9,7 @@ import pytest
 from roometry.config import Settings
 from roometry.scenes.geometry import WALL_ROTATIONS_RAD
 from roometry.vision.attachments import anchor_placements
+from roometry.vision.catalog import bind_catalog
 from roometry.vision.proposal_request import build_proposal_request
 from roometry.vision.proposal_schemas import SceneDraft
 from roometry.vision.proposals import assemble, issue
@@ -189,7 +190,9 @@ def test_repair_receives_the_same_host_and_child_poses_that_assembly_checks():
     assert child["position"]["x"] == pytest.approx(2.2)
     assert context["attachment_constraints"][0]["support_top_y_m"] == pytest.approx(1.1)
     normalized = SceneDraft.model_validate(context["previous_draft"])
-    repeated = anchor_placements(analysis, resolved.dimensions, normalized)
+    bound, issues = bind_catalog(analysis, normalized)
+    assert bound is not None and not issues
+    repeated = anchor_placements(analysis, resolved.dimensions, bound)
     for before, after in zip(normalized.objects, repeated):
         assert before.position.x == pytest.approx(after.position.x)
         assert before.position.z == pytest.approx(after.position.z)

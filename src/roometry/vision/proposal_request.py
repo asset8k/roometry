@@ -1,6 +1,7 @@
 """Text-only structured scene request, reusing the bounded Responses transport."""
 
 import json
+from dataclasses import asdict
 
 from openai.types.responses.response_create_params import (
     ResponseCreateParamsNonStreaming,
@@ -8,7 +9,10 @@ from openai.types.responses.response_create_params import (
 
 from roometry.config import Settings
 from roometry.scenes.assets import ASSET_REGISTRY
+from roometry.scenes.catalog import candidates, object_surfaces
+from roometry.scenes.geometry import catalog_surface_bounds
 from roometry.vision.attachments import anchor_placements
+from roometry.vision.catalog import bind_catalog, dimension_defaults
 from roometry.vision.errors import AnalysisFailure
 from roometry.vision.prompts import SCENE_PROPOSAL_INSTRUCTIONS
 from roometry.vision.proposal_schemas import ProposalIssue, SceneDraft
@@ -25,14 +29,22 @@ def build_proposal_request(
 ) -> ResponseCreateParamsNonStreaming:
     bindings = []
     for obj in analysis.observations.objects:
-        asset_id = f"{obj.type}_standard_01"
-        asset = ASSET_REGISTRY[asset_id]
+        models = []
+        options = candidates(obj.type, obj.placement) if obj.type is not None else ()
+        for asset in options:
+            configurations = {}
+            for placement in sorted(ASSET_REGISTRY[asset.asset_id].placements):
+                if obj.placement is not None and placement != obj.placement:
+                    continue
+                configurations[placement] = {
+                    "default_dimensions_m": dimension_defaults(obj, asset.asset_id, placement).model_dump(),
+                    "support_surfaces": [asdict(s) for s in object_surfaces(asset.asset_id, placement)],
+                }
+            models.append({"asset_id": asset.asset_id, "label": asset.label, "configurations": configurations})
         bindings.append(
             {
                 "id": obj.id,
-                "asset_id": asset_id,
-                "placements": sorted(asset.placements),
-                "supplies_surface": asset.supplies_surface,
+                "models": models,
                 **(
                     {
                         "opening_ids": [
@@ -46,15 +58,12 @@ def build_proposal_request(
                 ),
             }
         )
-    normalized = (
-        draft.model_copy(
-            update={
-                "objects": anchor_placements(analysis, measurements.dimensions, draft)
-            }
-        )
-        if draft is not None
-        else None
-    )
+    bound, _ = bind_catalog(analysis, draft) if draft is not None else (None, [])
+    normalized = None
+    if bound is not None:
+        normalized = bound.model_copy(update={
+            "objects": anchor_placements(analysis, measurements.dimensions, bound),
+        })
     by_id = {obj.id: obj for obj in normalized.objects} if normalized else {}
     attachment_constraints = []
     for obj in by_id.values():
@@ -64,6 +73,10 @@ def build_proposal_request(
             else None
         )
         if obj.placement == "surface" and support is not None:
+            surface = next((s for s in object_surfaces(support.asset_id, support.placement) if s.name == obj.support_surface_id), None)
+            if surface is None:
+                continue
+            area = catalog_surface_bounds(surface, support.dimensions_m, support.position, support.rotation_y_rad)
             attachment_constraints.append(
                 {
                     "object_id": obj.id,
@@ -73,10 +86,12 @@ def build_proposal_request(
                         "z": support.position.z,
                     },
                     "support_rotation_y_rad": support.rotation_y_rad,
-                    "support_top_y_m": support.position.y + support.dimensions_m.height,
+                    "support_surface_id": surface.name,
+                    "support_top_y_m": area.vertical[1],
+                    "available_surface_center": {"x": area.footprint.center[0], "z": area.footprint.center[1]},
                     "available_surface_m": {
-                        "width": support.dimensions_m.width,
-                        "depth": support.dimensions_m.depth,
+                        "width": area.footprint.half_extents[0] * 2,
+                        "depth": area.footprint.half_extents[1] * 2,
                     },
                     "object_dimensions_m": obj.dimensions_m.model_dump(),
                 }
@@ -89,7 +104,7 @@ def build_proposal_request(
         "asset_bindings": bindings,
         # Feedback describes the assembled poses, including server attachments,
         # so repair must see those same coordinates rather than the raw draft.
-        "previous_draft": normalized.model_dump(mode="json") if normalized else None,
+        "previous_draft": (normalized or draft).model_dump(mode="json") if draft is not None else None,
         "attachment_constraints": attachment_constraints,
         "validation_feedback": [item.model_dump(mode="json") for item in issues],
     }

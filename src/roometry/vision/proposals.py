@@ -6,10 +6,12 @@ from math import isclose
 from pydantic import ValidationError
 
 from roometry.scenes.assets import ASSET_REGISTRY
+from roometry.scenes.catalog import ASSET_CATALOG, candidates, dimensions_for
 from roometry.scenes.schemas import Opening, RoomDimensions, RoomScene, SceneObject
 from roometry.scenes.validation import GeometryReport, validate_geometry
 from roometry.uploads.schemas import InputDimensions
 from roometry.vision.attachments import anchor_placements
+from roometry.vision.catalog import bind_catalog
 from roometry.vision.proposal_schemas import (
     AXES,
     DimensionName,
@@ -97,13 +99,12 @@ def preflight(analysis: RoomAnalysisResponse) -> list[ProposalIssue]:
             )
         elif (
             obj.placement is not None
-            and obj.placement
-            not in ASSET_REGISTRY[f"{obj.type}_standard_01"].placements
+            and not candidates(obj.type, obj.placement)
         ):
             issues.append(
                 issue(
                     "unsupported_placement",
-                    "The standard asset cannot represent this observed placement.",
+                    "No catalog model can represent this observed placement.",
                     obj.id,
                 )
             )
@@ -153,10 +154,14 @@ def assemble(
     if issues:
         return None, None, issues
 
+    bound, issues = bind_catalog(analysis, draft)
+    if bound is None:
+        return None, None, issues
+
     object_observations = {obj.id: obj for obj in obs.objects}
     opening_observations = {opening.id: opening for opening in obs.openings}
     objects, openings = [], []
-    anchored_objects = anchor_placements(analysis, measurements.dimensions, draft)
+    anchored_objects = anchor_placements(analysis, measurements.dimensions, bound)
     for obj in anchored_objects:
         source = object_observations[obj.id]
         if source.placement is not None and obj.placement != source.placement:
@@ -203,7 +208,7 @@ def assemble(
                             obj.id,
                         )
                     )
-        asset_id = f"{source.type}_standard_01"
+        asset_id = obj.asset_id
         asset = ASSET_REGISTRY[asset_id]
         if obj.placement not in asset.placements:
             issues.append(
@@ -220,13 +225,16 @@ def assemble(
                 **obj.model_dump(),
                 "type": source.type,
                 "asset_id": asset_id,
-                "color": source.color or "#808080",
+                "color": source.color or ASSET_CATALOG[asset_id].color,
                 "fixed": asset.fixed_by_default
                 or source.appears_fixed is True
                 or obj.placement in {"wall", "ceiling"},
                 "locked": False,
                 "provenance": "photo_observed",
-                "measurements_source": "estimated",
+                "measurements_source": "catalog"
+                if source.estimated_dimensions_m is None
+                and (obj.dimensions_m.width, obj.dimensions_m.height, obj.dimensions_m.depth) == dimensions_for(asset_id, obj.placement)
+                else "estimated",
             }
         )
     for opening in draft.openings:
@@ -264,12 +272,19 @@ def assemble(
     if issues:
         return None, None, issues[:50]
     assumptions = [
-        "Positions, orientations, object sizes, and opening geometry are approximate photo estimates."
+        "Positions, orientations, and opening geometry are approximate photo estimates. Object sizes use recorded estimates, supported model estimates, or catalog defaults."
     ]
-    if anchored_objects != draft.objects:
+    if anchored_objects != bound.objects:
         assumptions.append(
             "Estimated placement was resolved geometrically: furniture boundary overshoots and attachment poses may be adjusted by up to 0.25 m, and movable floor decor by up to 0.75 m. Surface items may be aligned with their support's rotation to fit. Object sizes and room measurements were preserved."
         )
+    for obj in bound.objects:
+        original = next(item for item in draft.objects if item.id == obj.id)
+        if original.dimensions_m is None:
+            known = object_observations[obj.id].estimated_dimensions_m
+            axes = [axis for axis in ("width", "depth", "height") if known is None or getattr(known, axis) is None]
+            if axes:
+                assumptions.append(f"{obj.id}: unknown size axes use {obj.asset_id} catalog defaults ({', '.join(axes)}).")
     if measurements.estimated:
         assumptions.append(
             "Unconfirmed room dimensions: " + ", ".join(measurements.estimated) + "."

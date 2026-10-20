@@ -210,6 +210,7 @@ _assets.update(
         "kitchen_counter_sink_01": AssetDefinition(
             "kitchen_counter",
             frozenset({"floor"}),
+            supplies_surface=True,
             fixed_by_default=True,
         ),
         "kitchen_counter_hob_01": AssetDefinition(

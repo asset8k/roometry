@@ -418,7 +418,6 @@ def test_accessory_variant_does_not_allow_arbitrary_placement(scene_data):
     "asset_id,object_type",
     [
         ("shelf_coat_rack_01", "shelf"),
-        ("kitchen_counter_sink_01", "kitchen_counter"),
         ("kitchen_counter_hob_01", "kitchen_counter"),
     ],
 )
@@ -428,6 +427,14 @@ def test_nonflat_variants_cannot_support_surface_objects(
     find_object(scene_data, "desk_1").update(type=object_type, asset_id=asset_id)
     with pytest.raises(ValidationError, match="approved surface"):
         RoomScene.model_validate(scene_data)
+
+
+def test_sink_counter_support_requires_a_named_ledge(scene_data):
+    find_object(scene_data, "desk_1").update(type="kitchen_counter", asset_id="kitchen_counter_sink_01")
+    with pytest.raises(ValidationError, match="explicit approved surface selection"):
+        RoomScene.model_validate(scene_data)
+    find_object(scene_data, "computer_1")["support_surface_id"] = "deck_left"
+    assert RoomScene.model_validate(scene_data)
 
 
 def test_wall_requires_host_and_ceiling_forbids_host(scene_data):

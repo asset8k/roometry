@@ -19,18 +19,30 @@ MAX_NOTES = 50
 MAX_NOTE_LENGTH = 1000
 
 RoomType = Literal[
-    "bedroom", "living_room", "kitchen", "bathroom", "office", "dining_room",
-    "entryway", "laundry_room", "other",
+    "bedroom",
+    "living_room",
+    "kitchen",
+    "bathroom",
+    "office",
+    "dining_room",
+    "entryway",
+    "laundry_room",
+    "other",
 ]
 Wall = Literal["north", "south", "west", "east"]
 MeasurementSource = Literal["user_confirmed", "estimated"]
 ObjectMeasurementSource = Literal["user_confirmed", "catalog", "estimated"]
+SupportSurfaceId = Annotated[str, Field(min_length=1, max_length=96)]
 Provenance = Literal["photo_observed", "user_added", "agent_added"]
-Identifier = Annotated[str, Field(min_length=1, max_length=64, pattern=r"^[a-z][a-z0-9_]*$")]
+Identifier = Annotated[
+    str, Field(min_length=1, max_length=64, pattern=r"^[a-z][a-z0-9_]*$")
+]
 AssetId = Annotated[
     str,
     Field(
-        min_length=1, max_length=96, pattern=r"^[a-z][a-z0-9_]*$",
+        min_length=1,
+        max_length=96,
+        pattern=r"^[a-z][a-z0-9_]*$",
         json_schema_extra={"enum": list(ASSET_REGISTRY)},
     ),
 ]
@@ -45,7 +57,9 @@ class SceneModel(BaseModel):
     """Reject coercion/unknown fields and revalidate nested model instances."""
 
     model_config = ConfigDict(
-        extra="forbid", strict=True, revalidate_instances="always",
+        extra="forbid",
+        strict=True,
+        revalidate_instances="always",
     )
 
 
@@ -95,7 +109,9 @@ class Opening(SceneModel):
             if self.swing == "none" and self.hinge is not None:
                 raise ValueError("Doors without a swing require hinge=null")
             if self.swing != "none" and self.hinge is None:
-                raise ValueError("Swinging or uncertain doors require a hinge edge or 'unknown'")
+                raise ValueError(
+                    "Swinging or uncertain doors require a hinge edge or 'unknown'"
+                )
         return self
 
 
@@ -110,6 +126,8 @@ class SceneObject(SceneModel):
     placement: Placement
     # Nullable references are deliberately required: use explicit JSON null.
     support_object_id: Identifier | None
+    # Optional for existing scenes; reconstruction binds an explicit catalog area.
+    support_surface_id: SupportSurfaceId | None = None
     wall: Wall | None
     opening_id: Identifier | None
     fixed: bool
@@ -137,13 +155,19 @@ class SceneObject(SceneModel):
         if asset.object_type != self.type:
             raise ValueError(f"Asset {self.asset_id} does not match type {self.type}")
         if self.placement not in asset.placements:
-            raise ValueError(f"Asset {self.asset_id} does not allow {self.placement} placement")
+            raise ValueError(
+                f"Asset {self.asset_id} does not allow {self.placement} placement"
+            )
 
         if self.placement == "surface":
             if self.support_object_id is None or self.support_object_id == self.id:
-                raise ValueError("Surface objects require a different support_object_id")
+                raise ValueError(
+                    "Surface objects require a different support_object_id"
+                )
         elif self.support_object_id is not None:
             raise ValueError("Only surface objects may have support_object_id")
+        if self.support_surface_id is not None and self.placement != "surface":
+            raise ValueError("Only surface objects may have support_surface_id")
 
         if self.placement == "wall":
             if self.wall is None:
@@ -194,11 +218,29 @@ class RoomScene(SceneModel):
                     raise ValueError(f"Object {obj.id} requires support_object_id")
                 support = objects.get(support_id)
                 if support is None:
-                    raise ValueError(f"Object {obj.id} references missing support {support_id}")
+                    raise ValueError(
+                        f"Object {obj.id} references missing support {support_id}"
+                    )
                 if support.placement not in {"floor", "wall"}:
-                    raise ValueError(f"Object {obj.id} cannot use nested surface support")
+                    raise ValueError(
+                        f"Object {obj.id} cannot use nested surface support"
+                    )
                 if not ASSET_REGISTRY[support.asset_id].supplies_surface:
-                    raise ValueError(f"Object {support.id} does not supply an approved surface")
+                    raise ValueError(
+                        f"Object {support.id} does not supply an approved surface"
+                    )
+                from roometry.scenes.catalog import object_surfaces
+
+                surfaces = object_surfaces(support.asset_id, support.placement)
+                if obj.support_surface_id is not None:
+                    if obj.support_surface_id not in {s.name for s in surfaces}:
+                        raise ValueError(
+                            f"Object {obj.id} references an unknown support surface"
+                        )
+                elif not any(abs(s.y - 1) < 1e-9 for s in surfaces):
+                    raise ValueError(
+                        f"Object {obj.id} requires an explicit approved surface selection"
+                    )
             if obj.type == "window_covering":
                 opening_id = obj.opening_id
                 if opening_id is None:
@@ -207,7 +249,9 @@ class RoomScene(SceneModel):
                 # Curtains/blinds may also dress a glazed patio or balcony door.
                 # The existing asset name covers both kinds of opening.
                 if opening is None:
-                    raise ValueError(f"Object {obj.id} must reference an existing window or door")
+                    raise ValueError(
+                        f"Object {obj.id} must reference an existing window or door"
+                    )
                 if obj.wall != opening.wall:
                     raise ValueError(f"Object {obj.id} must use its opening's wall")
         return self

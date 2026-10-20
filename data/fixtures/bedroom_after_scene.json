@@ -59,7 +59,8 @@
       "fixed": false,
       "locked": true,
       "provenance": "photo_observed",
-      "measurements_source": "estimated"
+      "measurements_source": "estimated",
+      "support_surface_id": null
     },
     {
       "id": "rug_1",
@@ -84,7 +85,8 @@
       "fixed": false,
       "locked": false,
       "provenance": "photo_observed",
-      "measurements_source": "estimated"
+      "measurements_source": "estimated",
+      "support_surface_id": null
     },
     {
       "id": "desk_1",
@@ -109,7 +111,8 @@
       "fixed": false,
       "locked": false,
       "provenance": "photo_observed",
-      "measurements_source": "estimated"
+      "measurements_source": "estimated",
+      "support_surface_id": null
     },
     {
       "id": "computer_1",
@@ -134,7 +137,8 @@
       "fixed": false,
       "locked": false,
       "provenance": "photo_observed",
-      "measurements_source": "estimated"
+      "measurements_source": "estimated",
+      "support_surface_id": null
     },
     {
       "id": "tv_1",
@@ -159,7 +163,8 @@
       "fixed": true,
       "locked": false,
       "provenance": "photo_observed",
-      "measurements_source": "estimated"
+      "measurements_source": "estimated",
+      "support_surface_id": null
     },
     {
       "id": "clock_1",
@@ -184,7 +189,8 @@
       "fixed": true,
       "locked": false,
       "provenance": "photo_observed",
-      "measurements_source": "estimated"
+      "measurements_source": "estimated",
+      "support_surface_id": null
     },
     {
       "id": "chandelier_1",
@@ -209,7 +215,8 @@
       "fixed": true,
       "locked": false,
       "provenance": "photo_observed",
-      "measurements_source": "estimated"
+      "measurements_source": "estimated",
+      "support_surface_id": null
     },
     {
       "id": "curtain_1",
@@ -234,7 +241,8 @@
       "fixed": true,
       "locked": false,
       "provenance": "photo_observed",
-      "measurements_source": "estimated"
+      "measurements_source": "estimated",
+      "support_surface_id": null
     },
     {
       "id": "wardrobe_1",
@@ -259,7 +267,8 @@
       "fixed": false,
       "locked": false,
       "provenance": "photo_observed",
-      "measurements_source": "estimated"
+      "measurements_source": "estimated",
+      "support_surface_id": null
     }
   ],
   "assumptions": [

@@ -3,16 +3,18 @@
 from math import cos, hypot, sin
 
 from roometry.scenes.assets import ASSET_REGISTRY
+from roometry.scenes.catalog import object_surfaces
 from roometry.scenes.geometry import (
     TOLERANCE_M,
     WALL_ROTATIONS_RAD,
     ObjectBounds,
     Rectangle,
     boxes_overlap,
+    catalog_surface_bounds,
     intervals_overlap,
 )
 from roometry.uploads.schemas import InputDimensions
-from roometry.vision.proposal_schemas import DraftObject, SceneDraft
+from roometry.vision.proposal_schemas import BoundDraft, BoundObject
 from roometry.vision.schemas import RoomAnalysisResponse
 
 # Corrections apply only to generated estimates, never to scene edits or sizes.
@@ -23,7 +25,7 @@ PORTABLE_DECOR = frozenset(
 )
 
 
-def draft_bounds(obj: DraftObject) -> ObjectBounds:
+def draft_bounds(obj: BoundObject) -> ObjectBounds:
     c, s = cos(obj.rotation_y_rad), sin(obj.rotation_y_rad)
     return ObjectBounds(
         Rectangle(
@@ -36,8 +38,8 @@ def draft_bounds(obj: DraftObject) -> ObjectBounds:
 
 
 def anchor_placements(
-    analysis: RoomAnalysisResponse, room: InputDimensions, draft: SceneDraft
-) -> list[DraftObject]:
+    analysis: RoomAnalysisResponse, room: InputDimensions, draft: BoundDraft
+) -> list[BoundObject]:
     objects = [obj.model_copy(deep=True) for obj in draft.objects]
     width, length, height = room.width_m, room.length_m, room.height_m
     if width is None or length is None or height is None:
@@ -48,7 +50,7 @@ def anchor_placements(
         if obj.placement == "floor":
             obj.position.y = 0.0
             source = observations.get(obj.id)
-            asset = ASSET_REGISTRY.get(f"{source.type}_standard_01") if source else None
+            asset = ASSET_REGISTRY.get(obj.asset_id)
             if (
                 source is not None
                 and asset is not None
@@ -103,13 +105,12 @@ def anchor_placements(
                         obj.position.y = fitted_y
 
     by_id = {obj.id: obj for obj in objects}
-    eligible: list[tuple[DraftObject, DraftObject]] = []
+    eligible: list[tuple[BoundObject, BoundObject, ObjectBounds]] = []
     for obj in objects:
         if obj.placement != "surface" or obj.support_object_id is None:
             continue
         support = by_id.get(obj.support_object_id)
-        source = observations.get(obj.support_object_id)
-        asset = ASSET_REGISTRY.get(f"{source.type}_standard_01") if source else None
+        asset = ASSET_REGISTRY.get(support.asset_id) if support else None
         if (
             support is None
             or support.placement not in {"floor", "wall"}
@@ -117,6 +118,19 @@ def anchor_placements(
             or not asset.supplies_surface
         ):
             continue
+        surface = next(
+            (
+                s
+                for s in object_surfaces(support.asset_id, support.placement)
+                if s.name == obj.support_surface_id
+            ),
+            None,
+        )
+        if surface is None:
+            continue
+        area = catalog_surface_bounds(
+            surface, support.dimensions_m, support.position, support.rotation_y_rad
+        )
         before = original[support.id]
         # Preserve the child's local pose when its host is snapped to a wall.
         delta = support.rotation_y_rad - before.rotation_y_rad
@@ -125,24 +139,24 @@ def anchor_placements(
         obj.position.x = support.position.x + c * dx + s * dz
         obj.position.z = support.position.z - s * dx + c * dz
         obj.rotation_y_rad += delta
-        obj.position.y = support.position.y + support.dimensions_m.height
+        obj.position.y = area.vertical[1]
         relative = obj.rotation_y_rad - support.rotation_y_rad
         c, s = abs(cos(relative)), abs(sin(relative))
         rotated_width = c * obj.dimensions_m.width + s * obj.dimensions_m.depth
         rotated_depth = s * obj.dimensions_m.width + c * obj.dimensions_m.depth
         if (
             (
-                rotated_width > support.dimensions_m.width + TOLERANCE_M
-                or rotated_depth > support.dimensions_m.depth + TOLERANCE_M
+                rotated_width > area.footprint.half_extents[0] * 2 + TOLERANCE_M
+                or rotated_depth > area.footprint.half_extents[1] * 2 + TOLERANCE_M
             )
-            and obj.dimensions_m.width <= support.dimensions_m.width
-            and obj.dimensions_m.depth <= support.dimensions_m.depth
+            and obj.dimensions_m.width <= area.footprint.half_extents[0] * 2
+            and obj.dimensions_m.depth <= area.footprint.half_extents[1] * 2
         ):
             # A wide TV/frame needs the support's orientation, not a smaller size.
             obj.rotation_y_rad = support.rotation_y_rad
-        eligible.append((obj, support))
+        eligible.append((obj, support, area))
 
-    def inside(obj: DraftObject) -> bool:
+    def inside(obj: BoundObject) -> bool:
         box = draft_bounds(obj)
         return (
             all(
@@ -155,8 +169,8 @@ def anchor_placements(
         )
 
     bounds = {obj.id: draft_bounds(obj) for obj in objects}
-    for obj, support in sorted(eligible, key=lambda pair: pair[0].id):
-        outer = bounds[support.id].footprint
+    for obj, support, area in sorted(eligible, key=lambda pair: pair[0].id):
+        outer = area.footprint
         child = bounds[obj.id].footprint
         u, v = outer.axes
         dx, dz = obj.position.x - outer.center[0], obj.position.z - outer.center[1]

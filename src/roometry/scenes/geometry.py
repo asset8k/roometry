@@ -8,7 +8,15 @@ These functions describe solid boxes, not the empty space inside furniture.
 from dataclasses import dataclass
 from math import cos, remainder, sin, tau
 
-from roometry.scenes.schemas import Opening, RoomDimensions, SceneObject, Wall
+from roometry.scenes.furniture import SupportSurface
+from roometry.scenes.schemas import (
+    ObjectDimensions,
+    Opening,
+    Position,
+    RoomDimensions,
+    SceneObject,
+    Wall,
+)
 
 TOLERANCE_M = 0.000001
 # This is an angular tolerance in radians, separate from the distance tolerance.
@@ -18,7 +26,10 @@ Point2 = tuple[float, float]
 Interval = tuple[float, float]
 
 WALL_ROTATIONS_RAD: dict[Wall, float] = {
-    "north": 0.0, "east": tau * 0.75, "south": tau * 0.5, "west": tau * 0.25,
+    "north": 0.0,
+    "east": tau * 0.75,
+    "south": tau * 0.5,
+    "west": tau * 0.25,
 }
 
 
@@ -59,6 +70,30 @@ class Rectangle:
 class ObjectBounds:
     footprint: Rectangle
     vertical: Interval
+
+
+def catalog_surface_bounds(
+    surface: SupportSurface,
+    dimensions: ObjectDimensions,
+    position: Position,
+    rotation: float,
+) -> ObjectBounds:
+    """Transform a catalog support rectangle to a zero-thickness world plane."""
+    c, s = cos(rotation), sin(rotation)
+    x = (surface.x_min + surface.x_max) / 2 * dimensions.width
+    z = (surface.z_min + surface.z_max) / 2 * dimensions.depth
+    y = position.y + surface.y * dimensions.height
+    return ObjectBounds(
+        Rectangle(
+            (position.x + c * x + s * z, position.z - s * x + c * z),
+            ((c, -s), (s, c)),
+            (
+                (surface.x_max - surface.x_min) * dimensions.width / 2,
+                (surface.z_max - surface.z_min) * dimensions.depth / 2,
+            ),
+        ),
+        (y, y),
+    )
 
 
 def object_bounds(obj: SceneObject) -> ObjectBounds:
@@ -116,17 +151,15 @@ def bounds_inside_room(bounds: ObjectBounds, room: RoomDimensions) -> bool:
 
 
 def boxes_overlap(a: ObjectBounds, b: ObjectBounds) -> bool:
-    return (
-        intervals_overlap(a.vertical, b.vertical)
-        and rectangles_overlap(a.footprint, b.footprint)
+    return intervals_overlap(a.vertical, b.vertical) and rectangles_overlap(
+        a.footprint, b.footprint
     )
 
 
 def surface_is_supported(child: ObjectBounds, support: ObjectBounds) -> bool:
-    return (
-        abs(child.vertical[0] - support.vertical[1]) <= TOLERANCE_M
-        and rectangle_contains(support.footprint, child.footprint)
-    )
+    return abs(
+        child.vertical[0] - support.vertical[1]
+    ) <= TOLERANCE_M and rectangle_contains(support.footprint, child.footprint)
 
 
 def wall_span(room: RoomDimensions, wall: Wall) -> float:
@@ -136,13 +169,16 @@ def wall_span(room: RoomDimensions, wall: Wall) -> float:
 def opening_inside_wall(opening: Opening, room: RoomDimensions) -> bool:
     return (
         opening.offset_m >= -TOLERANCE_M
-        and opening.offset_m + opening.width_m <= wall_span(room, opening.wall) + TOLERANCE_M
+        and opening.offset_m + opening.width_m
+        <= wall_span(room, opening.wall) + TOLERANCE_M
         and opening.sill_height_m >= -TOLERANCE_M
         and opening.sill_height_m + opening.height_m <= room.height_m + TOLERANCE_M
     )
 
 
-def wall_is_attached(obj: SceneObject, bounds: ObjectBounds, room: RoomDimensions) -> bool:
+def wall_is_attached(
+    obj: SceneObject, bounds: ObjectBounds, room: RoomDimensions
+) -> bool:
     """Check inward facing and the entire local back edge touching the host wall."""
     wall = obj.wall
     if wall is None:
@@ -165,13 +201,10 @@ def wall_is_attached(obj: SceneObject, bounds: ObjectBounds, room: RoomDimension
 def wall_object_overlaps_opening(bounds: ObjectBounds, opening: Opening) -> bool:
     """Compare along-wall and vertical intervals; caller checks wall attachment."""
     axis = (1.0, 0.0) if opening.wall in {"north", "south"} else (0.0, 1.0)
-    return (
-        intervals_overlap(
-            bounds.footprint.project(axis),
-            (opening.offset_m, opening.offset_m + opening.width_m),
-        )
-        and intervals_overlap(
-            bounds.vertical,
-            (opening.sill_height_m, opening.sill_height_m + opening.height_m),
-        )
+    return intervals_overlap(
+        bounds.footprint.project(axis),
+        (opening.offset_m, opening.offset_m + opening.width_m),
+    ) and intervals_overlap(
+        bounds.vertical,
+        (opening.sill_height_m, opening.sill_height_m + opening.height_m),
     )

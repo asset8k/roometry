@@ -6,6 +6,7 @@ from pydantic import AwareDatetime, Field, field_validator, model_validator
 
 from roometry.scenes.assets import Placement
 from roometry.scenes.schemas import (
+    AssetId,
     FiniteNumber,
     Identifier,
     NonnegativeDistance,
@@ -13,6 +14,7 @@ from roometry.scenes.schemas import (
     Position,
     PositiveDistance,
     RoomScene,
+    SupportSurfaceId,
     Wall,
 )
 from roometry.scenes.validation import GeometryReport
@@ -43,15 +45,26 @@ class WallAssignment(AnalysisModel):
     wall: Wall
 
 
-class DraftObject(AnalysisModel):
+class ObjectPose(AnalysisModel):
     id: Identifier
     position: Position
     rotation_y_rad: FiniteNumber
-    dimensions_m: ObjectDimensions
     placement: Placement
     wall: Wall | None
     support_object_id: Identifier | None
     opening_id: Identifier | None
+    support_surface_id: SupportSurfaceId | None
+
+
+class DraftObject(ObjectPose):
+    asset_id: AssetId | None
+    # null asks the server for catalog defaults, overlaid with recorded estimates.
+    dimensions_m: ObjectDimensions | None
+
+
+class BoundObject(ObjectPose):
+    asset_id: AssetId
+    dimensions_m: ObjectDimensions
 
 
 class DraftOpening(AnalysisModel):
@@ -63,14 +76,21 @@ class DraftOpening(AnalysisModel):
     sill_height_m: SillHeight
 
 
-class SceneDraft(AnalysisModel):
-    """The model proposes geometry; identity, assets, and authority stay server-owned."""
-
+class DraftContent(AnalysisModel):
     wall_assignments: Annotated[list[WallAssignment], Field(max_length=4)]
-    objects: Annotated[list[DraftObject], Field(max_length=200)]
     openings: Annotated[list[DraftOpening], Field(max_length=32)]
     assumptions: Notes
     warnings: Notes
+
+
+class SceneDraft(DraftContent):
+    """Untrusted model selections and poses; the server resolves and checks them."""
+
+    objects: Annotated[list[DraftObject], Field(max_length=200)]
+
+
+class BoundDraft(DraftContent):
+    objects: Annotated[list[BoundObject], Field(max_length=200)]
 
 
 class ProposalIssue(AnalysisModel):
@@ -78,6 +98,7 @@ class ProposalIssue(AnalysisModel):
         "unsupported_room_shape",
         "unknown_object",
         "unsupported_placement",
+        "asset_mismatch",
         "insufficient_evidence",
         "draft_schema",
         "identity_mismatch",

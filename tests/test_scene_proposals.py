@@ -42,11 +42,13 @@ def draft_data():
     def obj(id, x, y, z, w, d, h, placement="floor", support=None):
         return {
             "id": id,
+            "asset_id": None,
             "position": {"x": x, "y": y, "z": z},
             "rotation_y_rad": 0,
             "dimensions_m": {"width": w, "depth": d, "height": h},
             "placement": placement,
             "support_object_id": support,
+            "support_surface_id": None,
             "wall": None,
             "opening_id": None,
         }
@@ -484,6 +486,7 @@ async def test_explicit_acceptance_of_estimated_dimensions(harness):
         "collision",
         "missing_object",
         "unknown_id",
+        "asset",
         "wall",
         "support",
         "shrink",
@@ -502,6 +505,8 @@ async def test_one_bounded_repair_preserves_authority(harness, defect):
         bad["objects"].pop()
     if defect == "unknown_id":
         bad["objects"][0]["id"] = "invented_bed"
+    if defect == "asset":
+        bad["objects"][0]["asset_id"] = "chair_standard_01"
     if defect == "wall":
         bad["openings"][0]["wall"] = "south"
     if defect == "support":
@@ -1042,6 +1047,8 @@ async def test_visible_window_sill_can_use_existing_shelf_asset_as_support():
         {
             "id": "window_sill",
             "position": {"x": 1.1, "y": 1.06, "z": 0.12},
+            "asset_id": None,
+            "support_surface_id": None,
             "rotation_y_rad": 0.01,
             "dimensions_m": {"width": 1.2, "depth": 0.24, "height": 0.04},
             "placement": "wall",
@@ -1052,6 +1059,8 @@ async def test_visible_window_sill_can_use_existing_shelf_asset_as_support():
         {
             "id": "plant_on_sill",
             "position": {"x": 1.1, "y": 1.11, "z": 0.12},
+            "asset_id": None,
+            "support_surface_id": None,
             "rotation_y_rad": 0,
             "dimensions_m": {"width": 0.15, "depth": 0.15, "height": 0.3},
             "placement": "surface",

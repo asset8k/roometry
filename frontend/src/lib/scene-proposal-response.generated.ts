@@ -231,6 +231,7 @@ export type Height = number;
 export type Color = string;
 export type Placement = "floor" | "surface" | "wall" | "ceiling";
 export type SupportObjectId = string | null;
+export type SupportSurfaceId = string | null;
 export type Wall1 = ("north" | "south" | "west" | "east") | null;
 export type OpeningId = string | null;
 export type Fixed = boolean;
@@ -271,6 +272,7 @@ export type Code1 =
   | "unsupported_room_shape"
   | "unknown_object"
   | "unsupported_placement"
+  | "asset_mismatch"
   | "insufficient_evidence"
   | "draft_schema"
   | "identity_mismatch"
@@ -356,6 +358,7 @@ export interface SceneObject {
   color: Color;
   placement: Placement;
   support_object_id: SupportObjectId;
+  support_surface_id?: SupportSurfaceId;
   wall: Wall1;
   opening_id: OpeningId;
   fixed: Fixed;
