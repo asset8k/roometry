@@ -8,16 +8,16 @@ describe('photo input boundaries', () => {
     for (const invalid of [{ ...limits, allowed_extensions: undefined }, { ...limits, allowed_media_types: [] }, { ...limits, max_images: 11 },
       { ...limits, max_body_bytes: 1 }, { ...limits, max_room_height_m: -1 }]) expect(() => parseInputLimits(invalid)).toThrow()
   })
-  it('preserves unknown dimensions, zero budgets and explicit confirmation', () => {
+  it('preserves unknown dimensions, zero budgets and user-entered measurements', () => {
     const options = draftOptions({ ...emptyDraft(), width: '4', budget: '0', currency: 'kzt', goalText: ' keep desk ' }, limits)
-    expect(options.dimensions).toEqual({ width_m: 4, length_m: null, height_m: null, measurements_source: 'estimated' })
+    expect(options.dimensions).toEqual({ width_m: 4, length_m: null, height_m: null, measurements_source: 'user_confirmed' })
     expect(options.budget).toEqual({ amount: 0, currency: 'KZT' })
     expect(options.goals).toEqual(['general_analysis'])
     expect(options.goal_text).toBe('keep desk')
     expect(draftOptions({ ...emptyDraft(), goals: ['better_aesthetics'], goalText: 'Keep the bed; make the room cozier.' }, limits)).toMatchObject({
       goals: ['better_aesthetics'], goal_text: 'Keep the bed; make the room cozier.',
     })
-    expect(draftOptions({ ...emptyDraft(), width: '4', length: '4', confirmed: true }, limits).dimensions?.measurements_source).toBe('user_confirmed')
+    expect(draftOptions({ ...emptyDraft(), width: '4', length: '4' }, limits).dimensions?.measurements_source).toBe('user_confirmed')
     expect(draftOptions(emptyDraft(), limits).dimensions).toBeNull()
   })
   it.each(['0', '-1', 'NaN', 'Infinity', '0x10', '31'])('rejects invalid width %s', width => {

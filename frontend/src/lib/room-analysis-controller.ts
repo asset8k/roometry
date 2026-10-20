@@ -12,12 +12,12 @@ export interface AnalysisState {
   input: PreparedRoomInput | null; analysis: RoomAnalysisResponse | null
   proposal: SceneProposalResponse | null; scene: RoomScene | null
   busy: 'analysis' | 'proposal' | null; notice: AnalysisNotice | null
-  measurements: Record<DimensionAxis, string>; confirmed: boolean; allowEstimates: boolean
+  measurements: Record<DimensionAxis, string>; enteredAxes: DimensionAxis[]
 }
 interface AnalysisClient { analyze: typeof analyzeRoom; propose: typeof proposeRoomScene }
 const emptyMeasurements = (): AnalysisState['measurements'] => ({ width_m: '', length_m: '', height_m: '' })
 const initialState = (): AnalysisState => ({ input: null, analysis: null, proposal: null, scene: null, busy: null,
-  notice: null, measurements: emptyMeasurements(), confirmed: false, allowEstimates: false })
+  notice: null, measurements: emptyMeasurements(), enteredAxes: [] })
 
 /** Temporary UI state; abort/revision guards prevent stale requests replacing a newer room. */
 export class RoomAnalysisController {
@@ -52,10 +52,10 @@ export class RoomAnalysisController {
   }
   changeMeasurements = (patch: Partial<AnalysisState['measurements']>) => {
     if (this.state.busy) return
-    this.update({ measurements: { ...this.state.measurements, ...patch }, confirmed: false, notice: null })
+    const enteredAxes = dimensionAxes.filter(axis => patch[axis] !== undefined
+      ? Boolean(patch[axis]?.trim()) : this.state.enteredAxes.includes(axis))
+    this.update({ measurements: { ...this.state.measurements, ...patch }, enteredAxes, notice: null })
   }
-  confirm = (confirmed: boolean) => { if (!this.state.busy) this.update({ confirmed, notice: null }) }
-  acceptEstimates = (allowEstimates: boolean) => { if (!this.state.busy) this.update({ allowEstimates, notice: null }) }
   cancel = () => {
     this.revision++
     this.pending?.abort()
@@ -91,7 +91,7 @@ export class RoomAnalysisController {
       const measurements = emptyMeasurements()
       for (const axis of dimensionAxes) measurements[axis] = String(dimensions?.[axis] ?? analysis.observations.estimated_dimensions?.[axis] ?? '')
       this.update({ analysis, measurements, busy: null, notice: { kind: 'info', text: 'Your photos have been analyzed. Review the observations and check the room dimensions.', connected: true },
-        confirmed: dimensions?.measurements_source === 'user_confirmed' && dimensionAxes.every(axis => dimensions[axis] != null) })
+        enteredAxes: dimensions?.measurements_source === 'user_confirmed' ? dimensionAxes.filter(axis => dimensions[axis] != null) : [] })
     } catch (error) { if (revision === this.revision && !controller.signal.aborted) this.failure(error) }
     finally { if (revision === this.revision) this.pending = null }
   }
@@ -100,7 +100,7 @@ export class RoomAnalysisController {
     if (!input || !analysis || this.state.busy) return
     let request: SceneProposalRequest
     try {
-      request = { analysis_id: analysis.analysis_id, allow_estimated_dimensions: this.state.allowEstimates }
+      request = { analysis_id: analysis.analysis_id, allow_estimated_dimensions: true }
       const values: Partial<Record<DimensionAxis, number>> = {}
       for (const axis of dimensionAxes) {
         const text = this.state.measurements[axis].trim()
@@ -109,25 +109,11 @@ export class RoomAnalysisController {
         if (!/^(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i.test(text) || !Number.isFinite(value) || value <= 0 || value > max) {
           throw new RoomAnalysisError(`Enter ${dimensionLabels[axis].toLowerCase()} greater than 0 and no more than ${max} meters.`, 'invalid_measurements')
         }
-        values[axis] = value
+        if (this.state.enteredAxes.includes(axis)) values[axis] = value
       }
-      if (this.state.confirmed && Object.keys(values).length) {
-        request.dimensions = { ...values, measurements_source: 'user_confirmed' }
-      } else if (this.state.allowEstimates) {
-        // Unconfirmed edits must never be silently dropped or represented as
-        // user-confirmed. Estimate consent uses only existing server estimates.
-        const known = this.state.proposal?.dimensions ?? analysis.input_options.dimensions
-        if (dimensionAxes.some(axis => {
-          const original = known?.[axis] ?? analysis.observations.estimated_dimensions?.[axis]
-          return (values[axis] ?? null) !== (original ?? null)
-        })) throw new RoomAnalysisError('Check the measurement confirmation box to use your edited dimensions.', 'invalid_measurements')
-      } else if (Object.keys(values).length === 3 || dimensionAxes.some(axis => {
-        const known = this.state.proposal?.dimensions ?? analysis.input_options.dimensions
-        const original = known?.[axis] ?? analysis.observations.estimated_dimensions?.[axis]
-        return (values[axis] ?? null) !== (original ?? null)
-      })) {
-        throw new RoomAnalysisError('Check the measurement confirmation box before building your room.', 'invalid_measurements')
-      }
+      // Submitting typed values is the user action that establishes their
+      // source. Untouched estimates stay on the server and retain that label.
+      if (Object.keys(values).length) request.dimensions = { ...values, measurements_source: 'user_confirmed' }
     } catch (error) { this.failure(error); return }
     const revision = ++this.revision, controller = new AbortController()
     this.pending = controller
@@ -140,8 +126,9 @@ export class RoomAnalysisController {
         || Date.parse(proposal.expires_at) !== Date.parse(input.expires_at)) throw new RoomAnalysisError('The scene proposal does not match your current room.')
       const measurements = emptyMeasurements()
       for (const axis of dimensionAxes) measurements[axis] = String(proposal.dimensions[axis] ?? '')
-      const measurementsChanged = dimensionAxes.some(axis => (proposal.dimensions[axis] ?? null) !== (this.state.measurements[axis].trim() ? Number(this.state.measurements[axis]) : null))
-      this.update({ proposal, measurements, confirmed: this.state.confirmed && !measurementsChanged, busy: null, scene: proposal.status === 'ready' ? proposal.scene : this.state.scene,
+      const estimatedAxes: ReadonlySet<string> = new Set(proposal.estimated_axes)
+      const enteredAxes = dimensionAxes.filter(axis => proposal.dimensions[axis] != null && !estimatedAxes.has(axis))
+      this.update({ proposal, measurements, enteredAxes, busy: null, scene: proposal.status === 'ready' ? proposal.scene : this.state.scene,
         notice: proposal.status === 'incomplete' && this.state.scene
           ? { kind: 'info', text: 'The new proposal could not be validated. The viewer still shows your last validated base scene.', connected: true }
           : { kind: 'info', text: proposal.status === 'ready' ? 'Your approximate base scene is ready.' : 'Your observations are saved while you review the room details.', connected: true } })

@@ -13,12 +13,12 @@ export type InputLimits = Required<UploadLimits>
 export type GoalChoice = Goals[number]
 export interface InputDraft {
   roomType: RoomType | ''; description: string; goals: GoalChoice[]; goalText: string
-  width: string; length: string; height: string; confirmed: boolean
+  width: string; length: string; height: string
   style: string; budget: string; currency: string
 }
 export const emptyDraft = (): InputDraft => ({
   roomType: '', description: '', goals: [], goalText: '', width: '', length: '', height: '',
-  confirmed: false, style: '', budget: '', currency: 'USD',
+  style: '', budget: '', currency: 'USD',
 })
 const ajv = new Ajv2020({ allErrors: true, strict: true })
 addFormats(ajv)
@@ -81,7 +81,7 @@ export function draftOptions(draft: InputDraft, limits: InputLimits): RoomInputO
   const height = numberInput(draft.height, 'height in meters', limits.max_room_height_m)
   const budget = numberInput(draft.budget, 'a budget', limits.max_budget_amount, true)
   const dimensions = [width, length, height].some(value => value !== null)
-    ? { width_m: width, length_m: length, height_m: height, measurements_source: draft.confirmed ? 'user_confirmed' as const : 'estimated' as const } : null
+    ? { width_m: width, length_m: length, height_m: height, measurements_source: 'user_confirmed' as const } : null
   const options = {
     room_type: draft.roomType || null, description: draft.description.trim() || null,
     goals: draft.goals.length ? draft.goals : ['general_analysis'], goal_text: draft.goalText.trim() || null,

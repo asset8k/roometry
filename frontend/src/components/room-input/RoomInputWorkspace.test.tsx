@@ -8,7 +8,7 @@ async function setup() {
   const controller = new RoomInputController({ limits: async () => limits, upload: async files => prepared(files), discard: async () => {} },
     { create: () => 'blob:preview', revoke: vi.fn() })
   await controller.loadLimits()
-  const render = () => renderToStaticMarkup(<RoomInputForm state={controller.getSnapshot()} controller={controller} />)
+  const render = () => renderToStaticMarkup(<RoomInputForm state={controller.getSnapshot()} controller={controller} onAnalyze={vi.fn(async () => {})} onCancel={vi.fn()} />)
   return { controller, render }
 }
 
@@ -22,7 +22,10 @@ describe('room input form', () => {
     for (const label of ['Kitchen', 'Bathroom', 'Other', 'Budget', 'Currency', 'Width (m)', 'Height (m)', 'Better aesthetics', 'Anything you want to improve?', 'Tell us what to keep or avoid.']) expect(html).toContain(label)
     for (const label of ['Dining room', 'Laundry room', 'Anything to keep or avoid?', 'Better furniture placement']) expect(html).not.toContain(label)
     expect(html).toContain('Room details &amp; preferences')
-    expect(html).toContain('Upload photos')
+    expect(html).toContain('Analyze photos')
+    expect(html).not.toContain('Upload current inputs')
+    expect(html).not.toContain('>Upload photos</button>')
+    expect(html).not.toContain('I have checked the dimensions I entered.')
   })
   it('keeps an unsupported local preview eligible for server upload', async () => {
     const { controller, render } = await setup()
@@ -39,16 +42,16 @@ describe('room input form', () => {
     await controller.submit()
     expect(render()).toContain('Photos received')
     expect(render()).toContain('View submitted details')
-    expect(render()).toContain('not a reconstructed 3D room')
+    expect(render()).toContain('Analysis and the room model appear below.')
     controller.change({ goalText: 'Keep the desk' })
-    expect(render()).toContain('Changes not uploaded')
-    expect(render()).toContain('Discard upload &amp; clear')
+    expect(render()).toContain('Changes not analyzed')
+    expect(render()).toContain('Clear inputs')
   })
   it('uses an indeterminate progress state and holds form edits during submission', async () => {
     const { controller } = await setup()
     const state = { ...controller.getSnapshot(), busy: 'upload' as const }
-    const html = renderToStaticMarkup(<RoomInputForm state={state} controller={controller} />)
-    expect(html).toContain('<progress aria-label="Uploading photos"')
+    const html = renderToStaticMarkup(<RoomInputForm state={state} controller={controller} onAnalyze={vi.fn(async () => {})} onCancel={vi.fn()} />)
+    expect(html).toContain('<progress aria-label="Preparing room photos"')
     expect(html).toContain('<fieldset class="room-preferences" disabled=""')
     expect(html).toContain('>Cancel</button>')
     expect(html).not.toContain('value="100"')

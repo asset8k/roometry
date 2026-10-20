@@ -12,14 +12,13 @@ function setup() {
 }
 
 describe('room analysis workspace', () => {
-  it('offers an explicit analysis action after upload', () => {
+  it('does not add a second analysis action after upload', () => {
     const { render } = setup()
     const html = render()
-    expect(html).toContain('Analyze photos')
-    expect(html).toContain('2 uploaded photos')
+    expect(html).toBe('')
     expect(html).not.toContain('3D room viewer')
   })
-  it('presents objects, uncertain identities, evidence counts, and measurement confirmation', async () => {
+  it('presents objects, uncertain identities, evidence counts, and direct measurement entry', async () => {
     const { controller, render } = setup()
     await controller.analyze()
     const html = render()
@@ -27,8 +26,9 @@ describe('room analysis workspace', () => {
     expect(html).toContain('Possible duplicate observations')
     expect(html).toContain('medium confidence')
     expect(html).toContain('What we couldn’t establish')
-    expect(html).toContain('I have checked the measurements entered above.')
-    expect(html).toContain('Use available photo estimates')
+    expect(html).not.toContain('type="checkbox"')
+    expect(html).toContain('Provided by you')
+    expect(html).toContain('Your entries are used directly')
     expect(html).toContain('Build base scene')
     expect(html).not.toContain('Example bedroom')
   })
@@ -37,7 +37,7 @@ describe('room analysis workspace', () => {
     const state = { ...controller.getSnapshot(), analysis: analyzedRoom(), proposal: needsDimensions() }
     const html = renderToStaticMarkup(<RoomAnalysisWorkspace state={state} controller={controller} onConnectionChange={vi.fn()} />)
     expect(html).toContain('A few measurements are still needed')
-    expect(html).toContain('Enter and confirm: height')
+    expect(html).toContain('Enter: height')
     expect(html).toContain('don’t need to analyze again')
     expect(html).not.toContain('3D room viewer')
     const incomplete = { ...state, proposal: { ...state.proposal, status: 'incomplete' as const, issues: [{ code: 'geometry' as const, entity_ids: [], message: 'Object extends outside the room.' }] } }
@@ -50,7 +50,6 @@ describe('room analysis workspace', () => {
     const { controller, render } = setup()
     await controller.analyze()
     controller.changeMeasurements({ height_m: '2.6' })
-    controller.confirm(true)
     await controller.build()
     const html = render()
     expect(html).toContain('Your reconstructed room')

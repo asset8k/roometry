@@ -66,13 +66,20 @@ describe('room input controller', () => {
     expect(await controller.submit()).toBe(false)
     expect(client.upload).not.toHaveBeenCalled()
   })
-  it('requires confirmation again when previously checked dimensions change', () => {
-    const { controller } = setup()
-    controller.change({ width: '4', confirmed: true })
-    controller.change({ style: 'Cozy' })
-    expect(controller.getSnapshot().draft.confirmed).toBe(true)
+  it('submits entered and corrected dimensions directly as user measurements', async () => {
+    const { controller, client } = setup()
+    await controller.loadLimits()
+    controller.addPhotos([photo()])
+    controller.change({ width: '4' })
+    await controller.submit()
+    expect(client.upload).toHaveBeenLastCalledWith(expect.any(Array), expect.objectContaining({
+      dimensions: { width_m: 4, length_m: null, height_m: null, measurements_source: 'user_confirmed' },
+    }), expect.any(AbortSignal))
     controller.change({ width: '4.1' })
-    expect(controller.getSnapshot().draft.confirmed).toBe(false)
+    await controller.submit()
+    expect(client.upload).toHaveBeenLastCalledWith(expect.any(Array), expect.objectContaining({
+      dimensions: { width_m: 4.1, length_m: null, height_m: null, measurements_source: 'user_confirmed' },
+    }), expect.any(AbortSignal))
   })
   it('accepts input, marks later changes dirty, and preserves the previously accepted batch on rejection', async () => {
     const { controller, client } = setup()

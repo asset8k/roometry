@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react'
 import RoomAnalysisWorkspace from '../room-analysis/RoomAnalysisWorkspace'
 import { RoomAnalysisController } from '../../lib/room-analysis-controller'
+import { RoomWorkflowController } from '../../lib/room-workflow-controller'
 import { RoomInputController } from '../../lib/room-input-controller'
 import type { RoomInputState } from '../../lib/room-input-controller'
 import { formatBytes } from '../../lib/room-input'
@@ -20,17 +21,10 @@ const roomLabel = (type: string | null | undefined) => roomTypes.find(([value]) 
 export default function RoomInputWorkspace({ onConnectionChange }: { onConnectionChange: (online: boolean) => void }) {
   const controller = useMemo(() => new RoomInputController(), [])
   const analysisController = useMemo(() => new RoomAnalysisController(), [])
+  const workflow = useMemo(() => new RoomWorkflowController(controller, analysisController), [controller, analysisController])
   const analysisState = useSyncExternalStore(analysisController.subscribe, analysisController.getSnapshot, analysisController.getSnapshot)
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot)
-  useEffect(() => {
-    const sync = () => {
-      const current = controller.getSnapshot()
-      analysisController.setInput(current.accepted, !current.dirty && !current.uncertain && !current.busy)
-    }
-    sync()
-    const unsubscribe = controller.subscribe(sync)
-    return () => { unsubscribe(); analysisController.release() }
-  }, [controller, analysisController])
+  useEffect(workflow.connect, [workflow])
   useEffect(() => {
     void controller.loadLimits()
     const timer = window.setInterval(controller.checkExpiry, 5000)
@@ -43,19 +37,22 @@ export default function RoomInputWorkspace({ onConnectionChange }: { onConnectio
     if (analysisState.notice?.connected !== undefined) onConnectionChange(analysisState.notice.connected)
   }, [analysisState.notice, onConnectionChange])
   return <>
-    <RoomInputForm state={state} controller={controller} locked={Boolean(analysisState.busy)} />
+    <RoomInputForm state={state} controller={controller} locked={Boolean(analysisState.busy)} analyzing={analysisState.busy === 'analysis'} analyzed={Boolean(analysisState.analysis)} onAnalyze={workflow.analyze} onCancel={workflow.cancel} />
     <RoomAnalysisWorkspace state={analysisState} controller={analysisController} onConnectionChange={onConnectionChange} />
   </>
 }
 
-export function RoomInputForm({ state, controller, locked = false }: { state: RoomInputState; controller: RoomInputController; locked?: boolean }) {
+export function RoomInputForm({ state, controller, onAnalyze, onCancel, locked = false, analyzing = false, analyzed = false }: {
+  state: RoomInputState; controller: RoomInputController; onAnalyze: () => Promise<void>; onCancel: () => void
+  locked?: boolean; analyzing?: boolean; analyzed?: boolean
+}) {
   const { limits, draft, photos, busy, accepted } = state
   const total = photos.reduce((bytes, photo) => bytes + photo.file.size, 0)
   const set = controller.change
   const acceptedOptions = accepted?.options
   return (
     <div className="input-workspace">
-      <form className="room-input-form" onSubmit={event => { event.preventDefault(); void controller.submit() }}>
+      <form className="room-input-form" onSubmit={event => { event.preventDefault(); void onAnalyze() }}>
         <fieldset className="input-edit-lock" disabled={locked}>
         <div className="input-section-title"><span className="section-label">Start with your space</span><h2>A few photos. A little context.</h2><p>Capture different angles of one room, then tell us what you’d like to improve.</p></div>
         <section className="photo-section" aria-labelledby="photo-heading">
@@ -107,7 +104,6 @@ export function RoomInputForm({ state, controller, locked = false }: { state: Ro
               <label>Height (m)<input type="number" step="any" min="0" max={limits?.max_room_height_m} inputMode="decimal" value={draft.height} onChange={event => set({ height: event.target.value })} /></label>
             </div>
             <p className="input-help">Leave unknown measurements blank. Photos alone don’t establish exact dimensions.</p>
-            <label className="confirmation-check"><input type="checkbox" checked={draft.confirmed} onChange={event => set({ confirmed: event.target.checked })} /><span>I have checked the dimensions I entered.</span></label>
             <div className="budget-inputs"><label>Budget<input type="number" min={0} max={limits?.max_budget_amount} step="any" inputMode="decimal" placeholder="Not specified" value={draft.budget} onChange={event => set({ budget: event.target.value })} /></label>
               <label>Currency<input type="text" maxLength={3} value={draft.currency} autoCapitalize="characters" onChange={event => set({ currency: event.target.value.toUpperCase() })} aria-describedby="budget-hint" /></label></div>
             <p id="budget-hint" className="input-help">Use a three-letter code, such as USD, EUR or KZT. A budget of 0 means no purchase budget.</p>
@@ -115,37 +111,37 @@ export function RoomInputForm({ state, controller, locked = false }: { state: Ro
           </details>
         </fieldset>
 
-        {state.notice && <div className={`input-notice ${state.notice.kind}`} role={state.notice.kind === 'error' ? 'alert' : 'status'}>
+        </fieldset>
+        {state.notice && !(state.notice.kind === 'success' && (analyzing || analyzed)) && <div className={`input-notice ${state.notice.kind}`} role={state.notice.kind === 'error' ? 'alert' : 'status'}>
           <p>{state.notice.text}</p>{!!state.notice.issues?.length && <ul>{state.notice.issues.map((issue, index) => <li key={index}>
             {issue.file_index != null ? `${photos[issue.file_index]?.file.name ?? `Photo ${issue.file_index + 1}`}: ` : ''}{issue.message}
           </li>)}</ul>}
         </div>}
-        {busy && <div className="upload-progress" role="status"><progress aria-label={busy === 'upload' ? 'Uploading photos' : 'Discarding upload'} /><span>{busy === 'upload' ? 'Uploading and checking photos…' : 'Discarding your upload…'}</span></div>}
-        <div className="input-actions"><button className="primary-action" type="submit" disabled={Boolean(busy) || !limits || state.policyLoading || !photos.length}>
-          {busy === 'upload' ? 'Uploading…' : accepted ? 'Upload current inputs' : 'Upload photos'}</button>
-          {busy ? <button type="button" onClick={() => controller.cancel()}>Cancel</button> : <button type="button" onClick={() => void controller.discard()} disabled={!photos.length && !accepted && !state.dirty && !state.uncertain}>{accepted ? 'Discard upload & clear' : 'Clear inputs'}</button>}
+        {(busy || analyzing) && <div className="upload-progress" role="status"><progress aria-label={analyzing ? 'Analyzing room photos' : busy === 'upload' ? 'Preparing room photos' : 'Clearing room inputs'} /><span>{analyzing ? 'Analyzing your photos together…' : busy === 'upload' ? 'Preparing your photos…' : 'Clearing your room inputs…'}</span></div>}
+        <div className="input-actions"><button className="primary-action" type="submit" disabled={Boolean(busy) || locked || !limits || state.policyLoading || !photos.length || (analyzed && !state.dirty && !state.uncertain)}>
+          {analyzing ? 'Analyzing photos…' : busy === 'upload' ? 'Preparing photos…' : analyzed && !state.dirty && !state.uncertain ? 'Photos analyzed' : 'Analyze photos'}</button>
+          {busy || analyzing ? <button type="button" onClick={onCancel}>Cancel</button> : <button type="button" onClick={() => void controller.discard()} disabled={locked || (!photos.length && !accepted && !state.dirty && !state.uncertain)}>Clear inputs</button>}
         </div>
         <p className="input-help privacy-note">Photos stay private and temporary. Refresh clears this form; uploaded copies expire automatically. Nothing is shared publicly.</p>
-        </fieldset>
       </form>
 
       <aside className="input-summary" aria-label="Your room input summary">
         <span className="section-label">Your room, your priorities</span>
         {accepted ? <>
-          <h2>{state.uncertain ? 'Upload status unconfirmed' : state.dirty ? 'Changes not uploaded' : 'Photos received'}</h2>
-          <p>{state.uncertain ? 'We couldn’t confirm the stored photos. Upload again or retry discard to confirm them.' : state.dirty ? 'Your form has changed. Upload again to replace the previous batch.' : 'Your photos and preferences are ready for room analysis.'}</p>
-          <dl className="input-summary-list"><div><dt>Uploaded photos</dt><dd>{accepted.images.length}</dd></div><div><dt>Room type</dt><dd>{roomLabel(acceptedOptions?.room_type)}</dd></div>
+          <h2>{state.uncertain ? 'Request not completed' : state.dirty ? 'Changes not analyzed' : analyzing ? 'Analyzing your photos' : analyzed ? 'Room analyzed' : 'Ready to analyze'}</h2>
+          <p>{state.uncertain ? 'Try Analyze photos again, or clear the inputs to start over.' : state.dirty ? 'Your form has changed. Choose Analyze photos to use the updated inputs.' : analyzing ? 'We’re identifying the room, furniture, doors, and windows.' : analyzed ? 'Review the observations and room dimensions below.' : 'Choose Analyze photos to continue with your current inputs.'}</p>
+          <dl className="input-summary-list"><div><dt>Photos</dt><dd>{accepted.images.length}</dd></div><div><dt>Room type</dt><dd>{roomLabel(acceptedOptions?.room_type)}</dd></div>
             <div><dt>Available until</dt><dd>{new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' }).format(new Date(accepted.expires_at))}</dd></div></dl>
           {acceptedOptions?.goal_text && <p className="submitted-note">{acceptedOptions.goal_text}</p>}
           <details className="accepted-details"><summary>View submitted details</summary><dl>
             <dt>Goals</dt><dd>{acceptedOptions?.goals?.map(value => goals.find(goal => goal.value === value)?.label ?? 'General analysis').join(', ')}</dd>
-            <dt>Dimensions</dt><dd>{acceptedOptions?.dimensions ? `${acceptedOptions.dimensions.width_m ?? '?'} × ${acceptedOptions.dimensions.length_m ?? '?'} × ${acceptedOptions.dimensions.height_m ?? '?'} m (${acceptedOptions.dimensions.measurements_source === 'user_confirmed' ? 'confirmed by you' : 'estimated'})` : 'Not specified'}</dd>
+            <dt>Dimensions</dt><dd>{acceptedOptions?.dimensions ? `${acceptedOptions.dimensions.width_m ?? '?'} × ${acceptedOptions.dimensions.length_m ?? '?'} × ${acceptedOptions.dimensions.height_m ?? '?'} m (${acceptedOptions.dimensions.measurements_source === 'user_confirmed' ? 'provided by you' : 'estimated'})` : 'Not specified'}</dd>
             <dt>Budget</dt><dd>{acceptedOptions?.budget ? `${acceptedOptions.budget.amount} ${acceptedOptions.budget.currency}` : 'Not specified'}</dd>
             {acceptedOptions?.description && <><dt>Description</dt><dd>{acceptedOptions.description}</dd></>}
             {acceptedOptions?.style && <><dt>Style</dt><dd>{acceptedOptions.style}</dd></>}
             {acceptedOptions?.constraints && <><dt>Keep or avoid</dt><dd>{acceptedOptions.constraints}</dd></>}
           </dl></details>
-          <p className="input-help">These describe your input, not a reconstructed 3D room. You can explore the separate example room while you’re here.</p>
+          <p className="input-help">These are your submitted details. Analysis and the room model appear below.</p>
         </> : <>
           <h2>Start with what you know.</h2><p>A few different angles help show the room, its furniture, doors, and windows.</p>
           <ol className="photo-tips"><li>Photograph the same room from different corners.</li><li>Include the floor and as much of each wall as you can.</li><li>Use clear, well-lit still photos.</li></ol>

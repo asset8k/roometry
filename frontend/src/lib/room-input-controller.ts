@@ -56,9 +56,6 @@ export class RoomInputController {
   change = (patch: Partial<InputDraft>) => {
     if (this.state.busy) return
     const draft = { ...this.state.draft, ...patch }
-    if (patch.confirmed === undefined && (['width', 'length', 'height'] as const).some(key => patch[key] !== undefined && patch[key] !== this.state.draft[key])) {
-      draft.confirmed = false
-    }
     this.update({ draft, dirty: true, notice: null })
   }
   addPhotos = (files: readonly File[]) => {
@@ -99,7 +96,7 @@ export class RoomInputController {
   }
   checkExpiry = () => {
     if (this.state.accepted && Date.parse(this.state.accepted.expires_at) <= this.now() && !this.state.busy) {
-      this.update({ accepted: null, dirty: true, notice: { kind: 'info', text: 'Your uploaded photos have expired. Your selections are kept; upload again when ready.' } })
+      this.update({ accepted: null, dirty: true, notice: { kind: 'info', text: 'Your temporary photos have expired. Your selections are kept; choose Analyze photos to continue.' } })
     }
   }
   cancel = (notify = true) => {
@@ -108,7 +105,7 @@ export class RoomInputController {
     this.pending?.abort()
     this.pending = null
     if (this.state.busy) this.update({ busy: null, uncertain: true,
-      notice: notify ? { kind: 'info', text: wasUpload ? 'Upload cancelled. Your selections are kept; submit again to confirm them.' : 'Discard cancelled. Your selections are kept; retry to confirm removal.' } : null })
+      notice: notify ? { kind: 'info', text: wasUpload ? 'Cancelled. Your selections are kept; choose Analyze photos when ready.' : 'Discard cancelled. Your selections are kept; retry to confirm removal.' } : null })
   }
   submit = async (): Promise<boolean> => {
     if (this.state.busy || !this.state.limits || this.state.policyLoading) return false
