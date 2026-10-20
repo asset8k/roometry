@@ -6,14 +6,13 @@ from math import isclose
 from pydantic import ValidationError
 
 from roometry.scenes.assets import ASSET_REGISTRY
-from roometry.scenes.geometry import WALL_ROTATIONS_RAD
 from roometry.scenes.schemas import Opening, RoomDimensions, RoomScene, SceneObject
 from roometry.scenes.validation import GeometryReport, validate_geometry
 from roometry.uploads.schemas import InputDimensions
+from roometry.vision.attachments import anchor_placements
 from roometry.vision.proposal_schemas import (
     AXES,
     DimensionName,
-    DraftObject,
     ProposalIssue,
     SceneDraft,
 )
@@ -120,50 +119,6 @@ def notes(*groups: list[str]) -> list[str]:
     return unique
 
 
-def _anchor_placements(
-    analysis: RoomAnalysisResponse, measurements: Measurements, draft: SceneDraft
-) -> list[DraftObject]:
-    """Derive attachment coordinates; leave free layout coordinates for validation.
-
-    These values follow the declared placement, not a model's approximate math.
-    Do not move objects sideways to hide collisions or change their dimensions.
-    """
-    objects = [obj.model_copy(deep=True) for obj in draft.objects]
-    room = measurements.dimensions
-    for obj in objects:
-        if obj.placement == "floor":
-            obj.position.y = 0.0
-        elif obj.placement == "ceiling" and room.height_m is not None:
-            obj.position.y = room.height_m - obj.dimensions_m.height
-        elif obj.placement == "wall" and obj.wall is not None:
-            obj.rotation_y_rad = WALL_ROTATIONS_RAD[obj.wall]
-            depth = obj.dimensions_m.depth / 2
-            if obj.wall == "north":
-                obj.position.z = depth
-            elif obj.wall == "south" and room.length_m is not None:
-                obj.position.z = room.length_m - depth
-            elif obj.wall == "west":
-                obj.position.x = depth
-            elif obj.wall == "east" and room.width_m is not None:
-                obj.position.x = room.width_m - depth
-    by_id = {obj.id: obj for obj in objects}
-    observations = {obj.id: obj for obj in analysis.observations.objects}
-    for obj in objects:
-        if obj.placement != "surface" or obj.support_object_id is None:
-            continue
-        support = by_id.get(obj.support_object_id)
-        source = observations.get(obj.support_object_id)
-        asset = ASSET_REGISTRY.get(f"{source.type}_standard_01") if source else None
-        if (
-            support is not None
-            and support.placement in {"floor", "wall"}
-            and asset is not None
-            and asset.supplies_surface
-        ):
-            obj.position.y = support.position.y + support.dimensions_m.height
-    return objects
-
-
 def assemble(
     analysis: RoomAnalysisResponse, measurements: Measurements, draft: SceneDraft
 ) -> tuple[RoomScene | None, GeometryReport | None, list[ProposalIssue]]:
@@ -201,7 +156,7 @@ def assemble(
     object_observations = {obj.id: obj for obj in obs.objects}
     opening_observations = {opening.id: opening for opening in obs.openings}
     objects, openings = [], []
-    anchored_objects = _anchor_placements(analysis, measurements, draft)
+    anchored_objects = anchor_placements(analysis, measurements.dimensions, draft)
     for obj in anchored_objects:
         source = object_observations[obj.id]
         if source.placement is not None and obj.placement != source.placement:
@@ -313,7 +268,7 @@ def assemble(
     ]
     if anchored_objects != draft.objects:
         assumptions.append(
-            "Floor, ceiling, wall, and support attachment coordinates were derived from their declared relationships."
+            "Estimated placement was resolved geometrically: furniture boundary overshoots and attachment poses may be adjusted by up to 0.25 m, and movable floor decor by up to 0.75 m. Surface items may be aligned with their support's rotation to fit. Object sizes and room measurements were preserved."
         )
     if measurements.estimated:
         assumptions.append(

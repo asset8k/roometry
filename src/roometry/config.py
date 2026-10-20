@@ -44,6 +44,11 @@ class Settings(BaseSettings):
     analysis_max_body_bytes: int = Field(default=4096, ge=128, le=16384)
     analysis_max_request_bytes: int = Field(default=45_000_000, ge=1024, le=50_000_000)
     analysis_max_output_tokens: int = Field(default=8192, ge=128, le=32768)
+    # Scene drafts carry geometry for every object, unlike photo observations.
+    scene_max_output_tokens: int = Field(default=16384, ge=128, le=32768)
+    scene_reasoning_effort: Literal[
+        "default", "none", "low", "medium", "high", "xhigh", "max"
+    ] = "low"
     analysis_max_output_bytes: int = Field(default=262144, ge=1024, le=1048576)
     analysis_max_provider_attempts: int = Field(default=2, ge=1, le=3)
     analysis_max_cached_inputs: int = Field(default=128, ge=1, le=1024)

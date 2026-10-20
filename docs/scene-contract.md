@@ -134,7 +134,8 @@ These are planned supported categories, not implemented assets. Start with one r
 | Display | `tv` | Surface or wall |
 | Projection | `projector` | Surface or ceiling |
 | Floor covering | `rug` | Floor |
-| Wall decor | `picture`, `clock` | Wall |
+| Framed pictures | `picture` | Surface or wall |
+| Clocks | `clock` | Wall |
 | Window treatments | `window_covering` | Wall, attached to a window or door reference |
 | Small decor | `souvenir`, `vase`, `book_stack` | Surface |
 | Small household items | `household_accessory` | Floor, surface, or wall, according to the approved asset |

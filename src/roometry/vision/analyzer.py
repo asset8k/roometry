@@ -155,10 +155,17 @@ def response_json(response: Response, max_bytes: int) -> object:
                 "The model could not complete this room request. Review the room input.",
             )
     if getattr(response, "status", None) == "incomplete":
+        reason = getattr(getattr(response, "incomplete_details", None), "reason", None)
+        token_limited = reason == "max_output_tokens"
         raise AnalysisFailure(
             502,
             "analysis_incomplete",
-            "The model result did not finish within its output limits.",
+            "The model result did not finish within its output limits."
+            if token_limited
+            else "The model could not complete this room request.",
+            diagnostics={
+                "reason": "max_output_tokens" if token_limited else "incomplete_output"
+            },
         )
     if getattr(response, "status", None) != "completed":
         raise AnalysisFailure(

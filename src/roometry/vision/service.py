@@ -520,6 +520,7 @@ class AnalysisService:
             state.scene_attempts += 1
             started, outcome, response = perf_counter(), "interrupted", None
             details: dict[str, object] | None = None
+            output_limited = False
             try:
                 with anyio.fail_after(self.settings.analysis_timeout_seconds):
                     response = await self.analyzer.request(payload)
@@ -528,7 +529,12 @@ class AnalysisService:
                         response, self.settings.analysis_max_output_bytes
                     )
                 except AnalysisFailure as error:
-                    if error.code != "invalid_analysis":
+                    output_limited = (
+                        error.code == "analysis_incomplete"
+                        and error.diagnostics is not None
+                        and error.diagnostics.get("reason") == "max_output_tokens"
+                    )
+                    if error.code != "invalid_analysis" and not output_limited:
                         raise
                     details = error.diagnostics
                     decoded = None
@@ -545,7 +551,9 @@ class AnalysisService:
                     problems = [
                         issue(
                             "draft_schema",
-                            "Return exactly the requested scene draft schema with finite, valid geometry fields.",
+                            "Scene construction exceeded its response limit before completing all observed objects."
+                            if output_limited
+                            else "Return exactly the requested scene draft schema with finite, valid geometry fields.",
                         )
                     ]
                 else:
@@ -564,7 +572,13 @@ class AnalysisService:
                         if report
                         else [],
                     }
-                outcome = "success" if scene is not None else "invalid_proposal"
+                outcome = (
+                    "analysis_incomplete"
+                    if output_limited
+                    else "success"
+                    if scene is not None
+                    else "invalid_proposal"
+                )
             except (APITimeoutError, TimeoutError):
                 outcome = "analysis_timeout"
                 raise AnalysisFailure(
@@ -612,7 +626,11 @@ class AnalysisService:
                     outcome,
                     response,
                     stage="scene_proposal",
-                    details=details,
+                    details={
+                        "output_token_limit": self.settings.scene_max_output_tokens,
+                        "reasoning_effort": self.settings.scene_reasoning_effort,
+                        **(details or {}),
+                    },
                 )
             # Deletion/replacement/expiry while awaiting a paid call revokes results
             # and prevents repair from sending the observations again.

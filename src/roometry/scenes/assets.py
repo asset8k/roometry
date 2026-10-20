@@ -28,7 +28,7 @@ _SURFACE_TYPES: set[ObjectType] = {
     "kettle", "toaster",
 }
 _WALL_TYPES: set[ObjectType] = {
-    "wall_shelf", "picture", "clock", "window_covering", "radiator",
+    "wall_shelf", "clock", "window_covering", "radiator",
     "air_conditioner", "wall_cabinet", "extractor_hood", "towel_rack",
     "water_heater",
 }
@@ -38,6 +38,7 @@ _MULTIPLE_PLACEMENTS: dict[ObjectType, frozenset[Placement]] = {
     "basket": frozenset({"floor", "surface"}),
     "speaker": frozenset({"floor", "surface"}),
     "tv": frozenset({"surface", "wall"}),
+    "picture": frozenset({"surface", "wall"}),
     "projector": frozenset({"surface", "ceiling"}),
     "mirror": frozenset({"floor", "wall"}),
     "plant": frozenset({"floor", "surface"}),

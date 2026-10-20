@@ -383,6 +383,10 @@ def test_wall_shelf_can_support_an_object(scene_data):
         ("bed", "bed_crib_01", "floor"),
         ("household_accessory", "household_accessory_toilet_brush_01", "floor"),
         ("household_accessory", "household_accessory_toilet_paper_holder_01", "wall"),
+        ("picture", "picture_standard_01", "surface"),
+        ("picture", "picture_square_01", "surface"),
+        ("picture", "picture_rectangular_01", "surface"),
+        ("picture", "picture_rectangular_01", "wall"),
     ],
 )
 def test_household_categories_and_reusable_variants(

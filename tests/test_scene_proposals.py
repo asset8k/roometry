@@ -150,6 +150,148 @@ def confirmed(**values):
     return {"measurements_source": "user_confirmed", **values}
 
 
+def output_limited_scene():
+    async def action(request, payload):
+        data = (await scene_action()(request, payload)).json()
+        data["status"] = "incomplete"
+        data["incomplete_details"] = {"reason": "max_output_tokens"}
+        data["output"][0]["status"] = "incomplete"
+        data["output"][0]["content"][0]["text"] = '{"objects": [PRIVATE_PARTIAL'
+        data["usage"]["output_tokens"] = payload["max_output_tokens"]
+        data["usage"]["total_tokens"] = 1200 + payload["max_output_tokens"]
+        data["usage"]["output_tokens_details"]["reasoning_tokens"] = 5602
+        return httpx.Response(200, json=data)
+
+    return action
+
+
+@pytest.mark.parametrize("effort", ["low", "medium", "default"])
+async def test_scene_output_budget_and_reasoning_are_separate_from_analysis(
+    harness, effort
+):
+    app, client, calls, actions = harness
+    app.state.settings.scene_max_output_tokens = 12288
+    app.state.settings.scene_reasoning_effort = effort
+    analysis = await analyzed(harness)
+    actions.append(scene_action())
+    response = await client.post(
+        "/api/rooms/propose-scene",
+        json=body(analysis, dimensions=confirmed(length_m=4, height_m=2.6)),
+    )
+    assert response.json()["status"] == "ready", response.text
+    assert calls[0]["max_output_tokens"] == 8192
+    assert "reasoning" not in calls[0]
+    assert calls[1]["max_output_tokens"] == 12288
+    assert calls[1]["model"] == calls[0]["model"] == "gpt-6-luna"
+    if effort == "default":
+        assert "reasoning" not in calls[1]
+    else:
+        assert calls[1]["reasoning"] == {"effort": effort}
+
+
+async def test_scene_output_limit_uses_existing_repair_and_discards_partial_json(
+    harness, caplog
+):
+    app, client, calls, actions = harness
+    analysis = await analyzed(harness)
+    actions.extend([output_limited_scene(), scene_action()])
+    with caplog.at_level("WARNING", logger="roometry.vision.service"):
+        response = await client.post(
+            "/api/rooms/propose-scene",
+            json=body(analysis, dimensions=confirmed(length_m=4, height_m=2.6)),
+        )
+    assert response.status_code == 200 and response.json()["status"] == "ready", (
+        response.text
+    )
+    assert len(calls) == 3
+    context = json.loads(calls[-1]["input"][0]["content"][0]["text"])
+    assert context["previous_draft"] is None
+    assert "response limit" in context["validation_feedback"][0]["message"]
+    logged = json.loads(
+        next(
+            record.getMessage().partition(": ")[2]
+            for record in caplog.records
+            if '"outcome": "analysis_incomplete"' in record.getMessage()
+        )
+    )
+    assert logged["diagnostics"]["reason"] == "max_output_tokens"
+    assert logged["diagnostics"]["output_token_limit"] == 16384
+    assert logged["diagnostics"]["reasoning_effort"] == "low"
+    assert "PRIVATE_PARTIAL" not in caplog.text
+    records = [
+        record
+        for record in app.state.analysis_service.usage_records
+        if record.stage == "scene_proposal"
+    ]
+    assert [record.outcome for record in records] == ["analysis_incomplete", "success"]
+    assert records[0].output_tokens == 16384 and records[0].reasoning_tokens == 5602
+
+
+@pytest.mark.parametrize("first_failure", ["output_limit", "geometry"])
+async def test_repeated_output_limits_cannot_expand_scene_attempt_budget(
+    harness, first_failure
+):
+    app, client, calls, actions = harness
+    analysis = await analyzed(harness)
+    bad = draft_data()
+    bad["objects"][0]["position"]["x"] = -10
+    actions.extend(
+        [
+            output_limited_scene()
+            if first_failure == "output_limit"
+            else scene_action(bad),
+            output_limited_scene(),
+        ]
+    )
+    req = body(analysis, dimensions=confirmed(length_m=4, height_m=2.6))
+    response = await client.post("/api/rooms/propose-scene", json=req)
+    result = response.json()
+    assert response.status_code == 200 and result["status"] == "incomplete", (
+        response.text
+    )
+    assert result["scene"] is None and result["validation"] is None
+    assert "response limit" in result["issues"][0]["message"]
+    assert len(calls) == 3
+    assert (await client.post("/api/rooms/propose-scene", json=req)).json() == result
+    assert len(calls) == 3
+    assert app.state.analysis_service._states[analysis["input_id"]].scene_attempts == 2
+
+
+@pytest.mark.parametrize("refusal", [False, True])
+async def test_filtered_scene_output_is_never_retried_as_a_token_limit(
+    harness, refusal
+):
+    _, client, calls, actions = harness
+    analysis = await analyzed(harness)
+
+    async def filtered(request, payload):
+        data = (await scene_action()(request, payload)).json()
+        data["status"] = "incomplete"
+        data["incomplete_details"] = {
+            "reason": "max_output_tokens" if refusal else "content_filter"
+        }
+        if refusal:
+            data["output"][0]["content"] = [
+                {"type": "refusal", "refusal": "PRIVATE_REFUSAL"}
+            ]
+        return httpx.Response(200, json=data)
+
+    actions.append(filtered)
+    response = await client.post(
+        "/api/rooms/propose-scene",
+        json=body(analysis, dimensions=confirmed(length_m=4, height_m=2.6)),
+    )
+    assert_error(
+        response,
+        422 if refusal else 502,
+        "analysis_refused" if refusal else "analysis_incomplete",
+    )
+    assert len(calls) == 2
+    assert (
+        "output limits" not in response.text and "PRIVATE_REFUSAL" not in response.text
+    )
+
+
 async def test_measurement_confirmation_cached_analysis_and_ready_scene(harness):
     app, client, calls, actions = harness
     analysis = await analyzed(harness)
@@ -207,6 +349,87 @@ async def test_measurement_confirmation_cached_analysis_and_ready_scene(harness)
         1,
         1,
     ]
+
+
+def framed_picture_case(placement="surface"):
+    raw = source().model_dump()
+    observations = raw["observations"]
+    observations["objects"] = observations["objects"][1:3]
+    observations["possible_duplicates"] = []
+    console, picture = observations["objects"]
+    console.update(
+        id="tv_console_observed", type="tv_stand", label="Television console"
+    )
+    picture.update(
+        id="picture_observed",
+        type="picture",
+        label="Small framed picture on the television console",
+        placement=placement,
+        appears_fixed=False,
+        estimated_dimensions_m=None,
+        support_object_id="tv_console_observed" if placement == "surface" else None,
+        wall_id="window_wall" if placement == "wall" else None,
+    )
+    data = draft_data()
+    data["objects"] = data["objects"][1:3]
+    data["objects"][0]["id"] = "tv_console_observed"
+    data["objects"][1].update(
+        id="picture_observed",
+        placement=placement,
+        support_object_id=picture["support_object_id"],
+        wall="north" if placement == "wall" else None,
+        dimensions_m={"width": 0.25, "depth": 0.06, "height": 0.3},
+    )
+    if placement == "wall":
+        data["objects"][1]["position"] = {"x": 3, "y": 1.5, "z": 0.03}
+    return RoomAnalysisResponse.model_validate(raw), data
+
+
+@pytest.mark.parametrize("placement", ["surface", "wall"])
+async def test_api_accepts_framed_picture_placements_and_sets_fixed_by_placement(
+    harness, monkeypatch, placement
+):
+    _, client, calls, actions = harness
+    original, draft = framed_picture_case(placement)
+    assert not preflight(original)
+    monkeypatch.setattr(test_vision_api, "SOURCE", original.observations.model_dump())
+    analysis = await analyzed(harness)
+    actions.append(scene_action(draft))
+    response = await client.post(
+        "/api/rooms/propose-scene",
+        json=body(analysis, dimensions=confirmed(length_m=4, height_m=2.6)),
+    )
+    assert response.status_code == 200 and response.json()["status"] == "ready", (
+        response.text
+    )
+    scene = RoomScene.model_validate(response.json()["scene"])
+    picture = next(obj for obj in scene.objects if obj.id == "picture_observed")
+    assert picture.type == "picture" and picture.placement == placement
+    assert picture.fixed is (placement == "wall")
+    assert validate_geometry(scene).valid
+    assert len(calls) == 2
+
+
+@pytest.mark.parametrize("defect", ["missing_support", "outside_support", "floor"])
+async def test_picture_placement_flexibility_preserves_validation(defect):
+    analysis, draft = framed_picture_case()
+    if defect == "missing_support":
+        analysis.observations.objects[1].support_object_id = None
+        draft["objects"][1]["support_object_id"] = None
+    elif defect == "outside_support":
+        draft["objects"][1]["position"]["x"] = 2
+    else:
+        analysis.observations.objects[1].placement = "floor"
+        assert preflight(analysis)[0].code == "unsupported_placement"
+        return
+    scene, report, issues = assemble(
+        analysis, measurements(analysis), SceneDraft.model_validate(draft)
+    )
+    assert scene is None and issues
+    if defect == "outside_support":
+        assert report is not None and "surface_support" in {
+            error.code for error in report.errors
+        }
 
 
 async def test_confirmed_dimensions_win_over_estimates_and_partial_values_do_not_erase():

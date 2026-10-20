@@ -90,6 +90,17 @@ observed approved support object, never a window/opening or an invented shelf.
 Check every object's asset placement, nullable wall field, and support reference
 before submitting. The server derives floor, ceiling, wall-depth, and support
 height attachment coordinates; do not change free layout positions to evade errors.
+Small boundary overshoots may be corrected by up to 0.25 m; movable floor decor
+may be repositioned locally by up to 0.75 m. These are disclosed pose estimates,
+not changes to furniture dimensions, observed identities, or user measurements.
+Repair previous_draft contains the server-adjusted coordinates that were checked.
+Use attachment_constraints to fit each surface item's ROTATED footprint inside
+its support; a plant's full approximate box must fit, not just its pot. Shelves
+currently provide one top surface. Separate their children horizontally; do not
+invent internal tiers or place several items in the same space. Curtains must
+fit within the host wall's span and below the ceiling. Positions are bottom centers.
 If repair feedback is supplied, correct those errors while preserving the same
 identities, measurements and evidence. Do not claim success or safety in notes.
+Keep assumptions and warnings concise. When feedback reports a response limit,
+produce a complete compact draft; never drop objects or return partial geometry.
 """
