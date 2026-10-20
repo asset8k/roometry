@@ -32,6 +32,17 @@ def build_proposal_request(
                 "asset_id": asset_id,
                 "placements": sorted(asset.placements),
                 "supplies_surface": asset.supplies_surface,
+                **(
+                    {
+                        "opening_ids": [
+                            opening.id
+                            for opening in analysis.observations.openings
+                            if obj.wall_id is None or opening.wall_id == obj.wall_id
+                        ]
+                    }
+                    if obj.type == "window_covering"
+                    else {}
+                ),
             }
         )
     context = {

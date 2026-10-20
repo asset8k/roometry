@@ -844,3 +844,104 @@ async def test_visible_window_sill_can_use_existing_shelf_asset_as_support():
     assert scene is not None and report is not None and report.valid and not problems
     assert scene.objects[0].asset_id == "wall_shelf_standard_01"
     assert scene.objects[1].position.y == pytest.approx(1.1)
+
+
+def curtained_door_case():
+    analysis = source().model_dump()
+    observations = analysis["observations"]
+    observations["objects"] = [
+        {
+            **observations["objects"][0],
+            "id": "curtains_observed",
+            "type": "window_covering",
+            "label": "Curtains at glazed patio door",
+            "placement": "wall",
+            "wall_id": "door_wall",
+            "support_object_id": None,
+            "estimated_dimensions_m": None,
+        }
+    ]
+    observations["openings"] = observations["openings"][1:]
+    observations["walls"] = observations["walls"][1:]
+    observations["possible_duplicates"] = []
+    data = draft_data()
+    data["wall_assignments"] = data["wall_assignments"][1:]
+    data["openings"] = data["openings"][1:]
+    data["objects"] = [
+        {
+            **data["objects"][0],
+            "id": "curtains_observed",
+            "placement": "wall",
+            "wall": "east",
+            "opening_id": "door_observed",
+            "position": {"x": 3.975, "y": 0, "z": 2.9},
+            "dimensions_m": {"width": 1, "depth": 0.05, "height": 2.15},
+        }
+    ]
+    return RoomAnalysisResponse.model_validate(analysis), data
+
+
+async def test_scene_assembly_preserves_glazed_door_with_curtains():
+    analysis, data = curtained_door_case()
+    scene, report, issues = assemble(
+        analysis, measurements(analysis), SceneDraft.model_validate(data)
+    )
+    assert scene is not None and report is not None and report.valid and not issues
+    assert scene.openings[0].id == "door_observed" and scene.openings[0].type == "door"
+    assert scene.objects[0].opening_id == "door_observed"
+
+
+@pytest.mark.parametrize(
+    "defect", ["missing_link", "unknown_link", "wrong_wall", "door_sill"]
+)
+async def test_opening_errors_identify_the_entity_and_repair_needed(defect):
+    analysis, data = curtained_door_case()
+    if defect == "missing_link":
+        data["objects"][0]["opening_id"] = None
+    elif defect == "unknown_link":
+        data["objects"][0]["opening_id"] = "missing_opening"
+    elif defect == "wrong_wall":
+        analysis.observations.objects[0].wall_id = None
+        data["objects"][0]["wall"] = "north"
+    else:
+        analysis.observations.openings[0].estimated_sill_height_m = None
+        data["openings"][0]["sill_height_m"] = 0.1
+    scene, report, issues = assemble(
+        analysis, measurements(analysis), SceneDraft.model_validate(data)
+    )
+    assert scene is None and report is None
+    assert issues[0].entity_ids[0] == (
+        "door_observed" if defect == "door_sill" else "curtains_observed"
+    )
+    assert (
+        "sill_height_m=0"
+        if defect == "door_sill"
+        else "east"
+        if defect == "wrong_wall"
+        else "opening_id"
+    ) in issues[0].message
+    assert "assembled scene violates" not in issues[0].message
+
+
+async def test_api_repairs_curtain_opening_link_without_reanalyzing(
+    harness, monkeypatch
+):
+    _, client, calls, actions = harness
+    original, data = curtained_door_case()
+    monkeypatch.setattr(test_vision_api, "SOURCE", original.observations.model_dump())
+    analysis = await analyzed(harness)
+    bad = deepcopy(data)
+    bad["objects"][0]["opening_id"] = "missing_opening"
+    actions.extend([scene_action(bad), scene_action(data)])
+    response = await client.post(
+        "/api/rooms/propose-scene",
+        json=body(analysis, dimensions=confirmed(length_m=4, height_m=2.6)),
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["status"] == "ready"
+    assert response.json()["scene"]["openings"][0]["type"] == "door"
+    assert len(calls) == 3
+    context = json.loads(calls[-1]["input"][0]["content"][0]["text"])
+    assert context["asset_bindings"][0]["opening_ids"] == ["door_observed"]
+    assert context["validation_feedback"][0]["entity_ids"] == ["curtains_observed"]
+    assert "opening_id" in context["validation_feedback"][0]["message"]

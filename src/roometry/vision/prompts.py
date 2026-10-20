@@ -78,7 +78,9 @@ supports must be approved surfaces on floor or wall, without nested support.
 All solid bounding boxes must fit the room and avoid overlap. Do not tuck chairs
 under desks: the current conservative box validator cannot represent that space.
 Opening offset runs along x for north/south and z for east/west; door sill=0.
-Only window_covering uses opening_id, pointing to its observed window on same wall.
+Only window_covering uses opening_id, pointing to its observed window OR door on
+the same wall. Curtains can dress a glazed patio/balcony door; preserve that door's
+observed type rather than inventing a window or changing the opening's identity.
 Only wall placement has wall; only surface placement has support_object_id.
 Allowed placements and surfaces come from server asset_bindings. Never invent assets.
 A known observed placement and support_object_id are immutable. A wall shelf

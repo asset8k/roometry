@@ -442,14 +442,21 @@ def test_wall_requires_host_and_ceiling_forbids_host(scene_data):
     [
         (None, "east"),
         ("missing_window", "east"),
-        ("door_1", "north"),
+        ("door_1", "west"),
         ("window_1", "west"),
     ],
 )
-def test_window_covering_requires_matching_window(scene_data, opening_id, wall):
+def test_window_covering_requires_matching_opening(scene_data, opening_id, wall):
     find_object(scene_data, "curtain_1").update(opening_id=opening_id, wall=wall)
     with pytest.raises(ValidationError):
         RoomScene.model_validate(scene_data)
+
+
+def test_curtains_can_reference_a_door_on_the_same_wall(scene_data):
+    door = scene_data["openings"][0]
+    find_object(scene_data, "curtain_1").update(opening_id=door["id"], wall=door["wall"])
+    scene = RoomScene.model_validate(scene_data)
+    assert next(obj for obj in scene.objects if obj.id == "curtain_1").opening_id == door["id"]
 
 
 @pytest.mark.parametrize(

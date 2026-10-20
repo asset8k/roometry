@@ -61,6 +61,21 @@ describe('room analysis workspace', () => {
     expect(html).not.toContain('Two authored example layouts')
     expect(html).not.toContain('Example bedroom')
   })
+  it('names the affected item and keeps scene failures separate from photo quality', () => {
+    const { controller } = setup()
+    const analysis = analyzedRoom()
+    const affected = analysis.observations.objects[0]
+    affected.label = 'Curtains at glazed patio door'
+    const state = { ...controller.getSnapshot(), analysis, proposal: {
+      ...proposedRoom(), status: 'incomplete' as const, scene: null, validation: null,
+      issues: [{ code: 'scene_schema' as const, entity_ids: [affected.id], message: 'This covering must reference an observed window or door using opening_id.' }],
+    } }
+    const html = renderToStaticMarkup(<RoomAnalysisWorkspace state={state} controller={controller} onConnectionChange={vi.fn()} />)
+    expect(html).toContain('(Curtains at glazed patio door)')
+    expect(html).toContain('Your photo analysis is still available until it expires.')
+    expect(html).not.toContain('Clearer photos or corrected measurements')
+    expect(html).not.toContain('3D room viewer')
+  })
   it('escapes observation text instead of interpreting model-provided markup', async () => {
     const { controller } = setup()
     await controller.analyze()

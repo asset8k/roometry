@@ -135,7 +135,7 @@ These are planned supported categories, not implemented assets. Start with one r
 | Projection | `projector` | Surface or ceiling |
 | Floor covering | `rug` | Floor |
 | Wall decor | `picture`, `clock` | Wall |
-| Window treatments | `window_covering` | Wall, attached to a window reference |
+| Window treatments | `window_covering` | Wall, attached to a window or door reference |
 | Small decor | `souvenir`, `vase`, `book_stack` | Surface |
 | Small household items | `household_accessory` | Floor, surface, or wall, according to the approved asset |
 | Mirror | `mirror` | Floor or wall |
@@ -212,7 +212,7 @@ The current viewer provides local, unsaved color previews for unlocked objects, 
 
 For wall objects, face into the room: north uses rotation `0`, east `3π/2`, south `π`, and west `π/2`. Offset the footprint center inward by half its depth from the host wall. For example, a north-wall picture with depth `0.04` has `position.z = 0.02`. Its `position.y` is the bottom edge's elevation.
 
-A `window_covering` references an existing window through `opening_id` and uses the same host wall. Its approved asset may overlap that window's opening area, but never a door or unrelated opening. Validate room bounds and solid-object collisions as usual. Treat it as a thin decorative layer; opaque panels may affect qualitative daylight/privacy suggestions, but they do not fill the window opening with a solid wall. Fixed rails/attachments are included in the asset; cloth movement is not simulated. All other categories set `opening_id = null`.
+A `window_covering` references an existing window or door through `opening_id` and uses the same host wall. This includes curtains at glazed patio or balcony doors. Its approved asset may overlap its linked opening's area, but never an unrelated opening. Validate room bounds and solid-object collisions as usual; this exception does not check door swings or access clearance. Treat it as a thin decorative layer; opaque panels may affect qualitative daylight/privacy suggestions, but they do not fill the opening with a solid wall. Fixed rails/attachments are included in the asset; cloth movement is not simulated. All other categories set `opening_id = null`.
 
 Surface object positions remain in world coordinates. Moving or rotating a supporting object must transform its children together and revalidate the result. Reject a change that would move a locked or fixed child. Reject removing a support until its children are explicitly relocated or removed. Deleting a desk must not silently delete its computer. Explicit user corrections to window geometry must also update and validate attached coverings atomically; reject deleting a window while a covering still references it.
 
@@ -511,7 +511,7 @@ Each error has `code`, `entity_ids`, and `message`:
 | `wall_attachment` | A wall object must face inward and have its entire back edge touching the specified host wall |
 | `ceiling_attachment` | A ceiling object's top must touch the ceiling |
 | `opening_outside_wall` | Opening offset, width, sill height, and height must fit the host wall |
-| `wall_opening_overlap` | A correctly attached wall object must not overlap a door or window, except its own linked window for an approved covering asset |
+| `wall_opening_overlap` | A correctly attached wall object must not overlap a door or window, except its own linked opening for an approved covering asset |
 
 Rug and window-covering exceptions come from trusted asset registry metadata. A curtain remains solid for object/object collision checks. Surface children remain ordinary solids too: touching the support top is allowed; penetrating it is rejected.
 

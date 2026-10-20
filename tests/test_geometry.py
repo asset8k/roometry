@@ -382,11 +382,21 @@ def test_curtain_can_cover_only_its_linked_window():
     assert report.errors[0].entity_ids == ("curtain_1", "window_2")
 
 
-def test_curtain_exception_never_allows_covering_a_door():
+def test_curtain_exception_never_allows_covering_an_unrelated_door():
     door = opening("door_1", kind="door", offset=2.7, width=0.8, bottom=0.0, height=2.1)
     report = validate_geometry(scene([curtain()], openings=[opening(offset=1.4, width=1.2), door]))
     assert codes(report) == {"wall_opening_overlap"}
     assert report.errors[0].entity_ids == ("curtain_1", "door_1")
+
+
+def test_curtain_can_cover_its_linked_door_but_not_another_opening():
+    item = curtain().model_copy(update={"opening_id": "patio_door"})
+    patio_door = opening("patio_door", kind="door", offset=1.4, width=1.2, bottom=0, height=2.1)
+    assert validate_geometry(scene([item], openings=[patio_door])).valid
+    another_door = opening("another_door", kind="door", offset=2.7, width=0.8, bottom=0, height=2.1)
+    report = validate_geometry(scene([item], openings=[patio_door, another_door]))
+    assert codes(report) == {"wall_opening_overlap"}
+    assert report.errors[0].entity_ids == ("curtain_1", "another_door")
 
 
 def test_curtain_is_still_solid_for_object_collisions():

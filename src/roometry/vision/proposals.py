@@ -342,7 +342,9 @@ def assemble(
                     if raw["placement"] == "surface"
                     and raw["support_object_id"] is None
                     else "scene_schema",
-                    "Check this object's asset placement, required wall/opening reference, and support_object_id. Surface objects require an observed supporting object.",
+                    "This covering requires opening_id naming an observed window or door."
+                    if raw["type"] == "window_covering" and raw["opening_id"] is None
+                    else "Check this object's asset placement, required wall/opening reference, and support_object_id. Surface objects require an observed supporting object.",
                     raw["id"],
                 )
             )
@@ -366,6 +368,46 @@ def assemble(
                 )
     if issues:
         return None, None, issues[:50]
+    parsed_openings = []
+    for raw in openings:
+        try:
+            parsed_openings.append(Opening.model_validate(raw))
+        except ValidationError:
+            issues.append(
+                issue(
+                    "scene_schema",
+                    "Check this opening's dimensions and sill height. Doors require sill_height_m=0.",
+                    raw["id"],
+                )
+            )
+    if issues:
+        return None, None, issues[:50]
+    opening_by_id = {opening.id: opening for opening in parsed_openings}
+    for obj in parsed_objects:
+        if obj.type != "window_covering":
+            continue
+        linked = (
+            opening_by_id.get(obj.opening_id) if obj.opening_id is not None else None
+        )
+        if linked is None:
+            issues.append(
+                issue(
+                    "scene_schema",
+                    "This covering must reference an observed window or door using opening_id.",
+                    obj.id,
+                )
+            )
+        elif obj.wall != linked.wall:
+            issues.append(
+                issue(
+                    "wall_mapping",
+                    f"This covering must use the linked opening's wall: {linked.wall}.",
+                    obj.id,
+                    linked.id,
+                )
+            )
+    if issues:
+        return None, None, issues[:50]
     try:
         scene = RoomScene(
             schema_version=1,
@@ -374,7 +416,7 @@ def assemble(
                 **measurements.dimensions.model_dump(),
             ),
             objects=parsed_objects,
-            openings=[Opening.model_validate(opening) for opening in openings],
+            openings=parsed_openings,
             assumptions=notes(assumptions, obs.assumptions, draft.assumptions),
             warnings=notes(warnings, obs.warnings, draft.warnings),
         )

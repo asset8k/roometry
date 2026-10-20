@@ -11,6 +11,10 @@ export default function RoomAnalysisWorkspace({ state, controller, onConnectionC
   if (!analysis && !state.notice) return null
   const observations = analysis?.observations
   const entities = observations ? [...observations.objects, ...observations.openings, ...observations.walls] : []
+  const entityName = (id: string) => {
+    const entity = entities.find(item => item.id === id)
+    return entity && 'label' in entity ? entity.label : entity && 'type' in entity ? label(entity.type) : label(id)
+  }
   return <section className="analysis-workspace" aria-label="Room analysis and reconstruction" aria-busy={Boolean(busy)}>
     <div className="analysis-card">
       <span className="section-label">From photos to a room</span>
@@ -48,7 +52,7 @@ export default function RoomAnalysisWorkspace({ state, controller, onConnectionC
       {busy && <div className="upload-progress" role="status"><progress aria-label={busy === 'analysis' ? 'Analyzing room photos' : 'Building base scene'} /><span>{busy === 'analysis' ? 'Reading the photos together…' : 'Proposing and checking the room geometry…'}</span><button type="button" onClick={controller.cancel}>Cancel</button></div>}
       {state.notice && <div className={`input-notice ${state.notice.kind}`} role={state.notice.kind === 'error' ? 'alert' : 'status'}><p>{state.notice.text}</p></div>}
       {proposal?.status === 'needs_dimensions' && <div className="input-notice" role="status"><strong>A few measurements are still needed</strong><p>Enter: {proposal.dimensions_to_confirm.map(axis => dimensionLabels[axis].toLowerCase()).join(', ')}. Your photo analysis is saved temporarily; you don’t need to analyze again.</p></div>}
-      {proposal?.status === 'incomplete' && <div className="input-notice error" role="alert"><strong>We couldn’t validate a complete base scene</strong><ul>{proposal.issues.map((issue, index) => <li key={index}>{issue.message}{!!issue.entity_ids.length && ` (${issue.entity_ids.join(', ')})`}</li>)}</ul><p>Review the room details. Clearer photos or corrected measurements may be needed.</p></div>}
+      {proposal?.status === 'incomplete' && <div className="input-notice error" role="alert"><strong>We couldn’t validate a complete base scene</strong><ul>{proposal.issues.map((issue, index) => <li key={index}>{issue.message}{!!issue.entity_ids.length && ` (${issue.entity_ids.map(entityName).join(', ')})`}</li>)}</ul><p>Your photo analysis is still available until it expires.</p></div>}
       {proposal?.estimated_axes.length ? <p className="analysis-caution">Unconfirmed room dimensions: {proposal.estimated_axes.map(axis => dimensionLabels[axis].toLowerCase()).join(', ')}. These remain labeled as estimates.</p> : null}
     </div>
     {scene && <section className="reconstructed-room" aria-label="Your reconstructed room">

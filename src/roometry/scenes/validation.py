@@ -110,7 +110,7 @@ def validate_geometry(scene: RoomScene) -> GeometryReport:
                 if opening.wall != obj.wall:
                     continue
                 # Exception comes from trusted asset metadata and the validated
-                # window link, never from a user-supplied collision flag.
+                # opening link, never from a user-supplied collision flag.
                 if asset.object_type == "window_covering" and obj.opening_id == opening.id:
                     continue
                 if wall_object_overlaps_opening(box, opening):

@@ -204,8 +204,10 @@ class RoomScene(SceneModel):
                 if opening_id is None:
                     raise ValueError(f"Object {obj.id} requires opening_id")
                 opening = openings.get(opening_id)
-                if opening is None or opening.type != "window":
-                    raise ValueError(f"Object {obj.id} must reference an existing window")
+                # Curtains/blinds may also dress a glazed patio or balcony door.
+                # The existing asset name covers both kinds of opening.
+                if opening is None:
+                    raise ValueError(f"Object {obj.id} must reference an existing window or door")
                 if obj.wall != opening.wall:
-                    raise ValueError(f"Object {obj.id} must use its window's wall")
+                    raise ValueError(f"Object {obj.id} must use its opening's wall")
         return self
