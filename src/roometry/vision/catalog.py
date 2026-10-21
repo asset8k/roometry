@@ -10,6 +10,7 @@ from roometry.scenes.catalog import (
     dimensions_for,
     object_surfaces,
 )
+from roometry.scenes.collision import contact_bounds
 from roometry.scenes.furniture import SupportSurface
 from roometry.scenes.schemas import ObjectDimensions
 from roometry.vision.proposal_schemas import (
@@ -132,10 +133,14 @@ def bind_catalog(
             )
             x, z = c * dx - s * dz, s * dx + c * dz
             host_size = support.dimensions_m
+            base = contact_bounds(obj)
+            if base is None:
+                continue
+            base_width, base_depth = (2 * half for half in base.footprint.half_extents)
             relative = obj.rotation_y_rad - support.rotation_y_rad
             c, s = abs(cos(relative)), abs(sin(relative))
-            child_width = c * obj.dimensions_m.width + s * obj.dimensions_m.depth
-            child_depth = s * obj.dimensions_m.width + c * obj.dimensions_m.depth
+            child_width = c * base_width + s * base_depth
+            child_depth = s * base_width + c * base_depth
             top_height = max(area.y for area in surfaces)
             top = [area for area in surfaces if area.y == top_height]
 
@@ -143,7 +148,7 @@ def bind_catalog(
                 width = (area.x_max - area.x_min) * host_size.width
                 depth = (area.z_max - area.z_min) * host_size.depth
                 return (child_width <= width and child_depth <= depth) or (
-                    obj.dimensions_m.width <= width and obj.dimensions_m.depth <= depth
+                    base_width <= width and base_depth <= depth
                 )
 
             # Default to the uppermost usable area; tie-break by proximity, then ID.

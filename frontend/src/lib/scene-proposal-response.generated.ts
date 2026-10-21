@@ -7,7 +7,7 @@
 
 export type AnalysisId = string;
 export type InputId = string;
-export type Status = "needs_dimensions" | "ready" | "incomplete";
+export type Status = "needs_dimensions" | "ready" | "partial" | "incomplete";
 export type WidthM = number | null;
 export type LengthM = number | null;
 export type HeightM = number | null;
@@ -250,7 +250,7 @@ export type Assumptions = string[];
  * @maxItems 50
  */
 export type Warnings = string[];
-export type PolicyVersion = "baseline-v1";
+export type PolicyVersion = "components-v1";
 export type ToleranceM = number;
 export type RotationToleranceRad = number;
 export type Code =
@@ -282,7 +282,9 @@ export type Code1 =
   | "support_mismatch"
   | "scene_schema"
   | "geometry"
-  | "proposal_limit_reached";
+  | "proposal_limit_reached"
+  | "dependency_unresolved"
+  | "repair_failed";
 /**
  * @maxItems 200
  */
@@ -292,6 +294,12 @@ export type Message1 = string;
  * @maxItems 50
  */
 export type Issues = ProposalIssue[];
+export type EntityId = string;
+export type Kind = "object" | "opening";
+/**
+ * @maxItems 232
+ */
+export type UnresolvedEntities = UnresolvedEntity[];
 /**
  * @maxItems 50
  */
@@ -308,6 +316,7 @@ export interface SceneProposalResponse {
   scene: RoomScene | null;
   validation: GeometryReport | null;
   issues: Issues;
+  unresolved_entities?: UnresolvedEntities;
   warnings: Warnings2;
   expires_at: ExpiresAt;
 }
@@ -380,7 +389,7 @@ export interface ObjectDimensions {
   height: Height;
 }
 /**
- * `valid` means these baseline checks passed, not full scene acceptance.
+ * `valid` means catalog component checks passed, not full scene acceptance.
  */
 export interface GeometryReport {
   policy_version?: PolicyVersion;
@@ -399,4 +408,12 @@ export interface ProposalIssue {
   code: Code1;
   entity_ids: EntityIds1;
   message: Message1;
+}
+/**
+ * An original observation omitted from the validated scene, never deleted.
+ */
+export interface UnresolvedEntity {
+  entity_id: EntityId;
+  kind: Kind;
+  reason: ProposalIssue;
 }

@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import requestSchema from './scene-proposal-request.schema.json'
 import responseSchema from './scene-proposal-response.schema.json'
 import fixture from '../data/room_scene_proposal.json'
+import partialFixture from '../data/room_scene_partial.json'
 import type { SceneProposalRequest } from './scene-proposal-request.generated'
 import type { SceneProposalResponse } from './scene-proposal-response.generated'
 
@@ -20,6 +21,12 @@ describe('shared scene-proposal contracts', () => {
     expect(proposal.validation?.valid).toBe(true)
     expect(proposal.scene?.room.measurements_source).toBe('user_confirmed')
     expect(proposal.scene?.objects.every(object => object.measurements_source === 'estimated')).toBe(true)
+  })
+  it('shares the partial fixture with the backend, including omitted observations', () => {
+    expect(validResponse(partialFixture)).toBe(true)
+    expect(partialFixture.validation.valid).toBe(true)
+    expect(partialFixture.unresolved_entities[0].entity_id).toBe('bed_observed')
+    expect(partialFixture.scene.objects.some(object => object.id === 'bed_observed')).toBe(false)
   })
 
   it('accepts partial confirmation without allowing client-supplied scene authority', () => {

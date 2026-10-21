@@ -137,8 +137,9 @@ def test_export_refuses_invalid_fixtures_before_writing_any_output(tmp_path, mon
     assert not (tmp_path / "frontend/src/data").exists()
 
 
-def test_frontend_scene_proposal_fixture_matches_validated_source():
-    source = SceneProposalResponse.model_validate_json((ROOT / "data/fixtures/room_scene_proposal.json").read_text())
-    exported = json.loads((ROOT / "frontend/src/data/room_scene_proposal.json").read_text())
+@pytest.mark.parametrize("filename", ["room_scene_proposal.json", "room_scene_partial.json"])
+def test_frontend_scene_proposal_fixture_matches_validated_source(filename):
+    source = SceneProposalResponse.model_validate_json((ROOT / "data/fixtures" / filename).read_text())
+    exported = json.loads((ROOT / "frontend/src/data" / filename).read_text())
     assert exported == source.model_dump(mode="json")
     assert source.scene is not None and validate_geometry(source.scene).valid

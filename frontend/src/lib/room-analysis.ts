@@ -34,19 +34,29 @@ export function parseRoomAnalysis(data: unknown): RoomAnalysisResponse {
 export function parseSceneProposal(data: unknown): SceneProposalResponse {
   if (!validProposal(data)) throw new RoomAnalysisError('The service returned an unreadable scene proposal.')
   const { status, scene, validation, dimensions, dimensions_to_confirm: pending, estimated_axes: estimated, issues } = data
+  const unresolved = data.unresolved_entities ?? []
+  const unresolvedIds = new Set(unresolved.map(item => item.entity_id))
+  const retained = [...(scene?.objects ?? []), ...(scene?.openings ?? [])].map(item => item.id)
+  const renderable = status === 'ready' || status === 'partial'
   const invalid = new Set(pending).size !== pending.length || new Set(estimated).size !== estimated.length
     || estimated.some(axis => dimensions[axis] == null)
     || (dimensions.measurements_source === 'user_confirmed' && estimated.length > 0)
     || (status === 'needs_dimensions' && !pending.length)
     || (status === 'incomplete' && !issues.length)
     || (validation !== null && validation.valid !== (validation.errors.length === 0))
-    || (status !== 'ready' && scene !== null)
-    || (status === 'ready' && (!scene || !validation?.valid || issues.length > 0 || pending.length > 0
+    || unresolvedIds.size !== unresolved.length || new Set(retained).size !== retained.length
+    || unresolved.some(item => !item.reason.entity_ids.includes(item.entity_id))
+    || retained.some(id => unresolvedIds.has(id))
+    || (status === 'ready' && (issues.length > 0 || unresolved.length > 0))
+    || (status === 'partial' && (!retained.length || !unresolved.length || !issues.length))
+    || (status === 'needs_dimensions' && unresolved.length > 0)
+    || (!renderable && scene !== null)
+    || (renderable && (!scene || !validation?.valid || pending.length > 0
       || dimensionAxes.some(axis => dimensions[axis] !== scene.room[axis])
       || dimensions.measurements_source !== scene.room.measurements_source
       || (estimated.length > 0) !== (dimensions.measurements_source === 'estimated')))
   if (invalid) throw new RoomAnalysisError('The service returned an inconsistent scene proposal. No new scene was opened.')
-  return structuredClone(data)
+  return structuredClone({ ...data, unresolved_entities: unresolved })
 }
 
 export function analysisFailure(data: unknown, status: number): RoomAnalysisError {

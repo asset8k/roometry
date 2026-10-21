@@ -80,7 +80,7 @@ describe('generated edit response validation', () => {
     expect(parseEditPreview(rejectedMove(scene)).accepted).toBe(false)
   })
 
-  it.each(['missing-scene', 'false-acceptance', 'inconsistent-report', 'missing-validation', 'unknown-changed-id', 'unsupported-policy'])('rejects %s responses before commit', fault => {
+  it.each(['missing-scene', 'false-acceptance', 'inconsistent-report', 'missing-validation', 'unknown-changed-id', 'unsupported-policy', 'outdated-policy'])('rejects %s responses before commit', fault => {
     const data = acceptedMove(loadExampleScene())
     if (fault === 'missing-scene') delete (data as Partial<typeof data>).scene
     if (fault === 'false-acceptance') data.edit_errors.push({ code: 'object_locked', entity_ids: ['desk_1'], message: 'Locked' })
@@ -88,6 +88,7 @@ describe('generated edit response validation', () => {
     if (fault === 'missing-validation') data.candidate_validation = null
     if (fault === 'unknown-changed-id') data.changed_object_ids.push('missing_1')
     if (fault === 'unsupported-policy') delete data.base_validation.policy_version
+    if (fault === 'outdated-policy') Object.assign(data.base_validation, { policy_version: 'baseline-v1' })
     expect(() => parseEditPreview(data)).toThrow()
   })
 

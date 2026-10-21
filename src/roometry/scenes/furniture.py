@@ -1,9 +1,9 @@
-"""Procedural core furniture: shared visual parts and future geometry inputs.
+"""Procedural core furniture: shared visual parts and geometry inputs.
 
 Local coordinates are x/z [-.5, .5], y [0, 1], with +Z facing forward.
-Parts are scaled by a scene object's dimensions; nominal sizes are gallery
-examples, never inferred room measurements. The current geometry validator
-still uses whole-object boxes. It does not consume these component shapes yet.
+Parts are scaled by a scene object's dimensions; nominal sizes are catalog
+examples, never inferred room measurements. Spatial checks approximate active
+solid parts with individual conservative boxes and use declared support areas.
 """
 
 from dataclasses import asdict, dataclass, replace
@@ -36,8 +36,28 @@ MaterialRole = Literal[
     "paper",
     "mirror",
 ]
-Shape = Literal["box", "rounded_box", "cylinder", "tube", "ellipsoid", "torus", "basin", "frustum", "pleated_panel", "arched_panel"]
-Category = Literal["furniture", "electronics", "lighting", "climate", "kitchen", "bathroom", "utility", "decor"]
+Shape = Literal[
+    "box",
+    "rounded_box",
+    "cylinder",
+    "tube",
+    "ellipsoid",
+    "torus",
+    "basin",
+    "frustum",
+    "pleated_panel",
+    "arched_panel",
+]
+Category = Literal[
+    "furniture",
+    "electronics",
+    "lighting",
+    "climate",
+    "kitchen",
+    "bathroom",
+    "utility",
+    "decor",
+]
 
 
 @dataclass(frozen=True)
@@ -54,7 +74,9 @@ class FurniturePart:
     bottom_scale: float = 1
     rotation: Point = (0, 0, 0)
     placements: tuple[Placement, ...] = ()  # Empty means every supported placement.
-    profile: tuple[tuple[float, float], ...] = ()  # Basin cross-section: radius, height in [0, 1].
+    profile: tuple[
+        tuple[float, float], ...
+    ] = ()  # Basin cross-section: radius, height in [0, 1].
 
 
 @dataclass(frozen=True)

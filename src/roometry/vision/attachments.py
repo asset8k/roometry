@@ -4,6 +4,11 @@ from math import cos, hypot, sin
 
 from roometry.scenes.assets import ASSET_REGISTRY
 from roometry.scenes.catalog import object_surfaces
+from roometry.scenes.collision import (
+    component_bounds,
+    contact_bounds,
+    first_component_overlap,
+)
 from roometry.scenes.geometry import (
     TOLERANCE_M,
     WALL_ROTATIONS_RAD,
@@ -140,17 +145,21 @@ def anchor_placements(
         obj.position.z = support.position.z - s * dx + c * dz
         obj.rotation_y_rad += delta
         obj.position.y = area.vertical[1]
+        base = contact_bounds(obj)
+        if base is None:
+            continue
+        base_width, base_depth = (2 * half for half in base.footprint.half_extents)
         relative = obj.rotation_y_rad - support.rotation_y_rad
         c, s = abs(cos(relative)), abs(sin(relative))
-        rotated_width = c * obj.dimensions_m.width + s * obj.dimensions_m.depth
-        rotated_depth = s * obj.dimensions_m.width + c * obj.dimensions_m.depth
+        rotated_width = c * base_width + s * base_depth
+        rotated_depth = s * base_width + c * base_depth
         if (
             (
                 rotated_width > area.footprint.half_extents[0] * 2 + TOLERANCE_M
                 or rotated_depth > area.footprint.half_extents[1] * 2 + TOLERANCE_M
             )
-            and obj.dimensions_m.width <= area.footprint.half_extents[0] * 2
-            and obj.dimensions_m.depth <= area.footprint.half_extents[1] * 2
+            and base_width <= area.footprint.half_extents[0] * 2
+            and base_depth <= area.footprint.half_extents[1] * 2
         ):
             # A wide TV/frame needs the support's orientation, not a smaller size.
             obj.rotation_y_rad = support.rotation_y_rad
@@ -169,11 +178,28 @@ def anchor_placements(
         )
 
     bounds = {obj.id: draft_bounds(obj) for obj in objects}
+    solids = {obj.id: component_bounds(obj) for obj in objects}
+
+    def collides(obj: BoundObject, obstacles: list[BoundObject]) -> bool:
+        box, pieces = draft_bounds(obj), component_bounds(obj)
+        return any(
+            boxes_overlap(box, bounds[other.id])
+            and first_component_overlap(pieces, solids[other.id]) is not None
+            for other in obstacles
+        )
+
     for obj, support, area in sorted(eligible, key=lambda pair: pair[0].id):
         outer = area.footprint
-        child = bounds[obj.id].footprint
+        contact = contact_bounds(obj)
+        if contact is None:
+            continue
+        child = contact.footprint
+        offset_x, offset_z = (
+            child.center[0] - obj.position.x,
+            child.center[1] - obj.position.z,
+        )
         u, v = outer.axes
-        dx, dz = obj.position.x - outer.center[0], obj.position.z - outer.center[1]
+        dx, dz = child.center[0] - outer.center[0], child.center[1] - outer.center[1]
         local_x, local_z = dx * u[0] + dz * u[1], dx * v[0] + dz * v[1]
         x_span, z_span = child.project(u), child.project(v)
         child_x, child_z = (x_span[1] - x_span[0]) / 2, (z_span[1] - z_span[0]) / 2
@@ -221,21 +247,25 @@ def anchor_placements(
                 or hypot(x - local_x, z - local_z) > MAX_ATTACHMENT_SHIFT_M
             ):
                 continue
-            obj.position.x = outer.center[0] + x * u[0] + z * v[0]
-            obj.position.z = outer.center[1] + x * u[1] + z * v[1]
-            if inside(obj) and not any(
-                boxes_overlap(draft_bounds(obj), bounds[other.id])
-                for other in objects
-                if other.id not in {obj.id, support.id}
-                and (
-                    observations.get(other.id) is None
-                    or observations[other.id].type != "rug"
-                )
+            obj.position.x = outer.center[0] + x * u[0] + z * v[0] - offset_x
+            obj.position.z = outer.center[1] + x * u[1] + z * v[1] - offset_z
+            if inside(obj) and not collides(
+                obj,
+                [
+                    other
+                    for other in objects
+                    if other.id != obj.id
+                    and (
+                        observations.get(other.id) is None
+                        or observations[other.id].type != "rug"
+                    )
+                ],
             ):
                 break
         else:
             obj.position.x, obj.position.z = previous_x, previous_z
         bounds[obj.id] = draft_bounds(obj)
+        solids[obj.id] = component_bounds(obj)
 
     # Small portable decor is especially uncertain in a single photo. Resolve
     # nearby conflicts while keeping the main furniture and every object size.
@@ -257,9 +287,7 @@ def anchor_placements(
                 or observations[other.id].type != "rug"
             )
         ]
-        if inside(obj) and not any(
-            boxes_overlap(bounds[obj.id], bounds[other.id]) for other in obstacles
-        ):
+        if inside(obj) and not collides(obj, obstacles):
             continue
         previous_x, previous_z = obj.position.x, obj.position.z
         x_span, z_span = (
@@ -292,12 +320,10 @@ def anchor_placements(
             if hypot(x - previous_x, z - previous_z) > MAX_DECOR_SHIFT_M:
                 continue
             obj.position.x, obj.position.z = x, z
-            box = draft_bounds(obj)
-            if inside(obj) and not any(
-                boxes_overlap(box, bounds[other.id]) for other in obstacles
-            ):
+            if inside(obj) and not collides(obj, obstacles):
                 break
         else:
             obj.position.x, obj.position.z = previous_x, previous_z
         bounds[obj.id] = draft_bounds(obj)
+        solids[obj.id] = component_bounds(obj)
     return objects

@@ -109,21 +109,38 @@ class ProposalIssue(AnalysisModel):
         "scene_schema",
         "geometry",
         "proposal_limit_reached",
+        "dependency_unresolved",
+        "repair_failed",
     ]
     entity_ids: Annotated[list[Identifier], Field(max_length=200)]
     message: Annotated[str, Field(min_length=1, max_length=1000)]
 
 
+class UnresolvedEntity(AnalysisModel):
+    """An original observation omitted from the validated scene, never deleted."""
+
+    entity_id: Identifier
+    kind: Literal["object", "opening"]
+    reason: ProposalIssue
+
+    @model_validator(mode="after")
+    def identifies_entity(self) -> Self:
+        if self.entity_id not in self.reason.entity_ids:
+            raise ValueError("An unresolved reason must identify its observation.")
+        return self
+
+
 class SceneProposalResponse(AnalysisModel):
     analysis_id: OpaqueId
     input_id: OpaqueId
-    status: Literal["needs_dimensions", "ready", "incomplete"]
+    status: Literal["needs_dimensions", "ready", "partial", "incomplete"]
     dimensions: InputDimensions
     dimensions_to_confirm: Annotated[list[DimensionName], Field(max_length=3)]
     estimated_axes: Annotated[list[DimensionName], Field(max_length=3)]
     scene: RoomScene | None
     validation: GeometryReport | None
     issues: Annotated[list[ProposalIssue], Field(max_length=50)]
+    unresolved_entities: Annotated[list[UnresolvedEntity], Field(max_length=232)] = Field(default_factory=list)
     warnings: Notes
     expires_at: AwareDatetime
 
@@ -150,17 +167,26 @@ class SceneProposalResponse(AnalysisModel):
             and self.estimated_axes
         ):
             raise ValueError("Confirmed measurements cannot include estimated axes.")
-        if self.status == "ready":
+        unresolved = {item.entity_id for item in self.unresolved_entities}
+        if len(unresolved) != len(self.unresolved_entities):
+            raise ValueError("Unresolved observations must be unique.")
+        if self.status in {"ready", "partial"}:
             if (
                 self.scene is None
                 or self.validation is None
                 or not self.validation.valid
-                or self.issues
                 or self.dimensions_to_confirm
             ):
                 raise ValueError(
-                    "Ready proposals require a valid scene and no unresolved issues."
+                    "Renderable proposals require a valid scene and resolved dimensions."
                 )
+            retained = {item.id for item in [*self.scene.objects, *self.scene.openings]}
+            if retained & unresolved:
+                raise ValueError("Unresolved observations cannot appear in the scene.")
+            if self.status == "ready" and (self.issues or unresolved):
+                raise ValueError("Ready proposals cannot have unresolved issues.")
+            if self.status == "partial" and (not retained or not unresolved or not self.issues):
+                raise ValueError("Partial proposals require retained and unresolved observations with reasons.")
             expected = self.dimensions.model_dump(
                 exclude_none=True, exclude={"measurements_source"}
             )
@@ -182,6 +208,8 @@ class SceneProposalResponse(AnalysisModel):
             raise ValueError("Unvalidated proposals cannot expose a scene.")
         if self.status == "needs_dimensions" and not self.dimensions_to_confirm:
             raise ValueError("Missing dimensions must be identified.")
+        if self.status == "needs_dimensions" and self.unresolved_entities:
+            raise ValueError("Resolve dimensions before selecting a partial scene.")
         if self.status == "incomplete" and not self.issues:
             raise ValueError("Incomplete proposals must explain why.")
         return self

@@ -3,7 +3,7 @@ import type { RoomScene } from '../scene.generated'
 
 export function geometryReport(valid = true): GeometryReport {
   return {
-    policy_version: 'baseline-v1', tolerance_m: 0.000001, rotation_tolerance_rad: 0.000001,
+    policy_version: 'components-v1', tolerance_m: 0.000001, rotation_tolerance_rad: 0.000001,
     valid, warnings: [], errors: valid ? [] : [{
       code: 'object_overlap', entity_ids: ['bed_1', 'desk_1'], message: 'Objects overlap.',
     }],

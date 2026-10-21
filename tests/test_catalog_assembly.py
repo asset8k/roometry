@@ -133,7 +133,7 @@ def test_selected_support_surface_is_preserved_and_default_top_uses_actual_area(
     assert context["previous_draft"]["objects"][0]["asset_id"] == "wall_shelf_standard_01"
 
 
-def test_internal_shelf_is_resolved_but_not_falsely_accepted_by_the_old_checker():
+def test_internal_shelf_rejects_an_item_taller_than_the_available_gap():
     analysis, data = shelf_case()
     data["objects"][1]["support_surface_id"] = "shelf_0"
     draft = SceneDraft.model_validate(data)
@@ -144,6 +144,8 @@ def test_internal_shelf_is_resolved_but_not_falsely_accepted_by_the_old_checker(
     assert objects[1].position.y == pytest.approx(1 + .04 * .1)
     scene, report, issues = assemble(analysis, measurements(analysis), draft)
     assert scene is None and report is not None and not report.valid and issues
+    assert "object_overlap" in {error.code for error in report.errors}
+    assert "surface_support" not in {error.code for error in report.errors}
 
 
 def test_sink_ledges_exclude_the_basin_and_hob_cannot_supply_a_surface():

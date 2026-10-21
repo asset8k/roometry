@@ -195,7 +195,7 @@
     ]
   },
   "validation": {
-    "policy_version": "baseline-v1",
+    "policy_version": "components-v1",
     "tolerance_m": 1e-06,
     "rotation_tolerance_rad": 1e-06,
     "errors": [],
@@ -203,12 +203,13 @@
       {
         "code": "baseline_scope",
         "entity_ids": [],
-        "message": "Checks use conservative solid bounding boxes. Door swings, walking/headroom clearance, overlapping openings, room-specific rules, budgets, and preservation of authorized previous state are not checked. A passing baseline is not full acceptance."
+        "message": "Checks use conservative boxes for catalog solid parts and declared support areas. Curved/hollow parts are approximated; stability and access are not simulated. Door swings, walking/headroom clearance, overlapping openings, room-specific rules, budgets, and preservation of authorized previous state are not checked. A passing baseline is not full acceptance."
       }
     ],
     "valid": true
   },
   "issues": [],
+  "unresolved_entities": [],
   "warnings": [
     "Synthetic approximate base scene for contract validation."
   ],

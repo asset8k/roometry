@@ -1,5 +1,6 @@
 import analysisFixture from '../../data/room_analysis.json'
 import proposalFixture from '../../data/room_scene_proposal.json'
+import partialFixture from '../../data/room_scene_partial.json'
 import { parseRoomAnalysis, parseSceneProposal } from '../room-analysis'
 import { prepared, photo } from './room-input'
 import type { PreparedRoomInput } from '../room-input-response.generated'
@@ -33,4 +34,7 @@ export function proposedRoom(input: PreparedRoomInput = roomInput()): ScenePropo
 export function needsDimensions(input: PreparedRoomInput = roomInput()): SceneProposalResponse {
   return parseSceneProposal({ ...proposedRoom(input), status: 'needs_dimensions', scene: null, validation: null,
     dimensions: { width_m: 4, length_m: 4, height_m: null, measurements_source: 'user_confirmed' }, dimensions_to_confirm: ['height_m'] })
+}
+export function partialRoom(input: PreparedRoomInput = roomInput()): SceneProposalResponse {
+  return parseSceneProposal({ ...structuredClone(partialFixture), input_id: input.input_id, expires_at: input.expires_at })
 }

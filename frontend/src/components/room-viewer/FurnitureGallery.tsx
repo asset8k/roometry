@@ -194,7 +194,7 @@ export default function FurnitureGallery() {
       </dl>
       <p className="furniture-preview-note">Drag to orbit · Scroll to zoom · Preview sizes are examples; room objects use their own dimensions.</p>
       {display === 'surfaces' && <p className="furniture-preview-note">Green: objects · Amber: seating or sleeping. Inner shelves have separate surfaces.</p>}
-      {display === 'solids' && <p className="furniture-preview-note">Component geometry for the planned validation update. The current scene checker still uses whole-object bounds.</p>}
+      {display === 'solids' && <p className="furniture-preview-note">Collision checks approximate these solid parts with conservative boxes. Curved parts and hollow interiors remain approximate.</p>}
     </div>
   </div>
     {(category === 'all' || category === 'kitchen' || category === 'bathroom' || category === 'utility' || category === 'decor') && <section className="catalog-room-examples" aria-label="Catalog room examples">

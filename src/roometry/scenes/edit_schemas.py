@@ -5,12 +5,17 @@ from typing import Annotated, Literal
 from pydantic import Field
 
 from roometry.scenes.schemas import (
-    MAX_POSITION_M, FiniteNumber, Identifier, RoomScene, SceneModel,
+    MAX_POSITION_M,
+    FiniteNumber,
+    Identifier,
+    RoomScene,
+    SceneModel,
 )
 from roometry.scenes.validation import GeometryReport
 
 HorizontalCoordinate = Annotated[
-    FiniteNumber, Field(ge=-MAX_POSITION_M, le=MAX_POSITION_M),
+    FiniteNumber,
+    Field(ge=-MAX_POSITION_M, le=MAX_POSITION_M),
 ]
 
 
@@ -35,8 +40,13 @@ class RotateObject(SceneModel):
 
 EditOperation = Annotated[MoveObject | RotateObject, Field(discriminator="operation")]
 EditRule = Literal[
-    "object_not_found", "object_locked", "object_fixed", "unsupported_placement",
-    "protected_children", "candidate_schema", "invalid_base_geometry",
+    "object_not_found",
+    "object_locked",
+    "object_fixed",
+    "unsupported_placement",
+    "protected_children",
+    "candidate_schema",
+    "invalid_base_geometry",
 ]
 
 
@@ -59,7 +69,7 @@ class PreviewEditResponse(SceneModel):
     """On rejection `scene` is the unmodified supplied base, not a saved revision.
 
     If the base already fails geometry, it is returned for inspection and no edit
-    is attempted. Geometry reports cover baseline-v1 only, not full acceptance.
+    is attempted. Geometry reports cover components-v1 only, not full acceptance.
     """
 
     accepted: bool

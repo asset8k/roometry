@@ -248,10 +248,14 @@ async def test_repeated_output_limits_cannot_expand_scene_attempt_budget(
     req = body(analysis, dimensions=confirmed(length_m=4, height_m=2.6))
     response = await client.post("/api/rooms/propose-scene", json=req)
     result = response.json()
-    assert response.status_code == 200 and result["status"] == "incomplete", (
+    assert response.status_code == 200 and result["status"] == ("partial" if first_failure == "geometry" else "incomplete"), (
         response.text
     )
-    assert result["scene"] is None and result["validation"] is None
+    if first_failure == "geometry":
+        assert result["scene"] is not None and result["validation"]["valid"]
+        assert "bed_observed" not in {obj["id"] for obj in result["scene"]["objects"]}
+    else:
+        assert result["scene"] is None and result["validation"] is None
     assert "response limit" in result["issues"][0]["message"]
     assert len(calls) == 3
     assert (await client.post("/api/rooms/propose-scene", json=req)).json() == result
@@ -540,7 +544,7 @@ async def test_one_bounded_repair_preserves_authority(harness, defect):
     ] == [1, 2]
 
 
-async def test_failed_repair_returns_incomplete_and_never_exposes_invalid_scene(
+async def test_failed_repair_retains_valid_partial_and_never_exposes_invalid_scene(
     harness,
     caplog,
 ):
@@ -552,8 +556,10 @@ async def test_failed_repair_returns_incomplete_and_never_exposes_invalid_scene(
     req = body(analysis, dimensions=confirmed(length_m=4, height_m=2.6))
     response = await client.post("/api/rooms/propose-scene", json=req)
     data = response.json()
-    assert data["status"] == "incomplete" and data["scene"] is None
-    assert data["validation"]["valid"] is False
+    assert data["status"] == "partial" and data["scene"] is not None
+    assert data["validation"]["valid"] is True
+    assert validate_geometry(RoomScene.model_validate(data["scene"])).valid
+    assert [item["entity_id"] for item in data["unresolved_entities"]] == ["bed_observed"]
     assert data["issues"][0]["code"] == "geometry"
     assert response.status_code == 200
     assert '"stage": "scene_proposal"' in caplog.text
@@ -570,7 +576,7 @@ async def test_failed_repair_returns_incomplete_and_never_exposes_invalid_scene(
 
 @pytest.mark.parametrize(
     "kind",
-    ["non_rectangular", "unknown_object", "unsupported_placement", "no_evidence"],
+    ["non_rectangular", "no_evidence"],
 )
 async def test_unsupported_evidence_returns_incomplete_without_model(harness, kind):
     app, client, calls, _actions = harness
@@ -578,10 +584,6 @@ async def test_unsupported_evidence_returns_incomplete_without_model(harness, ki
     obs = app.state.analysis_service._states[analysis["input_id"]].result.observations
     if kind == "non_rectangular":
         obs.room_shape = "non_rectangular"
-    if kind == "unknown_object":
-        obs.objects[0].type = None
-    if kind == "unsupported_placement":
-        obs.objects[0].placement = "ceiling"
     if kind == "no_evidence":
         obs.objects, obs.openings, obs.walls, obs.possible_duplicates = [], [], [], []
         obs.floor_visible = None

@@ -13,7 +13,7 @@ const validateResponse = validator.compile<PreviewEditResponse>(responseSchema)
 export function parseEditPreview(data: unknown): PreviewEditResponse {
   if (!validateResponse(data)) throw new Error('Unexpected edit response')
   const reports = [data.base_validation, data.candidate_validation].filter(report => report !== null)
-  if (reports.some(report => report.valid !== (report.errors.length === 0) || report.policy_version !== 'baseline-v1')) {
+  if (reports.some(report => report.valid !== (report.errors.length === 0) || report.policy_version !== 'components-v1')) {
     throw new Error('Inconsistent validation report')
   }
   if (data.accepted && (!data.base_validation.valid || !data.candidate_validation?.valid || data.edit_errors.length)) {

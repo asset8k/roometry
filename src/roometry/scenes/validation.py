@@ -1,4 +1,4 @@
-"""Baseline spatial checks, separate from schemas and scene-edit authorization."""
+"""Catalog component checks, separate from schemas and scene-edit authorization."""
 
 from itertools import combinations
 from typing import Literal
@@ -6,6 +6,11 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, computed_field
 
 from roometry.scenes.assets import ASSET_REGISTRY
+from roometry.scenes.collision import (
+    catalog_supports,
+    component_bounds,
+    first_component_overlap,
+)
 from roometry.scenes.geometry import (
     ROTATION_TOLERANCE_RAD,
     TOLERANCE_M,
@@ -14,16 +19,21 @@ from roometry.scenes.geometry import (
     object_bounds,
     opening_inside_wall,
     rectangles_overlap,
-    surface_is_supported,
     wall_is_attached,
     wall_object_overlaps_opening,
 )
 from roometry.scenes.schemas import RoomScene
 
 GeometryRule = Literal[
-    "object_outside_room", "object_overlap", "rug_overlap", "surface_support",
-    "wall_attachment", "ceiling_attachment", "opening_outside_wall",
-    "wall_opening_overlap", "baseline_scope",
+    "object_outside_room",
+    "object_overlap",
+    "rug_overlap",
+    "surface_support",
+    "wall_attachment",
+    "ceiling_attachment",
+    "opening_outside_wall",
+    "wall_opening_overlap",
+    "baseline_scope",
 ]
 
 
@@ -36,11 +46,11 @@ class GeometryIssue(BaseModel):
 
 
 class GeometryReport(BaseModel):
-    """`valid` means these baseline checks passed, not full scene acceptance."""
+    """`valid` means catalog component checks passed, not full scene acceptance."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    policy_version: Literal["baseline-v1"] = "baseline-v1"
+    policy_version: Literal["components-v1"] = "components-v1"
     tolerance_m: float = TOLERANCE_M
     rotation_tolerance_rad: float = ROTATION_TOLERANCE_RAD
     errors: tuple[GeometryIssue, ...]
@@ -63,6 +73,8 @@ def validate_geometry(scene: RoomScene) -> GeometryReport:
     objects = sorted(scene.objects, key=lambda obj: obj.id)
     openings = sorted(scene.openings, key=lambda opening: opening.id)
     bounds = {obj.id: object_bounds(obj) for obj in objects}
+    solids = {obj.id: component_bounds(obj) for obj in objects}
+    by_id = {obj.id: obj for obj in objects}
     errors: list[GeometryIssue] = []
 
     def fail(code: GeometryRule, ids: tuple[str, ...], message: str) -> None:
@@ -71,7 +83,8 @@ def validate_geometry(scene: RoomScene) -> GeometryReport:
     for opening in openings:
         if not opening_inside_wall(opening, scene.room):
             fail(
-                "opening_outside_wall", (opening.id,),
+                "opening_outside_wall",
+                (opening.id,),
                 "Opening extends beyond its wall's width or height.",
             )
 
@@ -79,7 +92,8 @@ def validate_geometry(scene: RoomScene) -> GeometryReport:
         box = bounds[obj.id]
         if not bounds_inside_room(box, scene.room):
             fail(
-                "object_outside_room", (obj.id,),
+                "object_outside_room",
+                (obj.id,),
                 "Object's rotated bounds extend outside the room.",
             )
 
@@ -88,20 +102,24 @@ def validate_geometry(scene: RoomScene) -> GeometryReport:
             support_id = obj.support_object_id
             if support_id is None:
                 raise ValueError("Surface object requires a support_object_id")
-            if not surface_is_supported(box, bounds[support_id]):
+            if not catalog_supports(obj, by_id[support_id]):
                 fail(
-                    "surface_support", (obj.id, support_id),
-                    "Object must touch its support's top and fit within its rotated footprint.",
+                    "surface_support",
+                    (obj.id, support_id),
+                    "Object's base must touch and fit within its selected catalog support area.",
                 )
         elif obj.placement == "ceiling":
             if abs(box.vertical[1] - scene.room.height_m) > TOLERANCE_M:
                 fail(
-                    "ceiling_attachment", (obj.id,), "Object's top must touch the ceiling.",
+                    "ceiling_attachment",
+                    (obj.id,),
+                    "Object's top must touch the ceiling.",
                 )
         elif obj.placement == "wall":
             if not wall_is_attached(obj, box, scene.room):
                 fail(
-                    "wall_attachment", (obj.id,),
+                    "wall_attachment",
+                    (obj.id,),
                     "Object must face inward with its entire back edge touching its host wall.",
                 )
                 continue
@@ -111,11 +129,15 @@ def validate_geometry(scene: RoomScene) -> GeometryReport:
                     continue
                 # Exception comes from trusted asset metadata and the validated
                 # opening link, never from a user-supplied collision flag.
-                if asset.object_type == "window_covering" and obj.opening_id == opening.id:
+                if (
+                    asset.object_type == "window_covering"
+                    and obj.opening_id == opening.id
+                ):
                     continue
                 if wall_object_overlaps_opening(box, opening):
                     fail(
-                        "wall_opening_overlap", (obj.id, opening.id),
+                        "wall_opening_overlap",
+                        (obj.id, opening.id),
                         "Wall-mounted object overlaps a door or unrelated window.",
                     )
 
@@ -126,16 +148,24 @@ def validate_geometry(scene: RoomScene) -> GeometryReport:
             # Rugs are decorative layers, but overlapping rug footprints are
             # forbidden even when their small vertical intervals only touch.
             if left_asset.object_type == right_asset.object_type == "rug":
-                if rectangles_overlap(bounds[left.id].footprint, bounds[right.id].footprint):
+                if rectangles_overlap(
+                    bounds[left.id].footprint, bounds[right.id].footprint
+                ):
                     fail(
-                        "rug_overlap", (left.id, right.id),
+                        "rug_overlap",
+                        (left.id, right.id),
                         "Rug footprints must not overlap each other.",
                     )
             continue
         if boxes_overlap(bounds[left.id], bounds[right.id]):
-            fail(
-                "object_overlap", (left.id, right.id), "Objects' solid bounding boxes overlap.",
-            )
+            overlap = first_component_overlap(solids[left.id], solids[right.id])
+            if overlap is not None:
+                parts = ", ".join(name.replace("_", " ") for name in overlap)
+                fail(
+                    "object_overlap",
+                    (left.id, right.id),
+                    f"Solid components overlap ({parts}).",
+                )
 
     return GeometryReport(
         errors=tuple(errors),
@@ -144,7 +174,8 @@ def validate_geometry(scene: RoomScene) -> GeometryReport:
                 code="baseline_scope",
                 entity_ids=(),
                 message=(
-                    "Checks use conservative solid bounding boxes. Door swings, walking/headroom "
+                    "Checks use conservative boxes for catalog solid parts and declared support areas. "
+                    "Curved/hollow parts are approximated; stability and access are not simulated. Door swings, walking/headroom "
                     "clearance, overlapping openings, room-specific rules, budgets, and preservation "
                     "of authorized previous state are not checked. A passing baseline is not full acceptance."
                 ),

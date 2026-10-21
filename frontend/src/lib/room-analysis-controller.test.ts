@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { RoomAnalysisController } from './room-analysis-controller'
 import { RoomAnalysisError } from './room-analysis'
-import { analyzedRoom, proposedRoom, needsDimensions, roomInput } from './test-support/room-analysis'
+import { analyzedRoom, proposedRoom, needsDimensions, roomInput, partialRoom } from './test-support/room-analysis'
 import { RoomInputController } from './room-input-controller'
 import { limits, photo } from './test-support/room-input'
 
@@ -111,6 +111,45 @@ describe('room reconstruction lifecycle', () => {
     await controller.build()
     expect(controller.getSnapshot().scene).toBe(previous)
     expect(controller.getSnapshot().notice?.text).toContain('last validated')
+  })
+  it('opens a partial scene and keeps its unresolved metadata on a failed update', async () => {
+    const { controller, client, input } = setup({ propose: vi.fn(async () => partialRoom()) })
+    await controller.analyze()
+    controller.changeMeasurements({ height_m: '2.6' })
+    await controller.build()
+    const previous = controller.getSnapshot().scene
+    expect(previous?.objects).toHaveLength(4)
+    expect(controller.getSnapshot().sceneProposal?.status).toBe('partial')
+    expect(controller.getSnapshot().notice?.text).toContain('partial')
+    vi.mocked(client.propose).mockResolvedValueOnce({ ...proposedRoom(input), status: 'incomplete', scene: null, validation: null,
+      issues: [{ code: 'proposal_limit_reached', entity_ids: [], message: 'Attempt limit reached.' }] })
+    await controller.build()
+    expect(controller.getSnapshot().scene).toBe(previous)
+    expect(controller.getSnapshot().sceneProposal?.unresolved_entities?.[0].entity_id).toBe('bed_observed')
+    expect(client.analyze).toHaveBeenCalledTimes(1)
+    controller.release()
+    expect(controller.getSnapshot().sceneProposal).toBeNull()
+  })
+  it.each(['missing', 'invented', 'wrong_kind'])('rejects a partial result with %s observation accounting', async defect => {
+    const invalid = partialRoom()
+    if (defect === 'missing') invalid.scene!.objects.pop()
+    if (defect === 'invented') invalid.unresolved_entities![0].entity_id = 'invented'
+    if (defect === 'wrong_kind') invalid.unresolved_entities![0].kind = 'opening'
+    const { controller } = setup({ propose: vi.fn(async () => invalid) })
+    await controller.analyze()
+    await controller.build()
+    expect(controller.getSnapshot().scene).toBeNull()
+    expect(controller.getSnapshot().notice?.text).toContain('every observed')
+  })
+  it('replaces partial metadata when a complete scene becomes available', async () => {
+    const { controller, client } = setup({ propose: vi.fn(async () => partialRoom()) })
+    await controller.analyze()
+    await controller.build()
+    vi.mocked(client.propose).mockResolvedValueOnce(proposedRoom())
+    await controller.build()
+    expect(controller.getSnapshot().scene?.objects).toHaveLength(5)
+    expect(controller.getSnapshot().sceneProposal?.status).toBe('ready')
+    expect(controller.getSnapshot().sceneProposal?.unresolved_entities).toEqual([])
   })
   it.each(['success', 'failure'])('ignores late analysis %s after replacing the uploaded room', async late => {
     const pending = deferred<ReturnType<typeof analyzedRoom>>()

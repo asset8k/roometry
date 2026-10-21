@@ -128,16 +128,17 @@ def test_console_item_can_fit_without_intersecting_nearby_floor_plant():
     assert scene.objects[-1].position.x == 3.8
 
 
-def test_wide_surface_display_is_aligned_to_fit_its_rotated_console():
+@pytest.mark.parametrize("width,expected", [(.8, 0), (1.0, pi / 2)])
+def test_surface_display_only_rotates_when_its_solid_base_needs_alignment(width, expected):
     analysis, data = framed_picture_case()
     data["objects"][0]["rotation_y_rad"] = pi / 2
-    data["objects"][1]["dimensions_m"].update(width=0.8, depth=0.1)
+    data["objects"][1]["dimensions_m"].update(width=width, depth=0.1)
     scene, report, issues = assemble(
         analysis, measurements(analysis), SceneDraft.model_validate(data)
     )
     assert scene is not None and report is not None and report.valid and not issues
-    assert scene.objects[1].rotation_y_rad == pytest.approx(pi / 2)
-    assert scene.objects[1].dimensions_m.width == 0.8
+    assert scene.objects[1].rotation_y_rad == pytest.approx(expected)
+    assert scene.objects[1].dimensions_m.width == width
 
 
 @pytest.mark.parametrize("defect", ["oversized_item", "far_from_support"])

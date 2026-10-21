@@ -28,6 +28,7 @@ from roometry.vision.diagnostics import (
     validation_diagnostics,
 )
 from roometry.vision.errors import AnalysisFailure
+from roometry.vision.partial import assemble_partial
 from roometry.vision.proposal_request import build_proposal_request
 from roometry.vision.proposal_schemas import (
     AXES,
@@ -437,7 +438,7 @@ class AnalysisService:
                 }
             )
         problems = preflight(analysis)
-        if problems:
+        if any(not problem.entity_ids for problem in problems):
             logging.getLogger(__name__).warning(
                 "Scene proposal incomplete: %s",
                 json.dumps(
@@ -456,7 +457,7 @@ class AnalysisService:
                     "status": "incomplete",
                     "scene": None,
                     "validation": None,
-                    "issues": problems,
+                    "issues": problems[:50],
                 }
             )
         cache_key = json.dumps(
@@ -506,21 +507,32 @@ class AnalysisService:
                 "Scene proposal is disabled or not configured.",
             )
         draft, report, scene = None, None, None
+        best_partial = None
+        best_count = -1
         problems = []
+        repair_failure: AnalysisFailure | None = None
         while state.scene_attempts < 2:
-            payload = await anyio.to_thread.run_sync(
-                build_proposal_request,
-                self.settings,
-                analysis,
-                measurements,
-                draft,
-                problems,
-            )
+            try:
+                payload = await anyio.to_thread.run_sync(
+                    build_proposal_request,
+                    self.settings,
+                    analysis,
+                    measurements,
+                    draft,
+                    problems,
+                )
+            except AnalysisFailure as error:
+                if best_partial is None:
+                    raise
+                repair_failure = error
+                await self._owned_analysis(analysis.analysis_id, owner)
+                break
             await self._owned_analysis(analysis.analysis_id, owner)
             state.scene_attempts += 1
             started, outcome, response = perf_counter(), "interrupted", None
             details: dict[str, object] | None = None
             output_limited = False
+            repair_failure = None
             try:
                 with anyio.fail_after(self.settings.analysis_timeout_seconds):
                     response = await self.analyzer.request(payload)
@@ -560,6 +572,19 @@ class AnalysisService:
                     scene, report, problems = await anyio.to_thread.run_sync(
                         assemble, analysis, measurements, draft
                     )
+                    if scene is None:
+                        candidate = await anyio.to_thread.run_sync(
+                            assemble_partial, analysis, measurements, draft
+                        )
+                        retained = candidate[0]
+                        count = (
+                            len(retained.objects) + len(retained.openings)
+                            if retained is not None
+                            else -1
+                        )
+                        if retained is not None and count > best_count:
+                            best_partial = candidate
+                            best_count = count
                 if problems and details is None:
                     details = {
                         "reason": "proposal_validation",
@@ -581,9 +606,11 @@ class AnalysisService:
                 )
             except (APITimeoutError, TimeoutError):
                 outcome = "analysis_timeout"
-                raise AnalysisFailure(
+                repair_failure = AnalysisFailure(
                     504, "analysis_timeout", "The scene provider timed out."
-                ) from None
+                )
+                if best_partial is None:
+                    raise repair_failure from None
             except APIStatusError as error:
                 details = {
                     "provider_status": error.status_code,
@@ -594,31 +621,39 @@ class AnalysisService:
                     if error.status_code == 429
                     else "provider_unavailable"
                 )
-                raise AnalysisFailure(
+                repair_failure = AnalysisFailure(
                     429 if error.status_code == 429 else 503,
                     "provider_rate_limited"
                     if error.status_code == 429
                     else "provider_unavailable",
                     "Scene proposal is temporarily unavailable.",
-                ) from None
+                )
+                if best_partial is None:
+                    raise repair_failure from None
             except APIError:
                 outcome = "provider_unavailable"
-                raise AnalysisFailure(
+                repair_failure = AnalysisFailure(
                     503,
                     "provider_unavailable",
                     "The scene provider could not complete this request.",
-                ) from None
+                )
+                if best_partial is None:
+                    raise repair_failure from None
             except AnalysisFailure as error:
                 details = error.diagnostics
                 outcome = error.code
-                raise
+                repair_failure = error
+                if best_partial is None:
+                    raise
             except ValueError:
                 outcome = "invalid_analysis"
-                raise AnalysisFailure(
+                repair_failure = AnalysisFailure(
                     502,
                     "invalid_analysis",
                     "The scene provider returned an invalid response.",
-                ) from None
+                )
+                if best_partial is None:
+                    raise repair_failure from None
             finally:
                 self._record(
                     state,
@@ -635,15 +670,52 @@ class AnalysisService:
             # Deletion/replacement/expiry while awaiting a paid call revokes results
             # and prevents repair from sending the observations again.
             await self._owned_analysis(analysis.analysis_id, owner)
+            if repair_failure is not None:
+                break
             if scene is not None:
                 break
+        unresolved = []
+        if scene is None and best_partial is not None:
+            final_problems = problems
+            scene, report, problems, unresolved = best_partial
+            if repair_failure is not None:
+                problems = [
+                    issue(
+                        "repair_failed",
+                        f"The repair did not complete ({repair_failure.code}); showing the validated partial result from the earlier attempt.",
+                    ),
+                    *problems,
+                ][:50]
+            elif any(problem.code == "draft_schema" for problem in final_problems):
+                problems = [
+                    issue(
+                        "repair_failed",
+                        final_problems[0].message
+                        + " Showing the earlier validated partial result.",
+                    ),
+                    *problems,
+                ][:50]
+        elif scene is None and draft is not None:
+            (
+                scene,
+                partial_report,
+                partial_problems,
+                unresolved,
+            ) = await anyio.to_thread.run_sync(
+                assemble_partial, analysis, measurements, draft
+            )
+            if scene is not None or unresolved:
+                report, problems = partial_report, partial_problems
         result = SceneProposalResponse.model_validate(
             {
                 **base,
-                "status": "ready" if scene is not None else "incomplete",
+                "status": ("partial" if unresolved else "ready")
+                if scene is not None
+                else "incomplete",
                 "scene": scene,
                 "validation": report,
                 "issues": problems,
+                "unresolved_entities": unresolved,
             }
         )
         state.proposal_key, state.proposal = cache_key, result.model_copy(deep=True)

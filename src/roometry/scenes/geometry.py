@@ -2,7 +2,8 @@
 
 World axes match Three.js: Y is up, and positive Y rotation maps local +Z
 onto (sin(angle), cos(angle)) in the X/Z plane. All distances are meters.
-These functions describe solid boxes, not the empty space inside furniture.
+These low-level functions describe oriented boxes, bounds, and support planes.
+Catalog component decomposition lives in collision.py.
 """
 
 from dataclasses import dataclass

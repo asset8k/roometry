@@ -40,11 +40,11 @@
     },
     "GeometryReport": {
       "additionalProperties": false,
-      "description": "`valid` means these baseline checks passed, not full scene acceptance.",
+      "description": "`valid` means catalog component checks passed, not full scene acceptance.",
       "properties": {
         "policy_version": {
-          "const": "baseline-v1",
-          "default": "baseline-v1",
+          "const": "components-v1",
+          "default": "components-v1",
           "title": "Policy Version",
           "type": "string"
         },
@@ -335,7 +335,9 @@
             "support_mismatch",
             "scene_schema",
             "geometry",
-            "proposal_limit_reached"
+            "proposal_limit_reached",
+            "dependency_unresolved",
+            "repair_failed"
           ],
           "title": "Code",
           "type": "string"
@@ -805,6 +807,37 @@
       ],
       "title": "SceneObject",
       "type": "object"
+    },
+    "UnresolvedEntity": {
+      "additionalProperties": false,
+      "description": "An original observation omitted from the validated scene, never deleted.",
+      "properties": {
+        "entity_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "object",
+            "opening"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "reason": {
+          "$ref": "#/$defs/ProposalIssue"
+        }
+      },
+      "required": [
+        "entity_id",
+        "kind",
+        "reason"
+      ],
+      "title": "UnresolvedEntity",
+      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -823,6 +856,7 @@
       "enum": [
         "needs_dimensions",
         "ready",
+        "partial",
         "incomplete"
       ],
       "title": "Status",
@@ -883,6 +917,14 @@
       },
       "maxItems": 50,
       "title": "Issues",
+      "type": "array"
+    },
+    "unresolved_entities": {
+      "items": {
+        "$ref": "#/$defs/UnresolvedEntity"
+      },
+      "maxItems": 232,
+      "title": "Unresolved Entities",
       "type": "array"
     },
     "warnings": {

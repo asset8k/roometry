@@ -240,7 +240,7 @@ export type Code =
 export type EntityIds = string[];
 export type Message = string;
 export type EditErrors = EditIssue[];
-export type PolicyVersion = "baseline-v1";
+export type PolicyVersion = "components-v1";
 export type ToleranceM = number;
 export type RotationToleranceRad = number;
 export type Code1 =
@@ -263,7 +263,7 @@ export type Valid = boolean;
  * On rejection `scene` is the unmodified supplied base, not a saved revision.
  *
  * If the base already fails geometry, it is returned for inspection and no edit
- * is attempted. Geometry reports cover baseline-v1 only, not full acceptance.
+ * is attempted. Geometry reports cover components-v1 only, not full acceptance.
  */
 export interface PreviewEditResponse {
   accepted: Accepted;
@@ -338,7 +338,7 @@ export interface EditIssue {
   message: Message;
 }
 /**
- * `valid` means these baseline checks passed, not full scene acceptance.
+ * `valid` means catalog component checks passed, not full scene acceptance.
  */
 export interface GeometryReport {
   policy_version?: PolicyVersion;

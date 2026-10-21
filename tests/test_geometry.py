@@ -94,7 +94,7 @@ def test_current_fixture_passes_baseline_without_mutation():
     report = validate_geometry(original)
     assert report.valid
     assert not report.errors
-    assert report.policy_version == "baseline-v1"
+    assert report.policy_version == "components-v1"
     assert report.tolerance_m == TOLERANCE_M
     assert report.model_dump(mode="json")["valid"] is True
     assert report.model_dump(mode="json")["warnings"][0]["code"] == "baseline_scope"

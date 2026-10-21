@@ -8,6 +8,9 @@ export default function RoomAnalysisWorkspace({ state, controller, onConnectionC
   state: AnalysisState; controller: RoomAnalysisController; onConnectionChange: (online: boolean) => void
 }) {
   const { analysis, proposal, busy, scene } = state
+  const visibleProposal = state.sceneProposal
+  const partial = visibleProposal?.status === 'partial'
+  const unresolvedCount = visibleProposal?.unresolved_entities?.length ?? 0
   if (!analysis && !state.notice) return null
   const observations = analysis?.observations
   const entities = observations ? [...observations.objects, ...observations.openings, ...observations.walls] : []
@@ -29,7 +32,7 @@ export default function RoomAnalysisWorkspace({ state, controller, onConnectionC
             <span className={`observation-confidence ${entity.confidence}`}>{entity.confidence} confidence · {entity.source_image_ids.length} photo{entity.source_image_ids.length === 1 ? '' : 's'}</span>
           </li>)}</ul>
         </details>
-        {!!observations.possible_duplicates.length && <div className="analysis-caution"><h3>Possible duplicate observations</h3><p>These may show the same item from different angles. They remain separate in the scene until their identity is resolved.</p><ul>{observations.possible_duplicates.map((pair, index) => <li key={index}><strong>{pair.entity_ids.map(id => {
+        {!!observations.possible_duplicates.length && <div className="analysis-caution"><h3>Possible duplicate observations</h3><p>These may show the same item from different angles. They remain separate observations until their identity is resolved.</p><ul>{observations.possible_duplicates.map((pair, index) => <li key={index}><strong>{pair.entity_ids.map(id => {
           const entity = entities.find(item => item.id === id)
           return entity && 'label' in entity ? entity.label : id
         }).join(' / ')}</strong>: {pair.reason}</li>)}</ul></div>}
@@ -52,11 +55,22 @@ export default function RoomAnalysisWorkspace({ state, controller, onConnectionC
       {busy && <div className="upload-progress" role="status"><progress aria-label={busy === 'analysis' ? 'Analyzing room photos' : 'Building base scene'} /><span>{busy === 'analysis' ? 'Reading the photos together…' : 'Proposing and checking the room geometry…'}</span><button type="button" onClick={controller.cancel}>Cancel</button></div>}
       {state.notice && <div className={`input-notice ${state.notice.kind}`} role={state.notice.kind === 'error' ? 'alert' : 'status'}><p>{state.notice.text}</p></div>}
       {proposal?.status === 'needs_dimensions' && <div className="input-notice" role="status"><strong>A few measurements are still needed</strong><p>Enter: {proposal.dimensions_to_confirm.map(axis => dimensionLabels[axis].toLowerCase()).join(', ')}. Your photo analysis is saved temporarily; you don’t need to analyze again.</p></div>}
-      {proposal?.status === 'incomplete' && <div className="input-notice error" role="alert"><strong>We couldn’t validate a complete base scene</strong><ul>{proposal.issues.map((issue, index) => <li key={index}>{issue.message}{!!issue.entity_ids.length && ` (${issue.entity_ids.map(entityName).join(', ')})`}</li>)}</ul><p>Your photo analysis is still available until it expires.</p></div>}
+      {proposal?.status === 'incomplete' && <div className="input-notice error" role="alert"><strong>We couldn’t validate a complete base scene</strong>
+        <ul>{proposal.unresolved_entities?.length ? <>
+          {proposal.issues.filter(issue => !issue.entity_ids.length).map((issue, index) => <li key={`global-${index}`}>{issue.message}</li>)}
+          {proposal.unresolved_entities.map(item => <li key={item.entity_id}><strong>{entityName(item.entity_id)}</strong>: {item.reason.message}</li>)}
+        </> : proposal.issues.map((issue, index) => <li key={index}>{issue.message}{!!issue.entity_ids.length && ` (${issue.entity_ids.map(entityName).join(', ')})`}</li>)}</ul>
+        <p>Your photo analysis is still available until it expires.</p></div>}
       {proposal?.estimated_axes.length ? <p className="analysis-caution">Unconfirmed room dimensions: {proposal.estimated_axes.map(axis => dimensionLabels[axis].toLowerCase()).join(', ')}. These remain labeled as estimates.</p> : null}
     </div>
     {scene && <section className="reconstructed-room" aria-label="Your reconstructed room">
-      <div className="analysis-card"><span className="section-label">Your approximate room</span><h2>5. Explore your base scene</h2><p>A reconstruction from your photos and dimensions. “Your layout” starts as a copy of the base scene for your own edits.</p>
+      <div className="analysis-card"><span className="section-label">Your approximate room</span><h2>{partial ? '5. Explore your partial base scene' : '5. Explore your base scene'}</h2><p>A reconstruction from your photos and dimensions. “Your layout” starts as a copy of the base scene for your own edits.</p>
+        {partial && <div className="analysis-caution" role="status"><h3>Some observations still need resolving</h3>
+          <p>{scene.objects.length} objects and {scene.openings.length} doors &amp; windows are included. {unresolvedCount} {unresolvedCount === 1 ? 'observation is' : 'observations are'} unresolved and absent from the 3D scene. They remain in your photo analysis.</p>
+          <ul>{visibleProposal.unresolved_entities?.map(item => <li key={item.entity_id}><strong>{entityName(item.entity_id)}</strong>: {item.reason.message}</li>)}</ul>
+          <p>Review the unresolved relationships and measurements. This scene is incomplete; it does not show everything detected in your photos.</p>
+          {visibleProposal.issues.filter(issue => !issue.entity_ids.length).map((issue, index) => <p key={index}>{issue.message}</p>)}
+        </div>}
         <details className="analysis-notes"><summary>Scene estimates, assumptions, and cautions</summary><ul>{[...scene.assumptions, ...scene.warnings].map((note, index) => <li key={index}>{note}</li>)}</ul></details>
       </div>
       <SceneWorkspace initialScene={scene} beforeScene={scene} variant="reconstruction" onConnectionChange={onConnectionChange} />

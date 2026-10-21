@@ -90,14 +90,13 @@ def main() -> None:
     outputs[ROOT / "frontend/src/data/room_analysis.json"] = analysis.model_dump(
         mode="json"
     )
-    proposal = SceneProposalResponse.model_validate_json(
-        (ROOT / "data/fixtures/room_scene_proposal.json").read_text()
-    )
-    if proposal.scene is None or not validate_geometry(proposal.scene).valid:
-        raise ValueError("The proposal fixture must contain a valid base scene.")
-    outputs[ROOT / "frontend/src/data/room_scene_proposal.json"] = proposal.model_dump(
-        mode="json"
-    )
+    for filename in ("room_scene_proposal.json", "room_scene_partial.json"):
+        proposal = SceneProposalResponse.model_validate_json(
+            (ROOT / "data/fixtures" / filename).read_text()
+        )
+        if proposal.scene is None or not validate_geometry(proposal.scene).valid:
+            raise ValueError("The proposal fixture must contain a valid base scene.")
+        outputs[ROOT / "frontend/src/data" / filename] = proposal.model_dump(mode="json")
     for path, data in outputs.items():
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(data, indent=2, allow_nan=False) + "\n")

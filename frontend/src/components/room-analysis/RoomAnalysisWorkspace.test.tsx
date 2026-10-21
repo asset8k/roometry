@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 import RoomAnalysisWorkspace from './RoomAnalysisWorkspace'
 import { RoomAnalysisController } from '../../lib/room-analysis-controller'
-import { analyzedRoom, proposedRoom, roomInput, needsDimensions } from '../../lib/test-support/room-analysis'
+import { analyzedRoom, proposedRoom, roomInput, needsDimensions, partialRoom } from '../../lib/test-support/room-analysis'
 
 function setup() {
   const controller = new RoomAnalysisController({ analyze: vi.fn(async () => analyzedRoom()), propose: vi.fn(async () => proposedRoom()) })
@@ -84,5 +84,23 @@ describe('room analysis workspace', () => {
     const html = renderToStaticMarkup(<RoomAnalysisWorkspace state={state} controller={controller} onConnectionChange={vi.fn()} />)
     expect(html).toContain('&lt;img src=x')
     expect(html).not.toContain('<img src=x')
+  })
+  it('shows valid partial geometry with named unresolved items and keeps that label on failed updates', () => {
+    const { controller } = setup()
+    const proposal = partialRoom()
+    const state = { ...controller.getSnapshot(), analysis: analyzedRoom(), proposal, sceneProposal: proposal, scene: proposal.scene }
+    const html = renderToStaticMarkup(<RoomAnalysisWorkspace state={state} controller={controller} onConnectionChange={vi.fn()} />)
+    expect(html).toContain('Explore your partial base scene')
+    expect(html).toContain('Some observations still need resolving')
+    expect(html).toContain('4 objects and 2 doors &amp; windows are included')
+    expect(html).toContain('1 observation is unresolved')
+    expect(html).toContain('<strong>Bed</strong>: object_outside_room')
+    expect(html).toContain('object_outside_room')
+    expect(html).toContain('Your reconstructed room')
+    expect(html).not.toContain('couldn’t validate a complete base scene')
+    const failed = { ...state, proposal: { ...proposal, status: 'incomplete' as const, scene: null, validation: null } }
+    const previous = renderToStaticMarkup(<RoomAnalysisWorkspace state={failed} controller={controller} onConnectionChange={vi.fn()} />)
+    expect(previous).toContain('Explore your partial base scene')
+    expect(previous).toContain('Some observations still need resolving')
   })
 })

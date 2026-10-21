@@ -11,12 +11,13 @@ export interface AnalysisNotice { kind: 'info' | 'error'; text: string; connecte
 export interface AnalysisState {
   input: PreparedRoomInput | null; analysis: RoomAnalysisResponse | null
   proposal: SceneProposalResponse | null; scene: RoomScene | null
+  sceneProposal: SceneProposalResponse | null
   busy: 'analysis' | 'proposal' | null; notice: AnalysisNotice | null
   measurements: Record<DimensionAxis, string>; enteredAxes: DimensionAxis[]
 }
 interface AnalysisClient { analyze: typeof analyzeRoom; propose: typeof proposeRoomScene }
 const emptyMeasurements = (): AnalysisState['measurements'] => ({ width_m: '', length_m: '', height_m: '' })
-const initialState = (): AnalysisState => ({ input: null, analysis: null, proposal: null, scene: null, busy: null,
+const initialState = (): AnalysisState => ({ input: null, analysis: null, proposal: null, scene: null, sceneProposal: null, busy: null,
   notice: null, measurements: emptyMeasurements(), enteredAxes: [] })
 
 /** Temporary UI state; abort/revision guards prevent stale requests replacing a newer room. */
@@ -124,14 +125,28 @@ export class RoomAnalysisController {
       if (!this.currentInput()) return
       if (proposal.input_id !== input.input_id || proposal.analysis_id !== analysis.analysis_id
         || Date.parse(proposal.expires_at) !== Date.parse(input.expires_at)) throw new RoomAnalysisError('The scene proposal does not match your current room.')
+      const renderable = proposal.status === 'ready' || proposal.status === 'partial'
+      if (renderable && proposal.scene) {
+        const expected = new Map([...analysis.observations.objects.map(item => [item.id, 'object'] as const),
+          ...analysis.observations.openings.map(item => [item.id, 'opening'] as const)])
+        const retained = [...proposal.scene.objects.map(item => [item.id, 'object'] as const),
+          ...proposal.scene.openings.map(item => [item.id, 'opening'] as const)]
+        const accounted = [...retained, ...(proposal.unresolved_entities ?? []).map(item => [item.entity_id, item.kind] as const)]
+        if (accounted.length !== expected.size || new Set(accounted.map(([id]) => id)).size !== expected.size
+          || accounted.some(([id, kind]) => expected.get(id) !== kind)) {
+          throw new RoomAnalysisError('The proposal does not account for every observed object and opening. No new scene was opened.')
+        }
+      }
       const measurements = emptyMeasurements()
       for (const axis of dimensionAxes) measurements[axis] = String(proposal.dimensions[axis] ?? '')
       const estimatedAxes: ReadonlySet<string> = new Set(proposal.estimated_axes)
       const enteredAxes = dimensionAxes.filter(axis => proposal.dimensions[axis] != null && !estimatedAxes.has(axis))
-      this.update({ proposal, measurements, enteredAxes, busy: null, scene: proposal.status === 'ready' ? proposal.scene : this.state.scene,
+      this.update({ proposal, measurements, enteredAxes, busy: null, scene: renderable ? proposal.scene : this.state.scene,
+        sceneProposal: renderable ? proposal : this.state.sceneProposal,
         notice: proposal.status === 'incomplete' && this.state.scene
           ? { kind: 'info', text: 'The new proposal could not be validated. The viewer still shows your last validated base scene.', connected: true }
-          : { kind: 'info', text: proposal.status === 'ready' ? 'Your approximate base scene is ready.' : 'Your observations are saved while you review the room details.', connected: true } })
+          : { kind: 'info', text: proposal.status === 'partial' ? 'Your partial base scene is available. Unresolved items are listed separately.'
+            : proposal.status === 'ready' ? 'Your approximate base scene is ready.' : 'Your observations are saved while you review the room details.', connected: true } })
     } catch (error) { if (revision === this.revision && !controller.signal.aborted) this.failure(error) }
     finally { if (revision === this.revision) this.pending = null }
   }

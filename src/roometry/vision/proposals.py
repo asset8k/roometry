@@ -97,10 +97,7 @@ def preflight(analysis: RoomAnalysisResponse) -> list[ProposalIssue]:
                     obj.id,
                 )
             )
-        elif (
-            obj.placement is not None
-            and not candidates(obj.type, obj.placement)
-        ):
+        elif obj.placement is not None and not candidates(obj.type, obj.placement):
             issues.append(
                 issue(
                     "unsupported_placement",
@@ -108,7 +105,7 @@ def preflight(analysis: RoomAnalysisResponse) -> list[ProposalIssue]:
                     obj.id,
                 )
             )
-    return issues[:50]
+    return issues
 
 
 def notes(*groups: list[str]) -> list[str]:
@@ -233,7 +230,12 @@ def assemble(
                 "provenance": "photo_observed",
                 "measurements_source": "catalog"
                 if source.estimated_dimensions_m is None
-                and (obj.dimensions_m.width, obj.dimensions_m.height, obj.dimensions_m.depth) == dimensions_for(asset_id, obj.placement)
+                and (
+                    obj.dimensions_m.width,
+                    obj.dimensions_m.height,
+                    obj.dimensions_m.depth,
+                )
+                == dimensions_for(asset_id, obj.placement)
                 else "estimated",
             }
         )
@@ -282,9 +284,15 @@ def assemble(
         original = next(item for item in draft.objects if item.id == obj.id)
         if original.dimensions_m is None:
             known = object_observations[obj.id].estimated_dimensions_m
-            axes = [axis for axis in ("width", "depth", "height") if known is None or getattr(known, axis) is None]
+            axes = [
+                axis
+                for axis in ("width", "depth", "height")
+                if known is None or getattr(known, axis) is None
+            ]
             if axes:
-                assumptions.append(f"{obj.id}: unknown size axes use {obj.asset_id} catalog defaults ({', '.join(axes)}).")
+                assumptions.append(
+                    f"{obj.id}: unknown size axes use {obj.asset_id} catalog defaults ({', '.join(axes)})."
+                )
     if measurements.estimated:
         assumptions.append(
             "Unconfirmed room dimensions: " + ", ".join(measurements.estimated) + "."

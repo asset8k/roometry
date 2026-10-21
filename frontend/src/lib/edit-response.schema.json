@@ -76,11 +76,11 @@
     },
     "GeometryReport": {
       "additionalProperties": false,
-      "description": "`valid` means these baseline checks passed, not full scene acceptance.",
+      "description": "`valid` means catalog component checks passed, not full scene acceptance.",
       "properties": {
         "policy_version": {
-          "const": "baseline-v1",
-          "default": "baseline-v1",
+          "const": "components-v1",
+          "default": "components-v1",
           "title": "Policy Version",
           "type": "string"
         },
@@ -736,7 +736,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "On rejection `scene` is the unmodified supplied base, not a saved revision.\n\nIf the base already fails geometry, it is returned for inspection and no edit\nis attempted. Geometry reports cover baseline-v1 only, not full acceptance.",
+  "description": "On rejection `scene` is the unmodified supplied base, not a saved revision.\n\nIf the base already fails geometry, it is returned for inspection and no edit\nis attempted. Geometry reports cover components-v1 only, not full acceptance.",
   "properties": {
     "accepted": {
       "title": "Accepted",
