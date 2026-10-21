@@ -379,7 +379,11 @@ class AnalysisService:
         )
 
     async def propose(
-        self, request: SceneProposalRequest, owner: str
+        self,
+        request: SceneProposalRequest,
+        owner: str,
+        *,
+        isolated_dimensions: bool = False,
     ) -> SceneProposalResponse:
         try:
             self._capacity.acquire_nowait()
@@ -392,7 +396,9 @@ class AnalysisService:
             # the configured per-call deadline; a slow first call must not consume
             # the repair's entire time budget. The total remains bounded.
             with anyio.fail_after(2 * self.settings.analysis_timeout_seconds):
-                return await self._propose(request, owner)
+                return await self._propose(
+                    request, owner, isolated_dimensions=isolated_dimensions
+                )
         except TimeoutError:
             raise AnalysisFailure(
                 504,
@@ -403,18 +409,25 @@ class AnalysisService:
             self._capacity.release()
 
     async def _propose(
-        self, request: SceneProposalRequest, owner: str
+        self,
+        request: SceneProposalRequest,
+        owner: str,
+        *,
+        isolated_dimensions: bool = False,
     ) -> SceneProposalResponse:
         state = await self._owned_analysis(request.analysis_id, owner)
         analysis = state.result
         assert analysis is not None
+        # Agent runs carry their own confirmed answers. Another run using this
+        # upload must not inherit them as silently confirmed measurements.
+        confirmed_dimensions = {} if isolated_dimensions else state.confirmed_dimensions
         if request.dimensions is not None:
             for axis in AXES:
                 value = getattr(request.dimensions, axis)
                 if value is not None:
-                    state.confirmed_dimensions[axis] = value
+                    confirmed_dimensions[axis] = value
         measurements = resolve_measurements(
-            analysis, state.confirmed_dimensions, request.allow_estimated_dimensions
+            analysis, confirmed_dimensions, request.allow_estimated_dimensions
         )
         base = {
             "analysis_id": analysis.analysis_id,

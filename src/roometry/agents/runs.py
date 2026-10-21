@@ -1,14 +1,11 @@
-"""Internal owned-run lifecycle with per-invocation clients and call budgets.
-
-Run endpoints and clarification handling follow in step 3. Callers inject the
-decision/tool adapters and the existing private upload resolver.
-"""
+"""Owned temporary runs, idempotent answers, and real interrupt resumption."""
 
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 
 import anyio
 from langchain_core.runnables import RunnableConfig
+from langgraph.types import Command
 
 from roometry.agents.budget import RunBudget
 from roometry.agents.checkpointing import (
@@ -18,9 +15,10 @@ from roometry.agents.checkpointing import (
     TemporaryCheckpoints,
     new_run_id,
 )
+from roometry.agents.clarification import AnswerConflict, validate_answer
 from roometry.agents.graph import build_graph
 from roometry.agents.nodes import RunContext, StepAdapter
-from roometry.agents.state import AgentState, RunLimits
+from roometry.agents.state import AgentState, ClarificationAnswer, RunLimits
 from roometry.uploads.errors import UploadFailure
 from roometry.uploads.schemas import PreparedRoomInput
 
@@ -32,6 +30,7 @@ class AgentRuns:
         advance: StepAdapter,
         *,
         execute_tool: StepAdapter | None = None,
+        default_limits: RunLimits | None = None,
         checkpoints: TemporaryCheckpoints | None = None,
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
         ttl_seconds: int = 3600,
@@ -40,10 +39,12 @@ class AgentRuns:
             raise ValueError("Run TTL must be between 1 second and 1 hour.")
         self.resolve_input, self.advance, self.now = resolve_input, advance, now
         self.execute_tool = execute_tool
+        self.default_limits = default_limits or RunLimits()
         self.checkpoints = (
             checkpoints if checkpoints is not None else TemporaryCheckpoints()
         )
         self.ttl_seconds = ttl_seconds
+        self._start_lock = anyio.Lock()
 
     async def _input(self, input_id: str, owner: str) -> PreparedRoomInput:
         try:
@@ -73,7 +74,7 @@ class AgentRuns:
             created_at=now,
             input_expires_at=prepared.expires_at,
             expires_at=expires_at,
-            limits=limits or RunLimits(),
+            limits=limits or self.default_limits,
             confirmed_dimensions=dimensions.model_copy(deep=True)
             if dimensions is not None
             and dimensions.measurements_source == "user_confirmed"
@@ -105,7 +106,7 @@ class AgentRuns:
     def _config(entry: CheckpointRun) -> RunnableConfig:
         return {
             "configurable": {"thread_id": entry.initial.run_id},
-            "recursion_limit": 3 * entry.initial.limits.max_steps + 4,
+            "recursion_limit": 4 * entry.initial.limits.max_steps + 4,
         }
 
     async def read(self, run_id: str, owner: str) -> AgentState:
@@ -120,9 +121,71 @@ class AgentRuns:
         return result.model_copy(deep=True)
 
     async def execute(self, run_id: str, owner: str) -> AgentState:
+        return await self._drive(run_id, owner)
+
+    async def start(self, input_id: str, owner: str, request_id: str) -> AgentState:
+        """Client-generated request IDs make retried starts safe as well."""
+        initial: AgentState | None = None
+        async with self._start_lock:
+            self.checkpoints.cleanup(self.now())
+            for entry in self.checkpoints._runs.values():
+                if entry.owner == owner and entry.request_id == request_id:
+                    if entry.initial.input_id != input_id:
+                        raise AnswerConflict(
+                            "This request ID already identifies another input."
+                        )
+                    existing_id = entry.initial.run_id
+                    break
+            else:
+                initial = await self.create(input_id, owner)
+                entry = self.checkpoints.get(initial.run_id, owner, self.now())
+                entry.request_id = request_id
+                existing_id = None
+        if existing_id is not None:
+            return await self.read(existing_id, owner)
+        assert initial is not None
+        try:
+            return await self.execute(initial.run_id, owner)
+        except anyio.get_cancelled_exc_class():
+            with anyio.CancelScope(shield=True):
+                try:
+                    await self.cancel(initial.run_id, owner)
+                except RunUnavailable:
+                    pass
+            raise
+
+    async def answer(
+        self, run_id: str, owner: str, answer: ClarificationAnswer
+    ) -> AgentState:
+        return await self._drive(
+            run_id, owner, ClarificationAnswer.model_validate(answer)
+        )
+
+    @staticmethod
+    def _duplicate(state: AgentState, answer: ClarificationAnswer) -> bool:
+        previous = state.submitted_answers.get(answer.question_id)
+        if previous is not None and previous != answer:
+            raise AnswerConflict("This question already has a different answer.")
+        return previous is not None
+
+    async def _drive(
+        self, run_id: str, owner: str, answer: ClarificationAnswer | None = None
+    ) -> AgentState:
         entry = await self._owned(run_id, owner)
         if entry.busy:
+            if answer is not None:
+                current = await self.read(run_id, owner)
+                if self._duplicate(current, answer) or entry.answer_in_flight == answer:
+                    return current
+                if (
+                    entry.answer_in_flight is not None
+                    and entry.answer_in_flight.question_id == answer.question_id
+                ):
+                    raise AnswerConflict(
+                        "A different answer is already being processed."
+                    )
             raise RunBusy()
+
         async def authorize() -> None:
             await self._owned(run_id, owner)
 
@@ -136,12 +199,23 @@ class AgentRuns:
         entry.busy = True
         try:
             snapshot = await graph.aget_state(config)
-            if snapshot.values and not snapshot.next:
-                return await self.read(run_id, owner)
             current = (
                 AgentState.model_validate(snapshot.values)
-                if snapshot.values else entry.initial
+                if snapshot.values
+                else entry.initial
             )
+            if answer is not None and self._duplicate(current, answer):
+                return await self.read(run_id, owner)
+            if answer is not None:
+                if (
+                    entry.cancel_requested
+                    or current.status != "awaiting_answer"
+                    or not snapshot.interrupts
+                ):
+                    raise AnswerConflict("This run is not waiting for an answer.")
+                validate_answer(current, answer)
+            elif snapshot.interrupts or (snapshot.values and not snapshot.next):
+                return await self.read(run_id, owner)
             budget.sync(current.usage)
             context = RunContext(
                 self.advance,
@@ -152,8 +226,16 @@ class AgentRuns:
                 budget=budget,
                 execute_tool=self.execute_tool,
             )
+            entry.answer_in_flight = answer
+            graph_input = (
+                Command(resume={snapshot.interrupts[0].id: answer.model_dump()})
+                if answer is not None
+                else None
+                if snapshot.values
+                else entry.initial.model_dump()
+            )
             await graph.ainvoke(
-                None if snapshot.values else entry.initial.model_dump(),
+                graph_input,
                 config,
                 context=context,
             )
@@ -172,13 +254,20 @@ class AgentRuns:
                         budget.sync(AgentState.model_validate(snapshot.values).usage)
                         await graph.aupdate_state(
                             config,
-                            {"status": "cancelled", "usage": budget.usage.model_dump()},
+                            {
+                                "status": "cancelled",
+                                "usage": budget.usage.model_dump(),
+                                "pending_question": None,
+                                "pending_tool": None,
+                                "continue_run": False,
+                            },
                             as_node="finalize",
                         )
                 except RunUnavailable:
                     pass
             raise
         finally:
+            entry.answer_in_flight = None
             entry.busy = False
 
     async def cancel(self, run_id: str, owner: str) -> AgentState:
@@ -186,7 +275,36 @@ class AgentRuns:
         entry.cancel_requested = True
         if entry.busy:
             return await self.read(run_id, owner)
-        return await self.execute(run_id, owner)
+        graph, config = build_graph(entry.saver), self._config(entry)
+        snapshot = await graph.aget_state(config)
+        current = (
+            AgentState.model_validate(snapshot.values)
+            if snapshot.values
+            else entry.initial
+        )
+        if current.status in {
+            "completed",
+            "partial",
+            "incomplete",
+            "failed",
+            "budget_exhausted",
+            "cancelled",
+            "expired",
+        }:
+            return await self.read(run_id, owner)
+        await graph.aupdate_state(
+            config,
+            {
+                **current.model_dump(),
+                "status": "cancelled",
+                "continue_run": False,
+                "pending_question": None,
+                "pending_tool": None,
+                "events": [{"step": current.steps_used, "status": "cancelled"}],
+            },
+            as_node="finalize",
+        )
+        return await self.read(run_id, owner)
 
     async def cleanup(self) -> None:
         self.checkpoints.cleanup(self.now())

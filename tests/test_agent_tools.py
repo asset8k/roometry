@@ -211,13 +211,14 @@ async def test_analysis_budget_cannot_be_expanded_by_a_hidden_retry(harness):
     assert result.analysis is None and result.usage.unknown_usage_calls == 1
 
 
-async def test_missing_dimensions_stop_honestly_without_repeating_analysis(harness):
+async def test_missing_dimensions_pause_without_repeating_analysis(harness):
     _, _, calls, actions = harness
     runs, owner, uploaded = await prepared(harness, complete=False)
     actions.extend([decision("analyze_photos"), photo, decision("propose_scene")])
     initial = await runs.create(uploaded["input_id"], owner)
     result = await runs.execute(initial.run_id, owner)
-    assert result.status == "incomplete" and result.proposal.status == "needs_dimensions"
+    assert result.status == "awaiting_answer" and result.proposal.status == "needs_dimensions"
+    assert result.pending_question.dimension_axes == ["length_m", "height_m"]
     assert result.analysis is not None and result.working_scene is None
     assert result.usage.model_calls == len(calls) == 3
 

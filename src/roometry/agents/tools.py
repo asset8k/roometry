@@ -5,11 +5,12 @@ are accepted. MCP transport and furniture additions belong to later milestones.
 """
 
 from dataclasses import asdict
-from typing import Annotated
+from typing import Annotated, Literal
 
 import anyio
 from pydantic import Field
 
+from roometry.agents.clarification import question_for
 from roometry.agents.nodes import RunContext
 from roometry.agents.state import AgentState, RunModel, RunStep, ToolFeedback, ToolName
 from roometry.scenes.assets import ASSET_REGISTRY, ObjectType, Placement
@@ -48,6 +49,11 @@ class RotateArguments(RunModel):
     rotation_y_rad: FiniteNumber
 
 
+class ClarificationArguments(RunModel):
+    kind: Literal["room_dimensions", "object_mobility"]
+    object_id: Identifier | None
+
+
 ARGUMENT_MODELS: dict[ToolName, type[RunModel]] = {
     "analyze_photos": NoArguments,
     "propose_scene": NoArguments,
@@ -57,6 +63,7 @@ ARGUMENT_MODELS: dict[ToolName, type[RunModel]] = {
     "rotate_object": RotateArguments,
     "validate_scene": NoArguments,
     "finish": NoArguments,
+    "request_clarification": ClarificationArguments,
 }
 DESCRIPTIONS: dict[ToolName, str] = {
     "analyze_photos": "Analyze the current owned room photos together. Successful analysis is cached.",
@@ -67,6 +74,7 @@ DESCRIPTIONS: dict[ToolName, str] = {
     "rotate_object": "Rotate an existing movable object about positive Y, in radians. Server validates and rolls back rejected edits.",
     "validate_scene": "Run deterministic component-aware geometry checks on the current scene.",
     "finish": "Finish with the existing validated scene or an honest incomplete result. Cannot fabricate successful geometry or resolve omitted observations.",
+    "request_clarification": "Ask one focused three-choice question about missing room measurements (object_id=null) or whether an existing movable object may move. At most three questions per run; answered facts cannot be asked again. The server constructs the choices and applies the answer as a real constraint.",
 }
 
 
@@ -78,6 +86,8 @@ def available_tools(state: AgentState) -> list[ToolName]:
         tools.append("propose_scene")
     if state.working_scene is not None:
         tools.extend(["read_scene", "move_object", "rotate_object", "validate_scene"])
+    if state.analysis is not None and len(state.questions) < 3:
+        tools.append("request_clarification")
     return tools
 
 
@@ -187,12 +197,21 @@ class SceneTools:
                     allow_estimated_dimensions=True,
                 ),
                 context.owner,
+                isolated_dimensions=True,
             )
+            question = None
+            if proposal.status == "needs_dimensions" and len(state.questions) < 3:
+                try:
+                    question = question_for(state, "room_dimensions")
+                except ValueError:
+                    pass
             return RunStep(
                 action="finish"
                 if proposal.status in {"needs_dimensions", "incomplete"}
+                and question is None
                 else "continue",
                 proposal=proposal,
+                pending_question=question,
                 feedback=feedback(
                     "Scene construction returned " + proposal.status + ".",
                     {
@@ -207,6 +226,23 @@ class SceneTools:
                         ],
                     },
                 ),
+            )
+        if name == "request_clarification":
+            assert isinstance(arguments, ClarificationArguments)
+            try:
+                question = question_for(state, arguments.kind, arguments.object_id)
+            except ValueError:
+                return RunStep(
+                    action="continue",
+                    feedback=feedback(
+                        "This question is unavailable, already answered, or targets a protected object. Use existing facts or finish honestly.",
+                        rejected=True,
+                    ),
+                )
+            return RunStep(
+                action="continue",
+                pending_question=question,
+                feedback=feedback("Waiting for a focused human clarification."),
             )
         if name == "search_catalog":
             assert isinstance(arguments, CatalogArguments)

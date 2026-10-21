@@ -7,10 +7,12 @@ from typing import Protocol
 
 import anyio
 from langgraph.runtime import Runtime
+from langgraph.types import interrupt
 from pydantic import ValidationError
 
 from roometry.agents.budget import RunBudget
-from roometry.agents.state import AgentState, RunStep, RunUsage
+from roometry.agents.clarification import answer_updates, question_for
+from roometry.agents.state import AgentState, ClarificationAnswer, RunStep, RunUsage
 from roometry.model_calls import observe_model_calls
 from roometry.scenes.validation import validate_geometry
 
@@ -105,6 +107,20 @@ def check_step(state: AgentState, step: RunStep) -> None:
                 raise ValueError(
                     "Proposal must account for every original observation."
                 )
+    if step.pending_question is not None:
+        question = step.pending_question
+        effective = state.model_copy(
+            update={"analysis": analysis, "proposal": proposal or state.proposal}
+        )
+        expected = question_for(
+            effective,
+            question.kind,
+            question.entity_ids[0] if question.entity_ids else None,
+        )
+        if question != expected or step.action != "continue":
+            raise ValueError(
+                "Questions must identify an available, specific constraint."
+            )
     if step.working_scene is not None:
         original, candidate = state.working_scene, step.working_scene
         if original is None or not validate_geometry(candidate).valid:
@@ -183,6 +199,14 @@ async def _perform(
                     result["base_scene"] = step.proposal.scene.model_dump()
         if step.working_scene is not None:
             result["working_scene"] = step.working_scene.model_dump()
+        if step.pending_question is not None:
+            result.update(
+                status="awaiting_answer",
+                pending_question=step.pending_question.model_dump(),
+                questions=[
+                    q.model_dump() for q in [*state.questions, step.pending_question]
+                ],
+            )
         if (
             usage.model_calls > state.limits.max_model_calls
             or usage.tool_calls > state.limits.max_tool_calls
@@ -234,6 +258,30 @@ async def execute_tool(
     return await _perform(state, runtime.context, adapter)
 
 
+async def clarify(state: AgentState, runtime: Runtime[RunContext]) -> dict[str, object]:
+    """Only replay-safe authorization and a pure state update surround interrupt.
+
+    The decision, photo analysis, proposal and question preparation have already
+    completed in other checkpointed nodes. Nothing here can call a model.
+    """
+    context = runtime.context
+    await context.authorize()
+    if context.cancelled():
+        return {"status": "cancelled", "pending_question": None}
+    if context.now() >= state.expires_at:
+        return {"status": "expired", "pending_question": None}
+    if state.pending_question is None:
+        return {"status": "failed", "last_error": "invalid_step"}
+    answer = interrupt(
+        state.pending_question.model_dump(mode="json"),
+        response_schema=ClarificationAnswer,
+    )
+    await context.authorize()
+    if context.cancelled():
+        return {"status": "cancelled", "pending_question": None}
+    return answer_updates(state, ClarificationAnswer.model_validate(answer))
+
+
 def finalize(state: AgentState) -> dict[str, object]:
     if state.status not in {"queued", "running"}:
         status = state.status
@@ -244,5 +292,6 @@ def finalize(state: AgentState) -> dict[str, object]:
     return {
         "status": status,
         "pending_tool": None,
+        "pending_question": None,
         "events": [{"step": state.steps_used, "status": status}],
     }

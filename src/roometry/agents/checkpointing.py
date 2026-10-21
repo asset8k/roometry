@@ -12,7 +12,7 @@ from uuid import uuid4
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 
-from roometry.agents.state import AgentState
+from roometry.agents.state import AgentState, ClarificationAnswer
 
 
 class RunUnavailable(Exception):
@@ -38,6 +38,8 @@ class CheckpointRun:
     ))
     busy: bool = False
     cancel_requested: bool = False
+    answer_in_flight: ClarificationAnswer | None = None
+    request_id: str | None = None
 
 
 class TemporaryCheckpoints:

@@ -195,6 +195,13 @@ async def prepare_input(request: Request, response: Response) -> PreparedRoomInp
         options = parse_options(raw_options[0])
         token, owner = session(request)
         result = await service.prepare(files, options, owner)
+        # The same private session now owns both room inputs and agent runs.
+        # Remove the narrower legacy cookie instead of retaining two cookies
+        # with the same name and different paths.
+        response.delete_cookie(
+            COOKIE_NAME, path="/api/rooms", httponly=True,
+            secure=settings.app_environment == "production", samesite="lax",
+        )
         response.set_cookie(
             COOKIE_NAME,
             token,
@@ -202,7 +209,7 @@ async def prepare_input(request: Request, response: Response) -> PreparedRoomInp
             httponly=True,
             secure=settings.app_environment == "production",
             samesite="lax",
-            path="/api/rooms",
+            path="/api",
         )
         response.headers["Cache-Control"] = "no-store"
         return result

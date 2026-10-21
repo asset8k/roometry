@@ -15,16 +15,19 @@ from typing_extensions import TypedDict
 from roometry.scenes.schemas import Identifier, RoomScene
 from roometry.uploads.schemas import (
     MAX_IMAGES,
+    Height,
     InputDimensions,
     OpaqueId,
     RoomInputOptions,
+    Side,
 )
-from roometry.vision.proposal_schemas import SceneProposalResponse
+from roometry.vision.proposal_schemas import DimensionName, SceneProposalResponse
 from roometry.vision.schemas import RoomAnalysisResponse
 
 RunStatus = Literal[
     "queued",
     "running",
+    "awaiting_answer",
     "completed",
     "partial",
     "incomplete",
@@ -43,7 +46,7 @@ class RunModel(BaseModel):
 
 class RunLimits(RunModel):
     max_steps: int = Field(default=8, ge=1, le=32)
-    step_timeout_seconds: float = Field(default=90, gt=0, le=300, allow_inf_nan=False)
+    step_timeout_seconds: float = Field(default=90, gt=0, le=610, allow_inf_nan=False)
     max_model_calls: int = Field(default=8, ge=1, le=32)
     max_tool_calls: int = Field(default=16, ge=1, le=64)
 
@@ -70,6 +73,7 @@ ToolName = Literal[
     "move_object",
     "rotate_object",
     "validate_scene",
+    "request_clarification",
     "finish",
 ]
 
@@ -92,13 +96,32 @@ class ClarificationChoice(RunModel):
     label: str = Field(min_length=1, max_length=200)
 
 
+class EnteredDimensions(RunModel):
+    width_m: Side | None = None
+    length_m: Side | None = None
+    height_m: Height | None = None
+
+
+class ClarificationAnswer(RunModel):
+    question_id: Identifier
+    choice_id: Identifier
+    dimensions: EnteredDimensions | None = Field(
+        default=None,
+        description="Only for enter_measurements: supply the requested axes in meters. Entered values are treated as user supplied, without a separate confirmation flag.",
+    )
+
+
 class ClarificationQuestion(RunModel):
-    """Reserved state payload; actual interrupt/answer handling belongs to step 3."""
+    """Three server-defined actions for one specific missing fact."""
 
     id: Identifier
     question: str = Field(min_length=1, max_length=500)
     choices: Annotated[list[ClarificationChoice], Field(min_length=3, max_length=3)]
     entity_ids: Annotated[list[Identifier], Field(max_length=200)] = Field(
+        default_factory=list
+    )
+    kind: Literal["room_dimensions", "object_mobility"]
+    dimension_axes: Annotated[list[DimensionName], Field(max_length=3)] = Field(
         default_factory=list
     )
 
@@ -140,6 +163,15 @@ class AgentState(RunModel):
         dict[Identifier, Identifier], Field(max_length=3)
     ] = Field(default_factory=dict)
     pending_question: ClarificationQuestion | None = None
+    questions: Annotated[list[ClarificationQuestion], Field(max_length=3)] = Field(
+        default_factory=list
+    )
+    submitted_answers: Annotated[
+        dict[Identifier, ClarificationAnswer], Field(max_length=3)
+    ] = Field(default_factory=dict)
+    object_mobility: Annotated[dict[Identifier, bool | None], Field(max_length=3)] = (
+        Field(default_factory=dict)
+    )
     base_scene: RoomScene | None = None
     working_scene: RoomScene | None = None
     pending_tool: ToolCall | None = None
@@ -182,4 +214,5 @@ class RunStep(RunModel):
     pending_tool: ToolCall | None = None
     feedback: ToolFeedback | None = None
     working_scene: RoomScene | None = None
+    pending_question: ClarificationQuestion | None = None
     failure: Literal["decision_failed", "tool_failed"] | None = None

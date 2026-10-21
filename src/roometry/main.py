@@ -13,7 +13,10 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel
 
 from roometry.agents.adapter import RoomAgent
+from roometry.agents.router import RunFailure
+from roometry.agents.router import router as agent_router
 from roometry.agents.runs import AgentRuns
+from roometry.agents.state import RunLimits
 from roometry.agents.tools import SceneTools
 from roometry.config import Settings, get_settings
 from roometry.scenes.router import router as scenes_router
@@ -47,6 +50,11 @@ def create_app(
         service.storage.resolve,
         RoomAgent(settings, analyzer),
         execute_tool=SceneTools(analysis_service),
+        # A scene tool may make an initial request and one repair. Its outer
+        # deadline must allow both configured per-request deadlines to run.
+        default_limits=RunLimits(
+            step_timeout_seconds=2 * settings.analysis_timeout_seconds + 5
+        ),
     )
 
     async def periodic_cleanup() -> None:
@@ -104,6 +112,15 @@ def create_app(
     application.include_router(scenes_router)
     application.include_router(uploads_router)
     application.include_router(analysis_router)
+    application.include_router(agent_router)
+
+    @application.exception_handler(RunFailure)
+    async def run_error(_request: Request, error: RunFailure) -> JSONResponse:
+        return JSONResponse(
+            error.response.model_dump(mode="json"),
+            status_code=error.status,
+            headers={"Cache-Control": "no-store"},
+        )
 
     @application.exception_handler(AnalysisFailure)
     async def analysis_error(_request: Request, error: AnalysisFailure) -> JSONResponse:
@@ -126,6 +143,17 @@ def create_app(
         _request: Request,
         error: RequestValidationError,
     ) -> JSONResponse:
+        if _request.url.path == "/api/agent-runs" or _request.url.path.startswith(
+            "/api/agent-runs/"
+        ):
+            return await run_error(
+                _request,
+                RunFailure(
+                    422,
+                    "invalid_request",
+                    "Send a valid agent run request using only the documented fields.",
+                ),
+            )
         if _request.url.path in ANALYSIS_PATHS:
             return await analysis_error(
                 _request,

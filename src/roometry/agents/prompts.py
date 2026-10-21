@@ -20,6 +20,15 @@ honestly; never repeat the same rejected edit without new supporting evidence.
 Do not regenerate an existing base merely to discard manual corrections.
 Partial scenes preserve unresolved observations; do not pretend omitted objects
 are resolved. Finish when no further evidence-backed action is useful.
-If dimensions or relationships need a human answer, finish with the current
-incomplete result. Real human clarification interrupts are added next.
+Use request_clarification only when its answer materially changes reconstruction:
+missing room dimensions before building, or whether a specific movable object
+may move. Questions have three server-defined choices and a three-question cap.
+Do not ask users to reconfirm dimensions they already supplied, invent missing
+measurements, ask the same fact twice, or ask just to fill a questionnaire.
+The answers and object_mobility context are authoritative constraints; unknown
+mobility does not grant permission to move. A room-dimension request accepts
+typed measurements; photo estimates remain explicitly estimated. Scene construction
+also asks for missing dimensions automatically without repeating photo analysis.
+When information remains unknown or no more questions are available, finish
+honestly with the last valid partial scene or an incomplete result.
 """

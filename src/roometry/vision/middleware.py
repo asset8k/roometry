@@ -1,4 +1,4 @@
-"""Bound analysis JSON before FastAPI reads it, including chunked requests."""
+"""Bound analysis and agent JSON before FastAPI reads it, including chunks."""
 
 import json
 
@@ -11,6 +11,14 @@ ANALYSIS_PATH = "/api/rooms/analyze"
 ANALYSIS_PATHS = {ANALYSIS_PATH, "/api/rooms/propose-scene"}
 
 
+def bounded_path(path: str) -> bool:
+    return (
+        path in ANALYSIS_PATHS
+        or path == "/api/agent-runs"
+        or path.startswith("/api/agent-runs/")
+    )
+
+
 class AnalysisRequestLimitMiddleware:
     def __init__(self, app: ASGIApp, max_bytes: int):
         self.app, self.max_bytes = app, max_bytes
@@ -18,7 +26,7 @@ class AnalysisRequestLimitMiddleware:
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if (
             scope["type"] != "http"
-            or scope["path"] not in ANALYSIS_PATHS
+            or not bounded_path(scope["path"])
             or scope["method"] != "POST"
         ):
             await self.app(scope, receive, send)

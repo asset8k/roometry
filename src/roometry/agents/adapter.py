@@ -68,6 +68,9 @@ class RoomAgent:
                 if state.confirmed_dimensions
                 else None
             ),
+            "questions": [q.model_dump(mode="json") for q in state.questions],
+            "clarification_answers": state.clarification_answers,
+            "object_mobility": state.object_mobility,
             "observations": (
                 state.analysis.observations.model_dump(mode="json")
                 if state.analysis
@@ -94,6 +97,7 @@ class RoomAgent:
                 "steps": state.limits.max_steps - state.steps_used,
                 "model_calls": state.limits.max_model_calls - state.usage.model_calls,
                 "tool_calls": state.limits.max_tool_calls - state.usage.tool_calls,
+                "questions": 3 - len(state.questions),
             },
         }
         payload = {
