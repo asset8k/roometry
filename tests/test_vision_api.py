@@ -873,3 +873,50 @@ async def test_failure_logs_include_safe_schema_reason_and_provider_ids(
     assert "req_diagnostic_test" in caplog.text and "resp_test" in caplog.text
     assert "PRIVATE" not in caplog.text and "private_missing_wall" not in caplog.text
     assert "diagnostics" not in response.text
+
+
+@pytest.mark.parametrize("count", [1, 2, 10])
+async def test_evidence_schema_is_bound_to_only_the_current_upload(harness, count):
+    _, client, calls, _ = harness
+    uploaded = await upload(client, count)
+    response = await client.post('/api/rooms/analyze', json={'input_id': uploaded['input_id']})
+    assert response.status_code == 200
+    schema = calls[0]['text']['format']['schema']
+    expected = [image['image_id'] for image in uploaded['images']]
+    root = schema['properties']['image_ids']
+    assert root['items']['enum'] == expected
+    assert root['minItems'] == root['maxItems'] == count
+    for model in schema['$defs'].values():
+        prop = model.get('properties', {}).get('source_image_ids')
+        if prop:
+            assert prop['items']['enum'] == expected and prop['maxItems'] == count
+
+
+@pytest.mark.parametrize('defect', ['duplicates', 'foreign', 'missing_photo'])
+async def test_evidence_normalization_is_lossless_and_never_reassigns_unknown_photos(harness, defect):
+    _, client, calls, actions = harness
+    uploaded = await upload(client, 2)
+
+    async def output(request, payload):
+        data = provider_response(payload)
+        obs = observations_for(payload)
+        if defect == 'duplicates':
+            obs['image_ids'].reverse()
+            obs['objects'][0]['source_image_ids'] *= 2
+        elif defect == 'foreign':
+            obs['objects'][0]['source_image_ids'] = ['44444444-4444-4444-8444-444444444444']
+        else:
+            obs['image_ids'].pop()
+        data['output'][0]['content'][0]['text'] = json.dumps(obs)
+        return httpx.Response(200, json=data)
+
+    actions.append(output)
+    response = await client.post('/api/rooms/analyze', json={'input_id': uploaded['input_id']})
+    assert len(calls) == 1  # Invalid evidence does not trigger blind paid retries.
+    if defect == 'duplicates':
+        assert response.status_code == 200
+        observations = response.json()['observations']
+        assert observations['image_ids'] == [image['image_id'] for image in uploaded['images']]
+        assert len(observations['objects'][0]['source_image_ids']) == 2
+    else:
+        assert_error(response, 502, 'invalid_analysis')

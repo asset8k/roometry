@@ -48,7 +48,7 @@ async def guard(state: AgentState, runtime: Runtime[RunContext]) -> dict[str, ob
         or state.usage.model_calls >= state.limits.max_model_calls
         or state.usage.tool_calls >= state.limits.max_tool_calls
     ):
-        return {"status": "budget_exhausted"}
+        return {"status": "budget_exhausted", "stop_reason": "budget_limit"}
     return {"status": "running", "steps_used": state.steps_used + 1}
 
 
@@ -229,6 +229,8 @@ async def _perform(
             or usage.tool_calls > state.limits.max_tool_calls
         ):
             result["status"] = "budget_exhausted"
+    if result.get("status") == "budget_exhausted":
+        result["stop_reason"] = "budget_limit"
     # Revocation/expiry during a step must never expose its result or continue.
     await context.authorize()
     if context.cancelled():
@@ -283,14 +285,28 @@ async def clarify(state: AgentState, runtime: Runtime[RunContext]) -> dict[str, 
 
 
 def finalize(state: AgentState) -> dict[str, object]:
-    if state.status not in {"queued", "running"}:
-        status = state.status
-    else:
-        status = {"ready": "completed", "partial": "partial"}.get(
-            state.proposal.status if state.proposal else "", "incomplete"
+    status = state.status
+    reason = state.stop_reason
+    if status in {"queued", "running", "budget_exhausted"}:
+        proposal, scene = state.proposal, state.working_scene
+        usable = (
+            proposal is not None
+            and proposal.status in {"ready", "partial"}
+            and scene is not None
+            and state.base_scene is not None
+            and state.last_error is None
+            and validate_geometry(scene).valid
         )
+        if usable and proposal is not None:
+            # Finishing consumes no provider/tool call. The reason preserves the
+            # distinction between normal completion and stopped optional work.
+            status = "partial" if proposal.status == "partial" else "completed"
+        elif status != "budget_exhausted":
+            status = "incomplete"
+        reason = reason or ("budget_limit" if state.status == "budget_exhausted" else "finished")
     return {
         "status": status,
+        "stop_reason": reason,
         "pending_tool": None,
         "pending_question": None,
         "events": [{"step": state.steps_used, "status": status}],

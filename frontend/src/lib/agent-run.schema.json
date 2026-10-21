@@ -1583,7 +1583,7 @@
       "additionalProperties": false,
       "properties": {
         "max_steps": {
-          "default": 8,
+          "default": 16,
           "maximum": 32,
           "minimum": 1,
           "title": "Max Steps",
@@ -1597,14 +1597,14 @@
           "type": "number"
         },
         "max_model_calls": {
-          "default": 8,
+          "default": 20,
           "maximum": 32,
           "minimum": 1,
           "title": "Max Model Calls",
           "type": "integer"
         },
         "max_tool_calls": {
-          "default": 16,
+          "default": 24,
           "maximum": 64,
           "minimum": 1,
           "title": "Max Tool Calls",
@@ -2525,6 +2525,22 @@
       "title": "Events",
       "type": "array"
     },
+    "stop_reason": {
+      "anyOf": [
+        {
+          "enum": [
+            "finished",
+            "budget_limit"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Stop Reason"
+    },
     "last_error": {
       "anyOf": [
         {
@@ -2571,6 +2587,7 @@
     "pending_tool",
     "tool_feedback",
     "events",
+    "stop_reason",
     "last_error"
   ],
   "title": "AgentState",

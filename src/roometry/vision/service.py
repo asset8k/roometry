@@ -29,6 +29,7 @@ from roometry.vision.diagnostics import (
 )
 from roometry.vision.errors import AnalysisFailure
 from roometry.vision.partial import assemble_partial
+from roometry.vision.importance import partial_quality
 from roometry.vision.proposal_request import build_proposal_request
 from roometry.vision.proposal_schemas import (
     AXES,
@@ -521,7 +522,8 @@ class AnalysisService:
             )
         draft, report, scene = None, None, None
         best_partial = None
-        best_count = -1
+        best_quality = (-1, -1, -1, -1)
+        observed = {item.id: item for item in [*analysis.observations.objects, *analysis.observations.openings]}
         problems = []
         repair_failure: AnalysisFailure | None = None
         while state.scene_attempts < 2:
@@ -590,14 +592,11 @@ class AnalysisService:
                             assemble_partial, analysis, measurements, draft
                         )
                         retained = candidate[0]
-                        count = (
-                            len(retained.objects) + len(retained.openings)
-                            if retained is not None
-                            else -1
-                        )
-                        if retained is not None and count > best_count:
-                            best_partial = candidate
-                            best_count = count
+                        if retained is not None:
+                            quality = partial_quality(retained, observed)
+                            if quality > best_quality:
+                                best_partial = candidate
+                                best_quality = quality
                 if problems and details is None:
                     details = {
                         "reason": "proposal_validation",

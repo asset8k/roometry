@@ -20,6 +20,13 @@ honestly; never repeat the same rejected edit without new supporting evidence.
 Do not regenerate an existing base merely to discard manual corrections.
 Partial scenes preserve unresolved observations; do not pretend omitted objects
 are resolved. Finish when no further evidence-backed action is useful.
+A partial proposal is a usable terminal result. The current tools cannot reinsert
+omitted observations, add/replace assets or repair an unresolved entity. Do not
+search the catalog or ask permission to move an omitted object as a workaround.
+Read-only tools are limited to once per unchanged scene. Current scene geometry
+and its successful validation are already in context. Avoid inspecting merely
+to fill remaining budget; choose finish when there is no evidence-backed edit.
+Use eligible_questions only; do not invent a question for another object.
 Use request_clarification only when its answer materially changes reconstruction:
 missing room dimensions before building, or whether a specific movable object
 may move. Questions have three server-defined choices and a three-question cap.

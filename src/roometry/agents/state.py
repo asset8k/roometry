@@ -46,10 +46,10 @@ class RunModel(BaseModel):
 
 
 class RunLimits(RunModel):
-    max_steps: int = Field(default=8, ge=1, le=32)
+    max_steps: int = Field(default=16, ge=1, le=32)
     step_timeout_seconds: float = Field(default=90, gt=0, le=610, allow_inf_nan=False)
-    max_model_calls: int = Field(default=8, ge=1, le=32)
-    max_tool_calls: int = Field(default=16, ge=1, le=64)
+    max_model_calls: int = Field(default=20, ge=1, le=32)
+    max_tool_calls: int = Field(default=24, ge=1, le=64)
 
 
 class RunUsage(RunModel):
@@ -180,6 +180,7 @@ class AgentState(RunModel):
         default_factory=list
     )
     events: Annotated[list[RunEvent], append_events] = Field(default_factory=list)
+    stop_reason: Literal["finished", "budget_limit"] | None = None
     last_error: (
         Literal[
             "step_failed",

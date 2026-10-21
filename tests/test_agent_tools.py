@@ -109,7 +109,8 @@ async def test_catalog_read_rotate_and_validate_tools_use_the_existing_catalog_a
         decision("read_scene"), decision("rotate_object", {"object_id": "chair_a", "rotation_y_rad": pi / 2}),
         decision("validate_scene"), decision("finish"),
     ])
-    initial = await runs.create(uploaded["input_id"], owner, limits=RunLimits(max_steps=10, max_model_calls=16))
+    initial = await runs.create(uploaded["input_id"], owner)
+    assert initial.limits.max_steps == 16 and initial.limits.max_model_calls == 20
     result = await runs.execute(initial.run_id, owner)
     assert result.status == "completed" and result.usage.tool_calls == 7
     catalog = next(item for item in result.tool_feedback if item.name == "search_catalog").details
@@ -191,7 +192,8 @@ async def test_model_budget_denies_a_nested_repair_and_keeps_the_valid_partial(h
     stages(actions, bad)
     initial = await runs.create(uploaded["input_id"], owner, limits=RunLimits(max_model_calls=4))
     result = await runs.execute(initial.run_id, owner)
-    assert result.status == "budget_exhausted" and len(calls) == result.usage.model_calls == 4
+    assert result.status == "partial" and result.stop_reason == "budget_limit"
+    assert len(calls) == result.usage.model_calls == 4
     assert result.proposal.status == "partial" and len(result.working_scene.objects) == 4
     assert result.proposal.unresolved_entities[0].entity_id == "bed_observed"
     assert validate_geometry(result.working_scene).valid
@@ -377,7 +379,7 @@ async def test_tool_schemas_are_strict_and_derived_from_current_state(harness):
     runs, owner, uploaded = await prepared(harness)
     state = await runs.create(uploaded["input_id"], owner)
     definitions = tool_definitions(state)
-    assert {tool["name"] for tool in definitions} == {"analyze_photos", "search_catalog", "finish"}
+    assert {tool["name"] for tool in definitions} == {"analyze_photos", "finish"}
 
     def check(schema):
         if schema.get("type") == "object":

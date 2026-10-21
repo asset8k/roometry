@@ -39,6 +39,14 @@ describe('guided generation workspace', () => {
     expect(html).toContain('Reset layout')
     expect(html).not.toContain('Example bedroom')
   })
+  it('shows a usable partial scene and an honest limit notice after free finalization', () => {
+    const run = { ...finishedRun(input, true), stop_reason: 'budget_limit' as const }
+    const html = render({ phase: 'partial', run })
+    expect(html).toContain('Your partial reconstruction')
+    expect(html).toContain('Additional checks stopped at the run limit')
+    expect(html).toContain('3D room viewer')
+    expect(html).not.toContain('This run did not finish successfully')
+  })
   it('shows failed and cancelled results honestly and offers safe network recovery', () => {
     expect(render({ phase: 'failed' })).toContain('Generation stopped')
     expect(render({ phase: 'cancelled' })).toContain('Generation cancelled')

@@ -839,6 +839,7 @@ export type Status3 =
   | "expired"
   | "failed";
 export type Events = RunEvent[];
+export type StopReason = ("finished" | "budget_limit") | null;
 export type LastError = ("step_failed" | "step_timeout" | "invalid_step" | "decision_failed" | "tool_failed") | null;
 
 export interface AgentState {
@@ -867,6 +868,7 @@ export interface AgentState {
   pending_tool: ToolCall | null;
   tool_feedback: ToolFeedback;
   events: Events;
+  stop_reason: StopReason;
   last_error: LastError;
 }
 export interface RoomInputOptions {

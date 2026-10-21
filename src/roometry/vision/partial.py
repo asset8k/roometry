@@ -9,6 +9,7 @@ from collections import Counter
 
 from roometry.scenes.schemas import RoomScene
 from roometry.scenes.validation import GeometryReport
+from roometry.vision.importance import importance
 from roometry.vision.proposal_schemas import ProposalIssue, SceneDraft, UnresolvedEntity
 from roometry.vision.proposals import Measurements, assemble, issue, notes, preflight
 from roometry.vision.schemas import RoomAnalysisResponse
@@ -69,11 +70,12 @@ def assemble_partial(
             if len(unresolved) == before:
                 return
 
-    def priority(entity_id: str) -> tuple[int, int, int, str]:
+    def priority(entity_id: str) -> tuple[int, int, int, int, str]:
         source = observed[entity_id]
         return (
             {"high": 0, "medium": 1, "low": 2}[source.confidence],
             0 if getattr(source, "appears_fixed", False) else 1,
+            importance(source),
             -dependents[entity_id],
             entity_id,
         )
@@ -101,7 +103,9 @@ def assemble_partial(
         scene, report, problems = assemble(subset, measurements, selected)
         if scene is not None:
             if unresolved:
+                major = [getattr(observed[key], "label", observed[key].type) for key in unresolved if importance(observed[key]) == 0]
                 scene.warnings = notes(scene.warnings, [
+                    *([("Important room elements remain unresolved: " + "; ".join(major))[:1000]] if major else []),
                     f"Partial reconstruction: {len(unresolved)} observed objects or openings are unresolved and omitted. Their observations are preserved separately; this is not a complete room."
                 ])
             return scene, report, reasons[:50], list(unresolved.values())
@@ -129,7 +133,7 @@ def assemble_partial(
                     elif poses[right].support_object_id == left:
                         affected = right
                     else:
-                        # Prefer stronger evidence, then fixed items/supports,
+                        # Prefer stronger evidence, fixed items and major furniture, then supports,
                         # then stable IDs. This is provisional, not photo truth.
                         affected = max(error.entity_ids, key=priority)
                 defer(affected, issue(

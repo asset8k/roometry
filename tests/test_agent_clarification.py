@@ -376,7 +376,7 @@ async def test_questions_are_not_asked_when_no_work_budget_remains(harness):
     actions.append(decision("request_clarification", {"kind": "object_mobility", "object_id": "chair_a"}))
     initial = await runs.create(uploaded["input_id"], owner, limits=RunLimits(max_model_calls=5))
     state = await runs.execute(initial.run_id, owner)
-    assert state.status == "budget_exhausted" and state.questions == []
+    assert state.status == "completed" and state.stop_reason == "budget_limit" and state.questions == []
     assert state.pending_question is None and len(calls) == 5
 
 

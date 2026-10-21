@@ -53,6 +53,9 @@ def create_app(
         # A scene tool may make an initial request and one repair. Its outer
         # deadline must allow both configured per-request deadlines to run.
         default_limits=RunLimits(
+            max_steps=settings.agent_max_steps,
+            max_model_calls=settings.agent_max_model_calls,
+            max_tool_calls=settings.agent_max_tool_calls,
             step_timeout_seconds=2 * settings.analysis_timeout_seconds + 5
         ),
     )

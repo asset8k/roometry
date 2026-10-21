@@ -72,6 +72,18 @@ class PhotoAnalyzer:
                     },
                 ]
             )
+        # Ground evidence at decoding time, not merely in prose instructions.
+        # UUID shape alone cannot distinguish this upload from another room.
+        image_ids = [image.image_id for image in prepared.images]
+        schema = RoomObservations.model_json_schema()
+        for properties in [schema["properties"], *(
+            definition.get("properties", {}) for definition in schema.get("$defs", {}).values()
+        )]:
+            for name in ("image_ids", "source_image_ids"):
+                if name in properties:
+                    properties[name]["items"]["enum"] = image_ids
+                    properties[name]["maxItems"] = len(image_ids)
+        schema["properties"]["image_ids"]["minItems"] = len(image_ids)
         payload: ResponseCreateParamsNonStreaming = {
             "model": self.settings.model_name,
             "instructions": OBSERVATION_INSTRUCTIONS,
@@ -81,7 +93,7 @@ class PhotoAnalyzer:
                     "type": "json_schema",
                     "name": "room_observations",
                     "strict": True,
-                    "schema": RoomObservations.model_json_schema(),
+                    "schema": schema,
                 }
             },
             "max_output_tokens": self.settings.analysis_max_output_tokens,
@@ -249,8 +261,8 @@ def response_json(response: Response, max_bytes: int) -> object:
         ) from None
 
 
-def _normalize_unknown_dimensions(decoded: object) -> object:
-    """An exact all-null measurement record means the same thing as no estimate.
+def _normalize_observations(decoded: object, image_ids: list[str]) -> object:
+    """Normalize lossless representations of dimensions and evidence sets.
 
     JSON Schema cannot express our model validators. Normalize only this lossless
     representation; unknown fields, partial dictionaries and real values still
@@ -259,6 +271,21 @@ def _normalize_unknown_dimensions(decoded: object) -> object:
     if not isinstance(decoded, dict):
         return decoded
     normalized = deepcopy(decoded)
+    manifest = normalized.get("image_ids")
+    if isinstance(manifest, list) and all(isinstance(value, str) for value in manifest):
+        # Only canonicalize an exact set of supplied photos. A missing or foreign
+        # ID must still fail; no evidence is inferred or reassigned.
+        if set(manifest) == set(image_ids):
+            normalized["image_ids"] = list(image_ids)
+    for kind in ("walls", "objects", "openings"):
+        entities = normalized.get(kind)
+        if isinstance(entities, list):
+            for entity in entities:
+                if not isinstance(entity, dict):
+                    continue
+                references = entity.get("source_image_ids")
+                if isinstance(references, list) and all(isinstance(value, str) for value in references):
+                    entity["source_image_ids"] = list(dict.fromkeys(references))
 
     def unknown(value: object, keys: set[str]) -> bool:
         return (
@@ -287,7 +314,7 @@ def parse_observations(
     decoded = response_json(response, max_bytes)
     try:
         observations = RoomObservations.model_validate(
-            _normalize_unknown_dimensions(decoded)
+            _normalize_observations(decoded, image_ids)
         )
     except ValidationError as error:
         raise AnalysisFailure(

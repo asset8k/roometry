@@ -41,6 +41,7 @@ export default function RoomGenerationWorkspace({ state, controller, onConnectio
       </div>}
       {!terminal && <p className="input-help">We’ll ask if a missing detail matters. Your entered measurements are used directly.</p>}
       {state.phase === 'completed' && <p>Your approximate reconstruction is ready to explore and edit. This shows your current room; you can try your own arrangement in the editor.</p>}
+      {run?.stop_reason === 'budget_limit' && ['completed', 'partial'].includes(state.phase) && <p className="input-help">Your validated reconstruction is available. Additional checks stopped at the run limit.</p>}
       {state.phase === 'partial' && <p>The included geometry passed validation. Some observations remain unresolved and are listed below.</p>}
       {state.phase === 'incomplete' && <p>There isn’t enough information to finish a complete room. Your selected photos are kept so you can update the details.</p>}
       {state.phase === 'failed' && <p>The service couldn’t finish this generation. Your selected photos and entered details are kept.</p>}

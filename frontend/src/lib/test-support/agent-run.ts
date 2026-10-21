@@ -8,12 +8,12 @@ export function agentRun(input: PreparedRoomInput, patch: Partial<AgentState> = 
     run_id: '66666666-6666-4666-8666-666666666666', input_id: input.input_id,
     image_ids: input.images.map(image => image.image_id), input_options: input.options,
     created_at: new Date(Date.now() - 1000).toISOString(), input_expires_at: input.expires_at, expires_at: input.expires_at,
-    limits: { max_steps: 8, max_model_calls: 8, max_tool_calls: 16, step_timeout_seconds: 185 },
+    limits: { max_steps: 16, max_model_calls: 20, max_tool_calls: 24, step_timeout_seconds: 185 },
     status: 'running', steps_used: 1, usage: { model_calls: 1, tool_calls: 0, input_tokens: 100, output_tokens: 30, unknown_usage_calls: 0 },
     continue_run: true, analysis: null, proposal: null, confirmed_dimensions: input.options.dimensions ?? null,
     clarification_answers: {}, submitted_answers: {}, questions: [], pending_question: null, object_mobility: {},
     pending_tool: { call_id: 'call_1', name: 'analyze_photos', arguments: {} }, tool_feedback: [],
-    base_scene: null, working_scene: null, events: [], last_error: null, ...patch,
+    base_scene: null, working_scene: null, events: [], stop_reason: null, last_error: null, ...patch,
   })
 }
 

@@ -17,6 +17,7 @@ from pydantic import ValidationError
 from roometry.agents.nodes import RunContext
 from roometry.agents.prompts import AGENT_INSTRUCTIONS
 from roometry.agents.state import AgentState, RunStep, ToolCall, ToolFeedback
+from roometry.agents.tool_policy import clarification_candidates
 from roometry.agents.tools import ARGUMENT_MODELS, available_tools, tool_definitions
 from roometry.config import Settings
 from roometry.vision.analyzer import PhotoAnalyzer
@@ -59,6 +60,11 @@ class RoomAgent:
             or not self.settings.openai_api_key.get_secret_value().strip()
         ):
             return failed("analysis_unavailable")
+        definitions = tool_definitions(state)
+        if all(tool["name"] == "finish" for tool in definitions):
+            return RunStep(action="finish", feedback=ToolFeedback(
+                name="finish", outcome="success", message="No useful tool action remains; finalizing the current reconstruction.",
+            ))
         # Fresh, bounded state context avoids storing provider reasoning items,
         # raw responses or image bytes in graph checkpoints. Feedback is data.
         data = {
@@ -76,6 +82,15 @@ class RoomAgent:
                 if state.analysis
                 else None
             ),
+            "eligible_questions": [
+                {"kind": q.kind, "object_id": q.entity_ids[0] if q.entity_ids else None}
+                for q in clarification_candidates(state)
+            ],
+            "scene_validation": (
+                {"valid": state.proposal.validation.valid, "policy_version": state.proposal.validation.policy_version}
+                if state.proposal and state.proposal.validation else None
+            ),
+            "unresolved_repair_available": False,
             "proposal_status": state.proposal.status if state.proposal else None,
             "unresolved_entities": (
                 [
@@ -114,7 +129,7 @@ class RoomAgent:
                     ],
                 }
             ],
-            "tools": tool_definitions(state),
+            "tools": definitions,
             "tool_choice": "required",
             "parallel_tool_calls": False,
             "max_output_tokens": self.settings.agent_max_output_tokens,

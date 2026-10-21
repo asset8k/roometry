@@ -278,3 +278,49 @@ async def test_repair_request_limit_preserves_partial_without_an_extra_paid_call
     assert app.state.analysis_service._states[analysis["input_id"]].scene_attempts == 1
     assert (await client.post("/api/rooms/propose-scene", json=req)).json() == response.json()
     assert len(calls) == 2
+
+
+@pytest.mark.parametrize('reverse', [False, True])
+def test_conflict_keeps_a_high_confidence_sofa_over_a_side_table_regardless_of_ids(reverse):
+    analysis, data = single_object_case('sofa')
+    sofa = analysis.observations.objects[0]
+    sofa.id, sofa.confidence, sofa.appears_fixed = 'z_sofa', 'high', False
+    side = sofa.model_copy(update={'id': 'a_side_table', 'type': 'side_table'})
+    analysis.observations.objects.append(side)
+    data['objects'][0]['id'] = sofa.id
+    data['objects'].append({**deepcopy(data['objects'][0]), 'id': side.id})
+    if reverse:
+        analysis.observations.objects.reverse()
+        data['objects'].reverse()
+    scene, _, _, unresolved = select(analysis, data)
+    assert scene and [obj.id for obj in scene.objects] == ['z_sofa']
+    assert set(unresolved) == {'a_side_table'}
+
+
+@pytest.mark.anyio
+async def test_best_partial_prefers_a_valid_sofa_to_more_minor_objects(harness):
+    app, client, _, actions = harness
+    response = await analyzed(harness)
+    cached = app.state.analysis_service._states[response['input_id']].result
+    analysis, data = single_object_case('sofa')
+    sofa = analysis.observations.objects[0]
+    sofa.id, sofa.confidence, sofa.appears_fixed = 'sofa', 'high', False
+    analysis.observations.image_ids = cached.observations.image_ids
+    sofa.source_image_ids = cached.observations.image_ids
+    data['objects'][0]['id'] = sofa.id
+    for i, x in enumerate((.5, 3.5)):
+        chair = sofa.model_copy(update={'id': f'chair_{i}', 'type': 'chair'})
+        analysis.observations.objects.append(chair)
+        data['objects'].append({**deepcopy(data['objects'][0]), 'id': chair.id, 'position': {'x': x, 'y': 0, 'z': .5}})
+    cached.observations = analysis.observations
+    first, second = deepcopy(data), deepcopy(data)
+    first['objects'][0]['position']['x'] = -10
+    for pose in second['objects'][1:]:
+        pose['position']['x'] = -10
+    actions.extend([scene_action(first), scene_action(second)])
+    proposal = await client.post('/api/rooms/propose-scene', json=body(response, dimensions=confirmed(length_m=4, height_m=2.6)))
+    assert proposal.status_code == 200, proposal.text
+    result = proposal.json()
+    assert result['status'] == 'partial' and result['validation']['valid']
+    assert [obj['id'] for obj in result['scene']['objects']] == ['sofa']
+    assert {item['entity_id'] for item in result['unresolved_entities']} == {'chair_0', 'chair_1'}

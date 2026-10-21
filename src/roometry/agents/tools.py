@@ -12,6 +12,7 @@ from pydantic import Field
 
 from roometry.agents.clarification import question_for
 from roometry.agents.nodes import RunContext
+from roometry.agents.tool_policy import already_inspected, clarification_candidates
 from roometry.agents.state import AgentState, RunModel, RunStep, ToolFeedback, ToolName
 from roometry.scenes.assets import ASSET_REGISTRY, ObjectType, Placement
 from roometry.scenes.catalog import ASSET_CATALOG, dimensions_for, object_surfaces
@@ -78,30 +79,41 @@ DESCRIPTIONS: dict[ToolName, str] = {
 }
 
 
-def available_tools(state: AgentState) -> list[ToolName]:
-    tools: list[ToolName] = ["search_catalog", "finish"]
+def available_tools(state: AgentState, *, reserve_decision: bool = True) -> list[ToolName]:
+    tools: list[ToolName] = ["finish"]
     if state.analysis is None:
         tools.append("analyze_photos")
     elif state.working_scene is None:
         tools.append("propose_scene")
     if state.working_scene is not None:
-        tools.extend(["read_scene", "move_object", "rotate_object", "validate_scene"])
-    if state.analysis is not None and len(state.questions) < 3:
+        inspection_tools: tuple[ToolName, ...] = ("read_scene", "search_catalog", "validate_scene")
+        for name in inspection_tools:
+            if not already_inspected(state, name):
+                tools.append(name)
+        if any(not obj.fixed and not obj.locked and obj.placement in {"floor", "surface"}
+               for obj in state.working_scene.objects):
+            tools.extend(["move_object", "rotate_object"])
+    if clarification_candidates(state, reserve_decision=reserve_decision):
         tools.append("request_clarification")
     return tools
 
 
 def tool_definitions(state: AgentState) -> list[dict]:
-    return [
-        {
-            "type": "function",
-            "name": name,
-            "description": DESCRIPTIONS[name],
-            "parameters": ARGUMENT_MODELS[name].model_json_schema(),
-            "strict": True,
-        }
-        for name in available_tools(state)
-    ]
+    definitions = []
+    for name in available_tools(state):
+        schema = ARGUMENT_MODELS[name].model_json_schema()
+        if name == "request_clarification":
+            questions = clarification_candidates(state)
+            schema["properties"]["kind"]["enum"] = list(dict.fromkeys(q.kind for q in questions))
+            schema["properties"]["object_id"] = {
+                "enum": [*dict.fromkeys(q.entity_ids[0] if q.entity_ids else None for q in questions)],
+                "type": ["string", "null"],
+            }
+        definitions.append({
+            "type": "function", "name": name, "description": DESCRIPTIONS[name],
+            "parameters": schema, "strict": True,
+        })
+    return definitions
 
 
 def report_summary(report: GeometryReport) -> dict:
@@ -124,7 +136,7 @@ class SceneTools:
         call = state.pending_tool
         if call is None:
             raise ValueError("There is no pending tool.")
-        if call.name not in available_tools(state):
+        if call.name not in available_tools(state, reserve_decision=False):
             return RunStep(
                 action="continue",
                 feedback=ToolFeedback(
