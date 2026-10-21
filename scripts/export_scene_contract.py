@@ -3,6 +3,8 @@
 import json
 from pathlib import Path
 
+from roometry.agents.state import AgentState, ClarificationAnswer
+from roometry.agents.router import StartRunRequest, RunErrorResponse
 from roometry.scenes.edit_schemas import PreviewEditRequest, PreviewEditResponse
 from roometry.scenes.decor import DECOR_CATALOG
 from roometry.scenes.equipment import EQUIPMENT_CATALOG
@@ -30,6 +32,10 @@ SCENE_FIXTURES = ("bedroom_scene.json", "bedroom_after_scene.json", "kitchen_cat
 
 def main() -> None:
     outputs = {
+        ROOT / "frontend/src/lib/agent-run.schema.json": AgentState.model_json_schema(mode="serialization"),
+        ROOT / "frontend/src/lib/agent-start.schema.json": StartRunRequest.model_json_schema(),
+        ROOT / "frontend/src/lib/agent-answer.schema.json": ClarificationAnswer.model_json_schema(),
+        ROOT / "frontend/src/lib/agent-error.schema.json": RunErrorResponse.model_json_schema(mode="serialization"),
         ROOT
         / "frontend/src/lib/scene-proposal-request.schema.json": SceneProposalRequest.model_json_schema(),
         ROOT

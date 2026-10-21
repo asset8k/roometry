@@ -281,8 +281,19 @@ footer { margin-top: 30px; text-align: center; color: #858a7e; font-size: 10px; 
 .analysis-caution ul, .analysis-notes ul { padding-left: 20px; }
 .measurement-form .room-preferences { margin-top: 24px; }
 .reconstructed-room { margin-top: 26px; }
+.clarification-form { margin-top: 24px; }
+.clarification-form fieldset { min-width: 0; padding: 0; margin: 0; border: 0; }
+.clarification-form legend { width: 100%; padding: 0; }
+.clarification-form legend strong { display: block; margin: 10px 0 18px; font-size: 18px; font-weight: 500; line-height: 1.6; }
+.clarification-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.clarification-choices label { display: flex; align-items: flex-start; gap: 10px; padding: 18px 14px; border: 1px solid #cdd7c3; border-radius: 9px; font-size: 13px; line-height: 1.7; cursor: pointer; }
+.clarification-choices label:has(input:checked) { background: #eaf0e1; border-color: #78916b; }
+.clarification-choices input { accent-color: #496751; margin-top: 4px; flex-shrink: 0; }
+.clarification-choices input:focus-visible { outline: 2px solid #496751; outline-offset: 4px; }
+.generation-workspace .input-actions button { min-height: 44px; }
 @media (max-width: 700px) {
   .analysis-card { padding: 22px 16px; }
   .analysis-observations li { flex-direction: column; gap: 6px; }
   .analysis-workspace button { min-height: 44px; }
+  .clarification-choices { grid-template-columns: minmax(0, 1fr); }
 }

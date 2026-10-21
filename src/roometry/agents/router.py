@@ -96,6 +96,15 @@ async def start_run(
 
 
 @router.get(
+    "", response_model=AgentState,
+    summary="Find an owned run by its start request ID without executing it",
+)
+async def read_started_run(request_id: OpaqueId, request: Request, response: Response) -> AgentState:
+    runs, owner = access(request, response)
+    return await result(runs.read_request(request_id, owner))
+
+
+@router.get(
     "/{run_id}", response_model=AgentState,
     summary="Read the current owned run without executing or resuming it",
 )

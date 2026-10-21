@@ -419,3 +419,18 @@ async def test_default_run_timeout_leaves_room_for_the_scene_repair_deadline(har
     state = await runs.create(uploaded["input_id"], owner)
     assert state.limits.step_timeout_seconds > 2 * app.state.settings.analysis_timeout_seconds
     assert not calls
+
+
+async def test_request_id_discovery_is_read_only_owned_and_does_not_resume_a_question(harness):
+    _, client, calls, _ = harness
+    request_id = str(uuid4())
+    assert (await client.get('/api/agent-runs', params={'request_id': request_id})).status_code == 404
+    assert not calls
+    _, _, request, paused = await paused_dimensions(harness)
+    for _ in range(2):
+        response = await client.get('/api/agent-runs', params={'request_id': request['request_id']})
+        assert response.status_code == 200 and response.json() == paused
+        assert response.headers['cache-control'] == 'no-store'
+    foreign = {'cookie': f'{COOKIE_NAME}={"A"*43}'}
+    assert (await client.get('/api/agent-runs', params={'request_id': request['request_id']}, headers=foreign)).status_code == 404
+    assert len(calls) == 3

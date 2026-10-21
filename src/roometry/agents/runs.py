@@ -123,6 +123,13 @@ class AgentRuns:
     async def execute(self, run_id: str, owner: str) -> AgentState:
         return await self._drive(run_id, owner)
 
+    async def read_request(self, request_id: str, owner: str) -> AgentState:
+        """Read-only discovery while the original start request is in flight."""
+        for entry in list(self.checkpoints._runs.values()):
+            if entry.owner == owner and entry.request_id == request_id:
+                return await self.read(entry.initial.run_id, owner)
+        raise RunUnavailable()
+
     async def start(self, input_id: str, owner: str, request_id: str) -> AgentState:
         """Client-generated request IDs make retried starts safe as well."""
         initial: AgentState | None = None

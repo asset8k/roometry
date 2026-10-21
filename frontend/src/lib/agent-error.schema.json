@@ -1,0 +1,38 @@
+{
+  "$defs": {
+    "RunIssue": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "RunIssue",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "detail": {
+      "items": {
+        "$ref": "#/$defs/RunIssue"
+      },
+      "title": "Detail",
+      "type": "array"
+    }
+  },
+  "required": [
+    "detail"
+  ],
+  "title": "RunErrorResponse",
+  "type": "object"
+}

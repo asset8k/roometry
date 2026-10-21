@@ -7,6 +7,8 @@ import pytest
 from pydantic import ValidationError
 
 from scripts import export_scene_contract
+from roometry.agents.state import AgentState, ClarificationAnswer
+from roometry.agents.router import StartRunRequest, RunErrorResponse
 
 from roometry.scenes.edit_schemas import PreviewEditRequest, PreviewEditResponse
 from roometry.scenes.schemas import RoomScene
@@ -20,6 +22,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.mark.parametrize("filename,model,mode", [
+    ("agent-run.schema.json", AgentState, "serialization"),
+    ("agent-start.schema.json", StartRunRequest, "validation"),
+    ("agent-answer.schema.json", ClarificationAnswer, "validation"),
+    ("agent-error.schema.json", RunErrorResponse, "serialization"),
     ("scene.schema.json", RoomScene, "validation"),
     ("scene-proposal-request.schema.json", SceneProposalRequest, "validation"),
     ("scene-proposal-response.schema.json", SceneProposalResponse, "serialization"),

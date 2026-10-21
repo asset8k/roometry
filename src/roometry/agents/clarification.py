@@ -52,7 +52,7 @@ def question_for(
         return ClarificationQuestion.model_validate(
             {
                 **common,
-                "question": f"What are the room's {names} in meters? Enter the values you know; photos could not establish these dimensions.",
+            "question": f"What {'is' if len(missing) == 1 else 'are'} the room's {names} in meters? Enter the values you know; photos could not establish these dimensions.",
                 "dimension_axes": missing,
                 "choices": [
                     {"id": "enter_measurements", "label": "Enter the measurements"},

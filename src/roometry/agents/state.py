@@ -40,7 +40,8 @@ RunStatus = Literal[
 
 class RunModel(BaseModel):
     model_config = ConfigDict(
-        extra="forbid", strict=True, frozen=True, revalidate_instances="always"
+        extra="forbid", strict=True, frozen=True, revalidate_instances="always",
+        json_schema_serialization_defaults_required=True,
     )
 
 

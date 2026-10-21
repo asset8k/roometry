@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react'
-import RoomAnalysisWorkspace from '../room-analysis/RoomAnalysisWorkspace'
-import { RoomAnalysisController } from '../../lib/room-analysis-controller'
-import { RoomWorkflowController } from '../../lib/room-workflow-controller'
+import RoomGenerationWorkspace from '../room-analysis/RoomGenerationWorkspace'
+import { RoomGenerationController } from '../../lib/room-generation-controller'
 import { RoomInputController } from '../../lib/room-input-controller'
 import type { RoomInputState } from '../../lib/room-input-controller'
 import { formatBytes } from '../../lib/room-input'
@@ -18,13 +17,12 @@ const goals: { value: GoalChoice; label: string }[] = [
 ]
 const roomLabel = (type: string | null | undefined) => roomTypes.find(([value]) => value === type)?.[1] ?? 'Not specified'
 
-export default function RoomInputWorkspace({ onConnectionChange }: { onConnectionChange: (online: boolean) => void }) {
-  const controller = useMemo(() => new RoomInputController(), [])
-  const analysisController = useMemo(() => new RoomAnalysisController(), [])
-  const workflow = useMemo(() => new RoomWorkflowController(controller, analysisController), [controller, analysisController])
-  const analysisState = useSyncExternalStore(analysisController.subscribe, analysisController.getSnapshot, analysisController.getSnapshot)
+export default function RoomInputWorkspace({ onConnectionChange, inputController }: { onConnectionChange: (online: boolean) => void; inputController?: RoomInputController }) {
+  const controller = useMemo(() => inputController ?? new RoomInputController(), [inputController])
+  const generation = useMemo(() => new RoomGenerationController(controller), [controller])
+  const generationState = useSyncExternalStore(generation.subscribe, generation.getSnapshot, generation.getSnapshot)
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot)
-  useEffect(workflow.connect, [workflow])
+  useEffect(generation.connect, [generation])
   useEffect(() => {
     void controller.loadLimits()
     const timer = window.setInterval(controller.checkExpiry, 5000)
@@ -34,17 +32,17 @@ export default function RoomInputWorkspace({ onConnectionChange }: { onConnectio
     if (state.notice?.connected !== undefined) onConnectionChange(state.notice.connected)
   }, [state.notice, onConnectionChange])
   useEffect(() => {
-    if (analysisState.notice?.connected !== undefined) onConnectionChange(analysisState.notice.connected)
-  }, [analysisState.notice, onConnectionChange])
+    if (generationState.connection !== undefined) onConnectionChange(generationState.connection)
+  }, [generationState.connection, onConnectionChange])
   return <>
-    <RoomInputForm state={state} controller={controller} locked={Boolean(analysisState.busy)} analyzing={analysisState.busy === 'analysis'} analyzed={Boolean(analysisState.analysis)} onAnalyze={workflow.analyze} onCancel={workflow.cancel} />
-    <RoomAnalysisWorkspace state={analysisState} controller={analysisController} onConnectionChange={onConnectionChange} />
+    <RoomInputForm state={state} controller={controller} locked={generation.locked()} generating={['starting', 'running', 'awaiting_answer'].includes(generationState.phase)} generated={['completed', 'partial'].includes(generationState.phase)} recovering={generationState.recovery} onGenerate={generation.generate} onCancel={() => void generation.cancel()} onClear={() => void generation.discard()} />
+    <RoomGenerationWorkspace state={generationState} controller={generation} onConnectionChange={onConnectionChange} />
   </>
 }
 
-export function RoomInputForm({ state, controller, onAnalyze, onCancel, locked = false, analyzing = false, analyzed = false }: {
-  state: RoomInputState; controller: RoomInputController; onAnalyze: () => Promise<void>; onCancel: () => void
-  locked?: boolean; analyzing?: boolean; analyzed?: boolean
+export function RoomInputForm({ state, controller, onGenerate, onCancel, onClear, recovering = false, locked = false, generating = false, generated = false }: {
+  state: RoomInputState; controller: RoomInputController; onGenerate: () => Promise<void>; onCancel: () => void
+  locked?: boolean; generating?: boolean; generated?: boolean; recovering?: boolean; onClear?: () => void
 }) {
   const { limits, draft, photos, busy, accepted } = state
   const total = photos.reduce((bytes, photo) => bytes + photo.file.size, 0)
@@ -52,7 +50,7 @@ export function RoomInputForm({ state, controller, onAnalyze, onCancel, locked =
   const acceptedOptions = accepted?.options
   return (
     <div className="input-workspace">
-      <form className="room-input-form" onSubmit={event => { event.preventDefault(); void onAnalyze() }}>
+      <form className="room-input-form" onSubmit={event => { event.preventDefault(); void onGenerate() }}>
         <fieldset className="input-edit-lock" disabled={locked}>
         <div className="input-section-title"><span className="section-label">Start with your space</span><h2>A few photos. A little context.</h2><p>Capture different angles of one room, then tell us what you’d like to improve.</p></div>
         <section className="photo-section" aria-labelledby="photo-heading">
@@ -112,15 +110,16 @@ export function RoomInputForm({ state, controller, onAnalyze, onCancel, locked =
         </fieldset>
 
         </fieldset>
-        {state.notice && !(state.notice.kind === 'success' && (analyzing || analyzed)) && <div className={`input-notice ${state.notice.kind}`} role={state.notice.kind === 'error' ? 'alert' : 'status'}>
+        {state.notice && !(state.notice.kind === 'success' && (generating || generated)) && <div className={`input-notice ${state.notice.kind}`} role={state.notice.kind === 'error' ? 'alert' : 'status'}>
           <p>{state.notice.text}</p>{!!state.notice.issues?.length && <ul>{state.notice.issues.map((issue, index) => <li key={index}>
             {issue.file_index != null ? `${photos[issue.file_index]?.file.name ?? `Photo ${issue.file_index + 1}`}: ` : ''}{issue.message}
           </li>)}</ul>}
         </div>}
-        {(busy || analyzing) && <div className="upload-progress" role="status"><progress aria-label={analyzing ? 'Analyzing room photos' : busy === 'upload' ? 'Preparing room photos' : 'Clearing room inputs'} /><span>{analyzing ? 'Analyzing your photos together…' : busy === 'upload' ? 'Preparing your photos…' : 'Clearing your room inputs…'}</span></div>}
-        <div className="input-actions"><button className="primary-action" type="submit" disabled={Boolean(busy) || locked || !limits || state.policyLoading || !photos.length || (analyzed && !state.dirty && !state.uncertain)}>
-          {analyzing ? 'Analyzing photos…' : busy === 'upload' ? 'Preparing photos…' : analyzed && !state.dirty && !state.uncertain ? 'Photos analyzed' : 'Analyze photos'}</button>
-          {busy || analyzing ? <button type="button" onClick={onCancel}>Cancel</button> : <button type="button" onClick={() => void controller.discard()} disabled={locked || (!photos.length && !accepted && !state.dirty && !state.uncertain)}>Clear inputs</button>}
+        {busy && <div className="upload-progress" role="status"><progress aria-label={generating ? 'Generating room' : busy === 'upload' ? 'Preparing room photos' : 'Clearing room inputs'} /><span>{generating ? 'Generating your room…' : busy === 'upload' ? 'Preparing your photos…' : 'Clearing your room inputs…'}</span></div>}
+        <div className="input-actions"><button className="primary-action" type="submit" disabled={Boolean(busy) || locked || !limits || state.policyLoading || !photos.length || (generated && !state.dirty && !state.uncertain)}>
+          {generating ? 'Generating room…' : busy === 'upload' ? 'Preparing photos…' : generated && !state.dirty && !state.uncertain ? 'Room generated' : 'Generate room'}</button>
+          {busy || generating || locked ? <button type="button" onClick={onCancel}>Cancel</button> : <button type="button" onClick={onClear ?? (() => void controller.discard())} disabled={locked || (!photos.length && !accepted && !state.dirty && !state.uncertain)}>Clear inputs</button>}
+          {recovering && <button type="button" onClick={onClear}>Discard &amp; clear inputs</button>}
         </div>
         <p className="input-help privacy-note">Photos stay private and temporary. Refresh clears this form; uploaded copies expire automatically. Nothing is shared publicly.</p>
       </form>
@@ -128,8 +127,8 @@ export function RoomInputForm({ state, controller, onAnalyze, onCancel, locked =
       <aside className="input-summary" aria-label="Your room input summary">
         <span className="section-label">Your room, your priorities</span>
         {accepted ? <>
-          <h2>{state.uncertain ? 'Request not completed' : state.dirty ? 'Changes not analyzed' : analyzing ? 'Analyzing your photos' : analyzed ? 'Room analyzed' : 'Ready to analyze'}</h2>
-          <p>{state.uncertain ? 'Try Analyze photos again, or clear the inputs to start over.' : state.dirty ? 'Your form has changed. Choose Analyze photos to use the updated inputs.' : analyzing ? 'We’re identifying the room, furniture, doors, and windows.' : analyzed ? 'Review the observations and room dimensions below.' : 'Choose Analyze photos to continue with your current inputs.'}</p>
+          <h2>{state.uncertain ? 'Request not completed' : state.dirty ? 'Changes not generated' : generating ? 'Generating your room' : generated ? 'Room generated' : 'Ready to generate'}</h2>
+          <p>{state.uncertain ? 'Try Generate room again, or clear the inputs to start over.' : state.dirty ? 'Your form has changed. Choose Generate room to use the updated inputs.' : generating ? 'Your photos are being turned into an approximate room model.' : generated ? 'Your reconstructed room is ready below.' : 'Choose Generate room to continue with your current inputs.'}</p>
           <dl className="input-summary-list"><div><dt>Photos</dt><dd>{accepted.images.length}</dd></div><div><dt>Room type</dt><dd>{roomLabel(acceptedOptions?.room_type)}</dd></div>
             <div><dt>Available until</dt><dd>{new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' }).format(new Date(accepted.expires_at))}</dd></div></dl>
           {acceptedOptions?.goal_text && <p className="submitted-note">{acceptedOptions.goal_text}</p>}
@@ -141,7 +140,7 @@ export function RoomInputForm({ state, controller, onAnalyze, onCancel, locked =
             {acceptedOptions?.style && <><dt>Style</dt><dd>{acceptedOptions.style}</dd></>}
             {acceptedOptions?.constraints && <><dt>Keep or avoid</dt><dd>{acceptedOptions.constraints}</dd></>}
           </dl></details>
-          <p className="input-help">These are your submitted details. Analysis and the room model appear below.</p>
+          <p className="input-help">These are your submitted details. Generation progress and your room model appear below.</p>
         </> : <>
           <h2>Start with what you know.</h2><p>A few different angles help show the room, its furniture, doors, and windows.</p>
           <ol className="photo-tips"><li>Photograph the same room from different corners.</li><li>Include the floor and as much of each wall as you can.</li><li>Use clear, well-lit still photos.</li></ol>

@@ -96,7 +96,7 @@ export class RoomInputController {
   }
   checkExpiry = () => {
     if (this.state.accepted && Date.parse(this.state.accepted.expires_at) <= this.now() && !this.state.busy) {
-      this.update({ accepted: null, dirty: true, notice: { kind: 'info', text: 'Your temporary photos have expired. Your selections are kept; choose Analyze photos to continue.' } })
+      this.update({ accepted: null, dirty: true, notice: { kind: 'info', text: 'Your temporary photos have expired. Your selections are kept; choose Generate room to continue.' } })
     }
   }
   cancel = (notify = true) => {
@@ -105,7 +105,7 @@ export class RoomInputController {
     this.pending?.abort()
     this.pending = null
     if (this.state.busy) this.update({ busy: null, uncertain: true,
-      notice: notify ? { kind: 'info', text: wasUpload ? 'Cancelled. Your selections are kept; choose Analyze photos when ready.' : 'Discard cancelled. Your selections are kept; retry to confirm removal.' } : null })
+      notice: notify ? { kind: 'info', text: wasUpload ? 'Cancelled. Your selections are kept; choose Generate room when ready.' : 'Discard cancelled. Your selections are kept; retry to confirm removal.' } : null })
   }
   submit = async (): Promise<boolean> => {
     if (this.state.busy || !this.state.limits || this.state.policyLoading) return false

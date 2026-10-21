@@ -1,0 +1,22 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "input_id": {
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "title": "Input Id",
+      "type": "string"
+    },
+    "request_id": {
+      "description": "Client-generated UUID v4. Reuse it with the same input_id when retrying a start; a retry reads the same run and never starts another generation.",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "title": "Request Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "input_id",
+    "request_id"
+  ],
+  "title": "StartRunRequest",
+  "type": "object"
+}

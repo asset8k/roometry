@@ -1,0 +1,88 @@
+{
+  "$defs": {
+    "EnteredDimensions": {
+      "additionalProperties": false,
+      "properties": {
+        "width_m": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 30.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Width M"
+        },
+        "length_m": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 30.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Length M"
+        },
+        "height_m": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 10.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Height M"
+        }
+      },
+      "title": "EnteredDimensions",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "question_id": {
+      "maxLength": 64,
+      "minLength": 1,
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "title": "Question Id",
+      "type": "string"
+    },
+    "choice_id": {
+      "maxLength": 64,
+      "minLength": 1,
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "title": "Choice Id",
+      "type": "string"
+    },
+    "dimensions": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/EnteredDimensions"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Only for enter_measurements: supply the requested axes in meters. Entered values are treated as user supplied, without a separate confirmation flag."
+    }
+  },
+  "required": [
+    "question_id",
+    "choice_id"
+  ],
+  "title": "ClarificationAnswer",
+  "type": "object"
+}
