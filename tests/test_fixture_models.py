@@ -106,4 +106,4 @@ def test_catalog_room_examples_validate_and_are_exported_without_changes(name):
     scene = RoomScene.model_validate_json((root / "data/fixtures" / name).read_text())
     report = validate_geometry(scene)
     assert report.valid, report.errors
-    assert json.loads((root / "frontend/src/data" / name).read_text()) == scene.model_dump(mode="json")
+    assert json.loads((root / "frontend/src/lib/test-support/fixtures" / name).read_text()) == scene.model_dump(mode="json")

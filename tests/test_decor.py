@@ -86,4 +86,4 @@ def test_living_room_example_covers_all_decor_types_and_passes_baseline_geometry
     report = validate_geometry(scene)
     assert report.valid, report.errors
     assert DECOR_TYPES <= {obj.type for obj in scene.objects}
-    assert json.loads((root / "frontend/src/data/decor_catalog_scene.json").read_text()) == scene.model_dump(mode="json")
+    assert json.loads((root / "frontend/src/lib/test-support/fixtures/decor_catalog_scene.json").read_text()) == scene.model_dump(mode="json")

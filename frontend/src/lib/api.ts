@@ -1,5 +1,3 @@
-import { dimensionAxes, analysisFailure, parseRoomAnalysis, parseSceneProposal, RoomAnalysisError } from './room-analysis'
-import type { SceneProposalRequest } from './scene-proposal-request.generated'
 import type { HealthResponse } from './types'
 import type { RoomScene } from './scene.generated'
 import type { PreviewEditResponse } from './edit-response.generated'
@@ -85,35 +83,4 @@ export async function discardRoomInput(inputId: string, signal: AbortSignal): Pr
   if (response.status === 204 || response.status === 404) return
   if (response.ok) throw new RoomInputError('The service did not confirm deletion. Please try again.', [], true)
   await uploadResponse(response)
-}
-
-/** Session cookies scope analysis/proposals; no provider credentials reach the browser. */
-async function roomAnalysisPost(path: string, body: unknown, signal: AbortSignal): Promise<unknown> {
-  const response = await fetch(`${baseUrl}/rooms/${path}`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-    credentials: 'include', cache: 'no-store',
-    signal: AbortSignal.any([signal, AbortSignal.timeout(330000)]),
-  })
-  let data: unknown
-  try { data = await response.json() } catch {
-    throw new RoomAnalysisError('The room service returned an unreadable response. The request may still have completed.')
-  }
-  if (!response.ok) throw analysisFailure(data, response.status)
-  return data
-}
-
-export async function analyzeRoom(inputId: string, signal: AbortSignal) {
-  const result = parseRoomAnalysis(await roomAnalysisPost('analyze', { input_id: inputId }, signal))
-  if (result.input_id !== inputId) throw new RoomAnalysisError('The analysis does not match your uploaded room.')
-  return result
-}
-
-export async function proposeRoomScene(request: SceneProposalRequest, signal: AbortSignal) {
-  const result = parseSceneProposal(await roomAnalysisPost('propose-scene', request, signal))
-  if (result.analysis_id !== request.analysis_id) throw new RoomAnalysisError('The proposal does not match your room analysis.')
-  if (request.dimensions?.measurements_source === 'user_confirmed' && dimensionAxes.some(axis => {
-    const value = request.dimensions?.[axis]
-    return value != null && result.dimensions[axis] !== value
-  })) throw new RoomAnalysisError('The proposal changed your confirmed measurements. No new scene was opened.')
-  return result
 }

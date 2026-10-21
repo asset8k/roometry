@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { SceneEditor } from './scene-editor'
-import { loadExampleScene, loadAlternativeScene } from './scene'
+import { loadExampleScene, loadAlternativeScene } from './test-support/scenes'
 import type { PreviewEditResponse } from './edit-response.generated'
 import { acceptedMove, rejectedMove } from './test-support/edit-responses'
 import { applyColorPreviews } from './color-previews'

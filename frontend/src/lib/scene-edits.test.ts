@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Group } from 'three'
-import { loadExampleScene } from './scene'
+import { loadExampleScene } from './test-support/scenes'
 import { editRestriction, parseEditPreview, previewTransform } from './scene-edits'
 import { acceptedMove, rejectedMove } from './test-support/edit-responses'
 import { gizmoEdit } from '../components/room-viewer/gizmo-edit'

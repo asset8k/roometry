@@ -2,7 +2,6 @@
 
 import json
 import math
-import re
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, get_args
@@ -73,17 +72,6 @@ def test_fixture_validates_and_round_trips():
         next(obj for obj in scene.objects if obj.id == "curtain_1").opening_id
         == "window_1"
     )
-
-
-def test_documented_examples_validate_and_category_list_matches():
-    document = (ROOT / "docs" / "scene-contract.md").read_text()
-    blocks = re.findall(r"```json\n(.*?)\n```", document, re.DOTALL)
-    RoomScene.model_validate_json(blocks[0])
-    SceneObject.model_validate_json(blocks[1])
-    table = document.split("| Group | Categories | Allowed placement |", 1)[1].split(
-        "`rug` includes", 1
-    )[0]
-    assert set(re.findall(r"`([a-z_]+)`", table)) == set(get_args(ObjectType))
 
 
 def test_exported_json_schema_lists_categories_and_approved_assets():

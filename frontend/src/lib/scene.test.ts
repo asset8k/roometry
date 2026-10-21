@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { loadExampleScene, loadAlternativeScene, parseRoomScene } from './scene'
+import { parseRoomScene } from './scene'
+import { loadExampleScene, loadAlternativeScene } from './test-support/scenes'
 
 describe('scene loading', () => {
   it('loads the full scene without relying on a backend or model call', () => {

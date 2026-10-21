@@ -1,7 +1,7 @@
 import Ajv2020 from 'ajv/dist/2020.js'
 import { describe, expect, it } from 'vitest'
 import schema from './room-input-options.schema.json'
-import fixture from '../data/room_input_options.json'
+import fixture from './test-support/fixtures/room_input_options.json'
 import type { RoomInputOptions } from './room-input-options.generated'
 
 const validate = new Ajv2020({ strict: true, allErrors: true }).compile<RoomInputOptions>(schema)

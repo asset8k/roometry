@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
-import { loadExampleScene, loadAlternativeScene } from '../../lib/scene'
+import { loadExampleScene, loadAlternativeScene } from '../../lib/test-support/scenes'
 import { SceneEditor } from '../../lib/scene-editor'
 import ObjectInspector from './ObjectInspector'
 import ObjectList from './ObjectList'

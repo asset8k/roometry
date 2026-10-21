@@ -1,4 +1,4 @@
-"""Export scene, edit, upload, and analysis contracts and validated fixtures."""
+"""Export frontend contracts, catalog recipes, and validated test fixtures."""
 
 import json
 from pathlib import Path
@@ -18,13 +18,8 @@ from roometry.uploads.schemas import (
     UploadErrorResponse,
     UploadLimits,
 )
-from roometry.vision.proposal_schemas import SceneProposalRequest, SceneProposalResponse
-from roometry.vision.schemas import (
-    AnalysisErrorResponse,
-    AnalyzeRoomRequest,
-    RoomAnalysisResponse,
-    RoomObservations,
-)
+from roometry.vision.proposal_schemas import SceneProposalResponse
+from roometry.vision.schemas import RoomAnalysisResponse
 
 ROOT = Path(__file__).resolve().parents[1]
 SCENE_FIXTURES = ("bedroom_scene.json", "bedroom_after_scene.json", "kitchen_catalog_scene.json", "bathroom_catalog_scene.json", "decor_catalog_scene.json")
@@ -37,13 +32,7 @@ def main() -> None:
         ROOT / "frontend/src/lib/agent-answer.schema.json": ClarificationAnswer.model_json_schema(),
         ROOT / "frontend/src/lib/agent-error.schema.json": RunErrorResponse.model_json_schema(mode="serialization"),
         ROOT
-        / "frontend/src/lib/scene-proposal-request.schema.json": SceneProposalRequest.model_json_schema(),
-        ROOT
         / "frontend/src/lib/scene-proposal-response.schema.json": SceneProposalResponse.model_json_schema(
-            mode="serialization"
-        ),
-        ROOT
-        / "frontend/src/lib/room-analysis-error.schema.json": AnalysisErrorResponse.model_json_schema(
             mode="serialization"
         ),
         ROOT / "frontend/src/lib/scene.schema.json": RoomScene.model_json_schema(),
@@ -68,10 +57,6 @@ def main() -> None:
             mode="serialization"
         ),
         ROOT
-        / "frontend/src/lib/room-analysis-request.schema.json": AnalyzeRoomRequest.model_json_schema(),
-        ROOT
-        / "frontend/src/lib/room-observations.schema.json": RoomObservations.model_json_schema(),
-        ROOT
         / "frontend/src/lib/room-analysis-response.schema.json": RoomAnalysisResponse.model_json_schema(
             mode="serialization"
         ),
@@ -83,17 +68,17 @@ def main() -> None:
         report = validate_geometry(scene)
         if not report.valid:
             raise ValueError(f"{filename} failed baseline geometry: {report.errors}")
-        outputs[ROOT / "frontend/src/data" / filename] = scene.model_dump(mode="json")
+        outputs[ROOT / "frontend/src/lib/test-support/fixtures" / filename] = scene.model_dump(mode="json")
     options = RoomInputOptions.model_validate_json(
         (ROOT / "data/fixtures/room_input_options.json").read_text()
     )
-    outputs[ROOT / "frontend/src/data/room_input_options.json"] = options.model_dump(
+    outputs[ROOT / "frontend/src/lib/test-support/fixtures/room_input_options.json"] = options.model_dump(
         mode="json"
     )
     analysis = RoomAnalysisResponse.model_validate_json(
         (ROOT / "data/fixtures/room_analysis.json").read_text()
     )
-    outputs[ROOT / "frontend/src/data/room_analysis.json"] = analysis.model_dump(
+    outputs[ROOT / "frontend/src/lib/test-support/fixtures/room_analysis.json"] = analysis.model_dump(
         mode="json"
     )
     for filename in ("room_scene_proposal.json", "room_scene_partial.json"):
@@ -102,7 +87,7 @@ def main() -> None:
         )
         if proposal.scene is None or not validate_geometry(proposal.scene).valid:
             raise ValueError("The proposal fixture must contain a valid base scene.")
-        outputs[ROOT / "frontend/src/data" / filename] = proposal.model_dump(mode="json")
+        outputs[ROOT / "frontend/src/lib/test-support/fixtures" / filename] = proposal.model_dump(mode="json")
     for path, data in outputs.items():
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(data, indent=2, allow_nan=False) + "\n")

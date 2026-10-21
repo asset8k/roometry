@@ -137,10 +137,6 @@ h2, h3, p { margin-top: 0; }
 footer { margin-top: 30px; text-align: center; color: #858a7e; font-size: 10px; }
 
 [hidden] { display: none !important; }
-.workspace-navigation { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 22px; }
-.workspace-navigation button { padding: 11px 16px; border: 1px solid #d2d9c9; border-radius: 8px; }
-.workspace-navigation button[aria-pressed='true'] { background: #496751; color: #fcfbf7; border-color: #496751; }
-.example-notice { margin: 0 0 16px; color: #74806b; font-size: 12px; }
 .input-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 285px; gap: 24px; align-items: start; }
 .room-input-form { min-width: 0; padding: 28px; background: #fcfbf7; border: 1px solid #e2e4da; border-radius: 15px; }
 .input-section-title h2, .input-summary h2 { margin: 10px 0; font-family: 'Manrope', system-ui, sans-serif; font-size: 25px; font-weight: 500; letter-spacing: -0.7px; }
@@ -185,7 +181,6 @@ footer { margin-top: 30px; text-align: center; color: #858a7e; font-size: 10px; 
 .optional-room-details summary span { margin-left: 8px; color: #8b9382; font-size: 10px; }
 .dimension-inputs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .budget-inputs { display: grid; grid-template-columns: minmax(0, 1fr) 100px; gap: 12px; }
-.measurement-source { color: #7f8976; font-size: 11px; line-height: 1.6; }
 .input-notice { margin-top: 20px; padding: 14px; border-radius: 8px; background: #edf1e5; color: #57734c; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
 .input-notice p { margin: 0; }
 .input-notice ul { margin: 8px 0 0; padding-left: 18px; }
@@ -226,7 +221,7 @@ footer { margin-top: 30px; text-align: center; color: #858a7e; font-size: 10px; 
   .photo-picker { padding: 20px 12px; }
   .photo-picker input { width: 100%; }
   .dimension-inputs { gap: 8px; }
-  .workspace-navigation button, .input-actions button, .photo-caption button { min-height: 44px; }
+  .input-actions button, .photo-caption button { min-height: 44px; }
 }
 
 @media (max-width: 900px) {
@@ -265,21 +260,12 @@ footer { margin-top: 30px; text-align: center; color: #858a7e; font-size: 10px; 
 .analysis-card { padding: 28px 32px; margin-bottom: 22px; border: 1px solid #dde3d2; border-radius: 15px; background: #fcfbf7; overflow-wrap: anywhere; }
 .analysis-card h2 { font-size: 23px; line-height: 1.4; }
 .analysis-card > p { color: #64775a; font-size: 13px; line-height: 1.8; max-width: 800px; }
-.analysis-stats { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0; }
-.analysis-stats > span { padding: 8px 13px; background: #eaf0e1; border-radius: 20px; color: #536c4b; font-size: 12px; }
-.analysis-observations, .analysis-notes { margin: 20px 0; color: #536c4b; font-size: 13px; line-height: 1.8; }
-.analysis-observations summary, .analysis-notes summary { cursor: pointer; }
-.analysis-observations ul { list-style: none; padding: 0; max-height: 380px; overflow-y: auto; }
-.analysis-observations li { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; border-bottom: 1px solid #e2e6db; padding: 12px 0; }
-.analysis-observations li > div { display: flex; flex-direction: column; gap: 4px; }
-.analysis-observations li > div > span { color: #7f8976; font-size: 12px; }
-.observation-confidence { flex-shrink: 0; color: #718267; font-size: 11px; }
-.observation-confidence.low { color: #986239; }
+.analysis-notes { margin: 20px 0; color: #536c4b; font-size: 13px; line-height: 1.8; }
+.analysis-notes summary { cursor: pointer; }
 .analysis-caution { padding: 14px 18px; margin: 16px 0; border-radius: 8px; background: #f3eddf; color: #7c6348; font-size: 12px; line-height: 1.8; }
 .analysis-caution h3 { margin: 0 0 8px; font-size: 13px; }
 .analysis-caution p { margin: 8px 0; }
 .analysis-caution ul, .analysis-notes ul { padding-left: 20px; }
-.measurement-form .room-preferences { margin-top: 24px; }
 .reconstructed-room { margin-top: 26px; }
 .clarification-form { margin-top: 24px; }
 .clarification-form fieldset { min-width: 0; padding: 0; margin: 0; border: 0; }
@@ -293,7 +279,6 @@ footer { margin-top: 30px; text-align: center; color: #858a7e; font-size: 10px; 
 .generation-workspace .input-actions button { min-height: 44px; }
 @media (max-width: 700px) {
   .analysis-card { padding: 22px 16px; }
-  .analysis-observations li { flex-direction: column; gap: 6px; }
   .analysis-workspace button { min-height: 44px; }
   .clarification-choices { grid-template-columns: minmax(0, 1fr); }
 }

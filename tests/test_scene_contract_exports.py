@@ -15,8 +15,8 @@ from roometry.scenes.schemas import RoomScene
 from roometry.scenes.validation import validate_geometry
 from roometry.scenes.service import preview_edit
 from roometry.uploads.schemas import RoomInputOptions, UploadLimits, PreparedRoomInput, UploadErrorResponse
-from roometry.vision.proposal_schemas import SceneProposalRequest, SceneProposalResponse
-from roometry.vision.schemas import AnalysisErrorResponse, AnalyzeRoomRequest, RoomAnalysisResponse, RoomObservations
+from roometry.vision.proposal_schemas import SceneProposalResponse
+from roometry.vision.schemas import RoomAnalysisResponse
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -27,7 +27,6 @@ ROOT = Path(__file__).resolve().parents[1]
     ("agent-answer.schema.json", ClarificationAnswer, "validation"),
     ("agent-error.schema.json", RunErrorResponse, "serialization"),
     ("scene.schema.json", RoomScene, "validation"),
-    ("scene-proposal-request.schema.json", SceneProposalRequest, "validation"),
     ("scene-proposal-response.schema.json", SceneProposalResponse, "serialization"),
     ("edit-request.schema.json", PreviewEditRequest, "validation"),
     ("edit-response.schema.json", PreviewEditResponse, "serialization"),
@@ -35,10 +34,7 @@ ROOT = Path(__file__).resolve().parents[1]
     ("room-input-limits.schema.json", UploadLimits, "serialization"),
     ("room-input-response.schema.json", PreparedRoomInput, "serialization"),
     ("room-input-error.schema.json", UploadErrorResponse, "serialization"),
-    ("room-analysis-request.schema.json", AnalyzeRoomRequest, "validation"),
-    ("room-observations.schema.json", RoomObservations, "validation"),
     ("room-analysis-response.schema.json", RoomAnalysisResponse, "serialization"),
-    ("room-analysis-error.schema.json", AnalysisErrorResponse, "serialization"),
 ])
 def test_frontend_contract_matches_python(filename, model, mode):
     exported = json.loads((ROOT / "frontend/src/lib" / filename).read_text())
@@ -48,20 +44,20 @@ def test_frontend_contract_matches_python(filename, model, mode):
 @pytest.mark.parametrize("filename", ["bedroom_scene.json", "bedroom_after_scene.json"])
 def test_frontend_fixture_matches_validated_source(filename):
     source = RoomScene.model_validate_json((ROOT / "data/fixtures" / filename).read_text())
-    exported = json.loads((ROOT / "frontend/src/data" / filename).read_text())
+    exported = json.loads((ROOT / "frontend/src/lib/test-support/fixtures" / filename).read_text())
     assert exported == source.model_dump(mode="json")
     assert validate_geometry(source).valid
 
 
 def test_frontend_input_fixture_matches_validated_source():
     source = RoomInputOptions.model_validate_json((ROOT / "data/fixtures/room_input_options.json").read_text())
-    exported = json.loads((ROOT / "frontend/src/data/room_input_options.json").read_text())
+    exported = json.loads((ROOT / "frontend/src/lib/test-support/fixtures/room_input_options.json").read_text())
     assert exported == source.model_dump(mode="json")
 
 
 def test_frontend_analysis_fixture_matches_validated_source():
     source = RoomAnalysisResponse.model_validate_json((ROOT / "data/fixtures/room_analysis.json").read_text())
-    exported = json.loads((ROOT / "frontend/src/data/room_analysis.json").read_text())
+    exported = json.loads((ROOT / "frontend/src/lib/test-support/fixtures/room_analysis.json").read_text())
     assert exported == source.model_dump(mode="json")
 
 
@@ -80,7 +76,7 @@ def test_export_refuses_inconsistent_analysis_before_writing_any_output(tmp_path
     with pytest.raises(ValidationError):
         export_scene_contract.main()
     assert sentinel.read_text() == "unchanged contract"
-    assert not (tmp_path / "frontend/src/data").exists()
+    assert not (tmp_path / "frontend/src/lib/test-support/fixtures").exists()
 
 
 def test_comparison_preserves_identity_room_openings_and_protected_objects():
@@ -140,12 +136,12 @@ def test_export_refuses_invalid_fixtures_before_writing_any_output(tmp_path, mon
     with pytest.raises(ValidationError if failure == "schema" else ValueError):
         export_scene_contract.main()
     assert sentinel.read_text() == "unchanged contract"
-    assert not (tmp_path / "frontend/src/data").exists()
+    assert not (tmp_path / "frontend/src/lib/test-support/fixtures").exists()
 
 
 @pytest.mark.parametrize("filename", ["room_scene_proposal.json", "room_scene_partial.json"])
 def test_frontend_scene_proposal_fixture_matches_validated_source(filename):
     source = SceneProposalResponse.model_validate_json((ROOT / "data/fixtures" / filename).read_text())
-    exported = json.loads((ROOT / "frontend/src/data" / filename).read_text())
+    exported = json.loads((ROOT / "frontend/src/lib/test-support/fixtures" / filename).read_text())
     assert exported == source.model_dump(mode="json")
     assert source.scene is not None and validate_geometry(source.scene).valid

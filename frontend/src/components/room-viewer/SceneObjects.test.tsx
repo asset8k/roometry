@@ -3,7 +3,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import ReactThreeTestRenderer from '@react-three/test-renderer'
 import { Box3, Mesh, MeshStandardMaterial, Vector3 } from 'three'
 import type { Object3D } from 'three'
-import { loadExampleScene } from '../../lib/scene'
+import { loadExampleScene } from '../../lib/test-support/scenes'
 import type { SceneObject } from '../../lib/scene.generated'
 import { getModelKind } from './model-registry'
 import SceneObjects, { SceneObjectView } from './SceneObjects'

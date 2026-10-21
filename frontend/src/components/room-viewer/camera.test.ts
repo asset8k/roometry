@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { PerspectiveCamera, Vector3 } from 'three'
 import { frameRoom } from './camera'
-import { loadExampleScene } from '../../lib/scene'
+import { loadExampleScene } from '../../lib/test-support/scenes'
 
 const exampleRoom = loadExampleScene().room
 

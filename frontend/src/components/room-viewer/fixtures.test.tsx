@@ -6,9 +6,9 @@ import { FurnitureParts } from './FurnitureModel'
 import { getModelKind } from './model-registry'
 import SceneObjects from './SceneObjects'
 import { parseRoomScene } from '../../lib/scene'
-import kitchenExample from '../../data/kitchen_catalog_scene.json'
-import bathroomExample from '../../data/bathroom_catalog_scene.json'
-import decorExample from '../../data/decor_catalog_scene.json'
+import kitchenExample from '../../lib/test-support/fixtures/kitchen_catalog_scene.json'
+import bathroomExample from '../../lib/test-support/fixtures/bathroom_catalog_scene.json'
+import decorExample from '../../lib/test-support/fixtures/decor_catalog_scene.json'
 
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>
 const mounted: Renderer[] = []

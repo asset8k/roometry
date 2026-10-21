@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { loadExampleScene } from '../../lib/scene'
+import { loadExampleScene } from '../../lib/test-support/scenes'
 import { getOpeningTransform, getWallFrame, isWallVisibleFrom } from './coordinates'
 import type { Wall } from './coordinates'
 

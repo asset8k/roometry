@@ -5,7 +5,7 @@ import { FURNITURE_CATALOG, getFurnitureAsset } from './furniture-catalog'
 import { FurnitureParts } from './FurnitureModel'
 import { getModelKind } from './model-registry'
 import { SceneObjectView } from './SceneObjects'
-import { loadExampleScene } from '../../lib/scene'
+import { loadExampleScene } from '../../lib/test-support/scenes'
 
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>
 const mounted: Renderer[] = []

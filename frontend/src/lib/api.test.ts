@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { requestEditPreview } from './api'
-import { loadExampleScene } from './scene'
+import { loadExampleScene } from './test-support/scenes'
 import { acceptedMove } from './test-support/edit-responses'
 
 const move = { operation: 'move' as const, object_id: 'desk_1', position: { x: 0.85, z: 2 } }

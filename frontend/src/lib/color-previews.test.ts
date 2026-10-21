@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { applyColorPreviews } from './color-previews'
-import { loadExampleScene } from './scene'
+import { loadExampleScene } from './test-support/scenes'
 
 describe('local color previews', () => {
   it('changes only the requested object and preserves the source fixture', () => {

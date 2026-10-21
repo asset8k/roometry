@@ -2,16 +2,13 @@ import Ajv2020 from 'ajv/dist/2020.js'
 import addFormats from 'ajv-formats'
 import analysisSchema from './room-analysis-response.schema.json'
 import proposalSchema from './scene-proposal-response.schema.json'
-import errorSchema from './room-analysis-error.schema.json'
 import type { RoomAnalysisResponse } from './room-analysis-response.generated'
 import type { SceneProposalResponse } from './scene-proposal-response.generated'
-import type { AnalysisErrorResponse } from './room-analysis-error.generated'
 
 const ajv = new Ajv2020({ strict: true, allErrors: true })
 addFormats(ajv)
 const validAnalysis = ajv.compile<RoomAnalysisResponse>(analysisSchema)
 const validProposal = ajv.compile<SceneProposalResponse>(proposalSchema)
-const validError = ajv.compile<AnalysisErrorResponse>(errorSchema)
 export const dimensionAxes = ['width_m', 'length_m', 'height_m'] as const
 export type DimensionAxis = typeof dimensionAxes[number]
 export const dimensionLabels: Record<DimensionAxis, string> = { width_m: 'Width', length_m: 'Length', height_m: 'Height' }
@@ -57,9 +54,4 @@ export function parseSceneProposal(data: unknown): SceneProposalResponse {
       || (estimated.length > 0) !== (dimensions.measurements_source === 'estimated')))
   if (invalid) throw new RoomAnalysisError('The service returned an inconsistent scene proposal. No new scene was opened.')
   return structuredClone({ ...data, unresolved_entities: unresolved })
-}
-
-export function analysisFailure(data: unknown, status: number): RoomAnalysisError {
-  if (validError(data)) return new RoomAnalysisError(data.detail.map(issue => issue.message).join(' '), data.detail[0].code, true, status)
-  return new RoomAnalysisError('The room service could not complete this request. Please try again.', 'unexpected_response', true, status)
 }

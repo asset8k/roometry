@@ -4,7 +4,7 @@ import { Box3, Mesh, MeshStandardMaterial, Raycaster, Vector3 } from 'three'
 import { ASSET_CATALOG, DECOR_CATALOG, dimensionsFor } from './asset-catalog'
 import { FurnitureParts } from './FurnitureModel'
 import { getModelKind } from './model-registry'
-import { loadExampleScene } from '../../lib/scene'
+import { loadExampleScene } from '../../lib/test-support/scenes'
 
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>
 const mounted: Renderer[] = []

@@ -4,7 +4,7 @@ import { DoubleSide, FrontSide, Mesh, MeshStandardMaterial } from 'three'
 import RoomShell from './RoomShell'
 import SceneObjects from './SceneObjects'
 import { WallModeContext } from './view-settings'
-import { loadExampleScene } from '../../lib/scene'
+import { loadExampleScene } from '../../lib/test-support/scenes'
 
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>
 const renderers: Renderer[] = []
