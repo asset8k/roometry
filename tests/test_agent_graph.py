@@ -64,7 +64,7 @@ class Room:
 def pipeline(room, partial=False):
     calls = []
 
-    async def advance(state):
+    async def advance(state, context):
         calls.append(state.steps_used)
         if state.analysis is None:
             return RunStep(action="continue", analysis=room.analysis, usage=RunUsage(model_calls=1))
@@ -97,7 +97,7 @@ async def test_mocked_run_routes_to_an_honest_complete_or_partial_result(partial
 async def test_non_finishing_adapter_stops_at_the_configured_budget(budget):
     room, calls = Room(), []
 
-    async def advance(state):
+    async def advance(state, context):
         calls.append(state.steps_used)
         return RunStep(action="continue", usage=RunUsage(model_calls=int(budget == "model"), tool_calls=int(budget == "tool")))
 
@@ -113,7 +113,7 @@ async def test_non_finishing_adapter_stops_at_the_configured_budget(budget):
 async def test_finish_without_a_valid_proposal_is_incomplete():
     room = Room()
 
-    async def advance(state):
+    async def advance(state, context):
         return RunStep(action="finish")
 
     runs = room.runs(advance)
@@ -126,7 +126,7 @@ async def test_finish_without_a_valid_proposal_is_incomplete():
 async def test_step_failure_stops_and_never_exposes_private_exception_text(failure, code):
     room, calls = Room(), []
 
-    async def advance(state):
+    async def advance(state, context):
         calls.append(1)
         raise failure("PRIVATE_PROVIDER_DETAILS")
 
@@ -142,7 +142,7 @@ async def test_step_failure_stops_and_never_exposes_private_exception_text(failu
 async def test_step_timeout_is_bounded_and_does_not_automatically_retry():
     room = Room()
 
-    async def advance(state):
+    async def advance(state, context):
         await anyio.sleep(1)
         return RunStep(action="finish")
 
@@ -160,7 +160,7 @@ async def test_adapter_results_preserve_input_identity_measurements_and_scene_va
         room.analysis.input_options.dimensions.height_m = None
         room.prepared.options.dimensions.height_m = None
 
-    async def advance(state):
+    async def advance(state, context):
         if state.analysis is None:
             analysis = room.analysis.model_copy(deep=True)
             if defect == "foreign_analysis":
@@ -279,7 +279,7 @@ async def test_cancellation_revocation_and_duplicate_execution_while_a_step_is_r
     entered, release = anyio.Event(), anyio.Event()
     results = []
 
-    async def advance(state):
+    async def advance(state, context):
         entered.set()
         await release.wait()
         return RunStep(action="finish", analysis=room.analysis, proposal=room.proposal())
@@ -327,7 +327,7 @@ async def test_aborted_execution_is_not_silently_replayed_on_a_later_execute():
     room, calls = Room(), []
     entered = anyio.Event()
 
-    async def advance(state):
+    async def advance(state, context):
         calls.append(1)
         entered.set()
         await anyio.sleep_forever()
@@ -347,7 +347,7 @@ async def test_real_upload_resolver_enforces_owner_and_deletion_without_any_mode
     uploaded = await test_vision_api.upload(client)
     owner = owner_scope(client.cookies[COOKIE_NAME])
 
-    async def advance(state):
+    async def advance(state, context):
         return RunStep(action="finish")
 
     runs = AgentRuns(app.state.upload_service.storage.resolve, advance)

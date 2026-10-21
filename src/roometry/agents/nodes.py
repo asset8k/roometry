@@ -9,12 +9,14 @@ import anyio
 from langgraph.runtime import Runtime
 from pydantic import ValidationError
 
+from roometry.agents.budget import RunBudget
 from roometry.agents.state import AgentState, RunStep, RunUsage
+from roometry.model_calls import observe_model_calls
 from roometry.scenes.validation import validate_geometry
 
 
 class StepAdapter(Protocol):
-    async def __call__(self, state: AgentState) -> RunStep: ...
+    async def __call__(self, state: AgentState, context: "RunContext") -> RunStep: ...
 
 
 @dataclass(frozen=True)
@@ -25,6 +27,9 @@ class RunContext:
     authorize: Callable[[], Awaitable[None]]
     cancelled: Callable[[], bool]
     now: Callable[[], datetime]
+    owner: str = ""
+    budget: RunBudget | None = None
+    execute_tool: StepAdapter | None = None
 
 
 async def guard(state: AgentState, runtime: Runtime[RunContext]) -> dict[str, object]:
@@ -100,17 +105,43 @@ def check_step(state: AgentState, step: RunStep) -> None:
                 raise ValueError(
                     "Proposal must account for every original observation."
                 )
+    if step.working_scene is not None:
+        original, candidate = state.working_scene, step.working_scene
+        if original is None or not validate_geometry(candidate).valid:
+            raise ValueError("Edits require an existing valid scene.")
+        if original.model_dump(exclude={"objects"}) != candidate.model_dump(
+            exclude={"objects"}
+        ):
+            raise ValueError("Scene edits cannot change room geometry or provenance.")
+        originals = {obj.id: obj for obj in original.objects}
+        if [obj.id for obj in original.objects] != [
+            obj.id for obj in candidate.objects
+        ]:
+            raise ValueError("Edits cannot add, remove or reorder observed objects.")
+        for obj in candidate.objects:
+            old = originals[obj.id]
+            if old.model_dump(exclude={"position", "rotation_y_rad"}) != obj.model_dump(
+                exclude={"position", "rotation_y_rad"}
+            ):
+                raise ValueError("Edits may change poses only.")
+            if (old.fixed or old.locked) and old != obj:
+                raise ValueError("Protected objects cannot be changed.")
 
 
-async def advance(state: AgentState, runtime: Runtime[RunContext]) -> dict[str, object]:
-    context = runtime.context
+async def _perform(
+    state: AgentState, context: RunContext, adapter: StepAdapter
+) -> dict[str, object]:
     result: dict[str, object]
     await context.authorize()
     if context.cancelled():
         return {"status": "cancelled"}
+    if context.budget is not None:
+        context.budget.sync(state.usage)
+    before = context.budget.usage if context.budget is not None else RunUsage()
     try:
         with anyio.fail_after(state.limits.step_timeout_seconds):
-            step = await context.advance(state.model_copy(deep=True))
+            with observe_model_calls(context.budget):
+                step = await adapter(state.model_copy(deep=True), context)
         step = RunStep.model_validate(step)
         check_step(state, step)
     except TimeoutError:
@@ -130,7 +161,17 @@ async def advance(state: AgentState, runtime: Runtime[RunContext]) -> dict[str, 
         result = {
             "continue_run": step.action == "continue",
             "usage": usage.model_dump(),
+            "pending_tool": (
+                step.pending_tool.model_dump() if step.pending_tool else None
+            ),
         }
+        if step.feedback is not None:
+            result["tool_feedback"] = [
+                item.model_dump()
+                for item in [*state.tool_feedback, step.feedback][-16:]
+            ]
+        if step.failure is not None:
+            result.update(status="failed", last_error=step.failure)
         if step.analysis is not None:
             result["analysis"] = step.analysis.model_dump()
         if step.proposal is not None:
@@ -140,21 +181,57 @@ async def advance(state: AgentState, runtime: Runtime[RunContext]) -> dict[str, 
                 result["working_scene"] = scene
                 if state.base_scene is None:
                     result["base_scene"] = step.proposal.scene.model_dump()
+        if step.working_scene is not None:
+            result["working_scene"] = step.working_scene.model_dump()
         if (
             usage.model_calls > state.limits.max_model_calls
+            or usage.tool_calls > state.limits.max_tool_calls
+        ):
+            result["status"] = "budget_exhausted"
+    if context.budget is not None:
+        observed = context.budget.delta(before)
+        usage = RunUsage.model_validate(result.get("usage", state.usage))
+        usage = RunUsage(
+            **{
+                key: value + getattr(observed, key)
+                for key, value in usage.model_dump().items()
+            }
+        )
+        context.budget.sync(usage)
+        result["usage"] = usage.model_dump()
+        if (
+            context.budget.exhausted
+            or usage.model_calls > state.limits.max_model_calls
             or usage.tool_calls > state.limits.max_tool_calls
         ):
             result["status"] = "budget_exhausted"
     # Revocation/expiry during a step must never expose its result or continue.
     await context.authorize()
     if context.cancelled():
-        return {"status": "cancelled"}
+        return {
+            "status": "cancelled",
+            "usage": result.get("usage", state.usage.model_dump()),
+            "pending_tool": None,
+        }
     if context.now() >= state.expires_at:
         return {"status": "expired"}
     result["events"] = [
         {"step": state.steps_used, "status": result.get("status", "running")}
     ]
     return result
+
+
+async def advance(state: AgentState, runtime: Runtime[RunContext]) -> dict[str, object]:
+    return await _perform(state, runtime.context, runtime.context.advance)
+
+
+async def execute_tool(
+    state: AgentState, runtime: Runtime[RunContext]
+) -> dict[str, object]:
+    adapter = runtime.context.execute_tool
+    if adapter is None or state.pending_tool is None:
+        return {"status": "failed", "last_error": "invalid_step", "pending_tool": None}
+    return await _perform(state, runtime.context, adapter)
 
 
 def finalize(state: AgentState) -> dict[str, object]:
@@ -164,4 +241,8 @@ def finalize(state: AgentState) -> dict[str, object]:
         status = {"ready": "completed", "partial": "partial"}.get(
             state.proposal.status if state.proposal else "", "incomplete"
         )
-    return {"status": status, "events": [{"step": state.steps_used, "status": status}]}
+    return {
+        "status": status,
+        "pending_tool": None,
+        "events": [{"step": state.steps_used, "status": status}],
+    }

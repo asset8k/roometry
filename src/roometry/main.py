@@ -12,6 +12,9 @@ from fastapi.responses import JSONResponse
 from openai import AsyncOpenAI
 from pydantic import BaseModel
 
+from roometry.agents.adapter import RoomAgent
+from roometry.agents.runs import AgentRuns
+from roometry.agents.tools import SceneTools
 from roometry.config import Settings, get_settings
 from roometry.scenes.router import router as scenes_router
 from roometry.uploads.errors import UploadFailure
@@ -40,6 +43,11 @@ def create_app(
     )
     analyzer = PhotoAnalyzer(settings, analysis_client)
     analysis_service = AnalysisService(settings, service.storage, analyzer)
+    agent_runs = AgentRuns(
+        service.storage.resolve,
+        RoomAgent(settings, analyzer),
+        execute_tool=SceneTools(analysis_service),
+    )
 
     async def periodic_cleanup() -> None:
         while True:
@@ -47,6 +55,7 @@ def create_app(
             try:
                 await service.cleanup()
                 await analysis_service.cleanup()
+                await agent_runs.cleanup()
             except OSError:
                 logging.getLogger(__name__).warning(
                     "Temporary upload cleanup will be retried."
@@ -75,6 +84,7 @@ def create_app(
     application.state.settings = settings
     application.state.upload_service = service
     application.state.analysis_service = analysis_service
+    application.state.agent_runs = agent_runs
     application.add_middleware(
         UploadBodyLimitMiddleware, max_bytes=settings.upload_max_body_bytes
     )

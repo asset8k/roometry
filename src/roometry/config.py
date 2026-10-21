@@ -52,6 +52,11 @@ class Settings(BaseSettings):
     analysis_max_output_bytes: int = Field(default=262144, ge=1024, le=1048576)
     analysis_max_provider_attempts: int = Field(default=2, ge=1, le=3)
     analysis_max_cached_inputs: int = Field(default=128, ge=1, le=1024)
+    agent_max_output_tokens: int = Field(default=2048, ge=128, le=8192)
+    agent_max_request_bytes: int = Field(default=524288, ge=4096, le=2097152)
+    agent_reasoning_effort: Literal[
+        "default", "none", "low", "medium", "high", "xhigh", "max"
+    ] = "low"
 
     @field_validator("model_name", mode="before")
     @classmethod

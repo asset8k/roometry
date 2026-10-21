@@ -1,12 +1,15 @@
-"""Typed execution state; runtime clients, owner tokens and image bytes stay out.
-
-This foundation does not choose tools or ask questions yet. The injected step
-adapter is connected to real agent decisions in the next implementation step.
-"""
+"""Typed execution state; runtime clients, owner tokens and image bytes stay out."""
 
 from typing import Annotated, Literal, Self
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    JsonValue,
+    model_validator,
+)
 from typing_extensions import TypedDict
 
 from roometry.scenes.schemas import Identifier, RoomScene
@@ -48,14 +51,40 @@ class RunLimits(RunModel):
 class RunUsage(RunModel):
     """Actual usage reported by a trusted adapter, never by an LLM decision.
 
-    Step 2 must reserve/check individual paid calls before dispatch, including
-    any retries inside existing services. These counters alone are not billing.
+    RunBudget reserves calls before dispatch, including nested service retries.
+    Unknown provider usage is explicit. These counters are not dollar billing.
     """
 
     model_calls: int = Field(default=0, ge=0)
     tool_calls: int = Field(default=0, ge=0)
     input_tokens: int = Field(default=0, ge=0)
     output_tokens: int = Field(default=0, ge=0)
+    unknown_usage_calls: int = Field(default=0, ge=0)
+
+
+ToolName = Literal[
+    "analyze_photos",
+    "propose_scene",
+    "read_scene",
+    "search_catalog",
+    "move_object",
+    "rotate_object",
+    "validate_scene",
+    "finish",
+]
+
+
+class ToolCall(RunModel):
+    call_id: str = Field(min_length=1, max_length=128, pattern=r"^[A-Za-z0-9_-]+$")
+    name: ToolName
+    arguments: dict[str, JsonValue]
+
+
+class ToolFeedback(RunModel):
+    name: ToolName | None
+    outcome: Literal["success", "rejected", "error"]
+    message: str = Field(min_length=1, max_length=1000)
+    details: dict[str, JsonValue] = Field(default_factory=dict)
 
 
 class ClarificationChoice(RunModel):
@@ -113,8 +142,21 @@ class AgentState(RunModel):
     pending_question: ClarificationQuestion | None = None
     base_scene: RoomScene | None = None
     working_scene: RoomScene | None = None
+    pending_tool: ToolCall | None = None
+    tool_feedback: Annotated[list[ToolFeedback], Field(max_length=16)] = Field(
+        default_factory=list
+    )
     events: Annotated[list[RunEvent], append_events] = Field(default_factory=list)
-    last_error: Literal["step_failed", "step_timeout", "invalid_step"] | None = None
+    last_error: (
+        Literal[
+            "step_failed",
+            "step_timeout",
+            "invalid_step",
+            "decision_failed",
+            "tool_failed",
+        ]
+        | None
+    ) = None
 
     @model_validator(mode="after")
     def consistent_input(self) -> Self:
@@ -131,9 +173,13 @@ class AgentState(RunModel):
 
 
 class RunStep(RunModel):
-    """Narrow adapter output: adapters cannot rewrite ownership, limits or counters."""
+    """Narrow adapter output; only trusted usage increments are accepted."""
 
     action: Literal["continue", "finish"]
     analysis: RoomAnalysisResponse | None = None
     proposal: SceneProposalResponse | None = None
     usage: RunUsage = Field(default_factory=RunUsage)
+    pending_tool: ToolCall | None = None
+    feedback: ToolFeedback | None = None
+    working_scene: RoomScene | None = None
+    failure: Literal["decision_failed", "tool_failed"] | None = None

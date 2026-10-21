@@ -1,7 +1,7 @@
-"""Internal owned-run lifecycle, ready for later API/model integration.
+"""Internal owned-run lifecycle with per-invocation clients and call budgets.
 
-No routes or default fake agent are exposed. Callers must inject a step adapter
-and the existing private upload resolver; the frontend remains unchanged.
+Run endpoints and clarification handling follow in step 3. Callers inject the
+decision/tool adapters and the existing private upload resolver.
 """
 
 from collections.abc import Callable
@@ -10,6 +10,7 @@ from datetime import UTC, datetime, timedelta
 import anyio
 from langchain_core.runnables import RunnableConfig
 
+from roometry.agents.budget import RunBudget
 from roometry.agents.checkpointing import (
     CheckpointRun,
     RunBusy,
@@ -30,6 +31,7 @@ class AgentRuns:
         resolve_input: Callable[[str, str], PreparedRoomInput],
         advance: StepAdapter,
         *,
+        execute_tool: StepAdapter | None = None,
         checkpoints: TemporaryCheckpoints | None = None,
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
         ttl_seconds: int = 3600,
@@ -37,6 +39,7 @@ class AgentRuns:
         if not 1 <= ttl_seconds <= 3600:
             raise ValueError("Run TTL must be between 1 second and 1 hour.")
         self.resolve_input, self.advance, self.now = resolve_input, advance, now
+        self.execute_tool = execute_tool
         self.checkpoints = (
             checkpoints if checkpoints is not None else TemporaryCheckpoints()
         )
@@ -102,7 +105,7 @@ class AgentRuns:
     def _config(entry: CheckpointRun) -> RunnableConfig:
         return {
             "configurable": {"thread_id": entry.initial.run_id},
-            "recursion_limit": 2 * entry.initial.limits.max_steps + 4,
+            "recursion_limit": 3 * entry.initial.limits.max_steps + 4,
         }
 
     async def read(self, run_id: str, owner: str) -> AgentState:
@@ -120,18 +123,34 @@ class AgentRuns:
         entry = await self._owned(run_id, owner)
         if entry.busy:
             raise RunBusy()
+        async def authorize() -> None:
+            await self._owned(run_id, owner)
+
+        graph, config = build_graph(entry.saver), self._config(entry)
+        budget = RunBudget(
+            entry.initial.limits,
+            entry.initial.usage,
+            authorize,
+            lambda: entry.cancel_requested,
+        )
         entry.busy = True
         try:
-            graph, config = build_graph(entry.saver), self._config(entry)
             snapshot = await graph.aget_state(config)
             if snapshot.values and not snapshot.next:
                 return await self.read(run_id, owner)
-
-            async def authorize() -> None:
-                await self._owned(run_id, owner)
-
+            current = (
+                AgentState.model_validate(snapshot.values)
+                if snapshot.values else entry.initial
+            )
+            budget.sync(current.usage)
             context = RunContext(
-                self.advance, authorize, lambda: entry.cancel_requested, self.now
+                self.advance,
+                authorize,
+                lambda: entry.cancel_requested,
+                self.now,
+                owner=owner,
+                budget=budget,
+                execute_tool=self.execute_tool,
             )
             await graph.ainvoke(
                 None if snapshot.values else entry.initial.model_dump(),
@@ -148,8 +167,13 @@ class AgentRuns:
                     await self._owned(run_id, owner)
                     snapshot = await graph.aget_state(config)
                     if snapshot.values and snapshot.next:
+                        # Cancellation can interrupt the first checkpoint read,
+                        # before this invocation has synchronized its ledger.
+                        budget.sync(AgentState.model_validate(snapshot.values).usage)
                         await graph.aupdate_state(
-                            config, {"status": "cancelled"}, as_node="finalize"
+                            config,
+                            {"status": "cancelled", "usage": budget.usage.model_dump()},
+                            as_node="finalize",
                         )
                 except RunUnavailable:
                     pass

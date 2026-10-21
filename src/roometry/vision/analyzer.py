@@ -23,6 +23,7 @@ from openai.types.responses.response_create_params import (
 from pydantic import ValidationError
 
 from roometry.config import Settings
+from roometry.model_calls import current_observer
 from roometry.uploads.schemas import PreparedRoomInput
 from roometry.vision.diagnostics import validation_diagnostics
 from roometry.vision.errors import AnalysisFailure
@@ -116,9 +117,19 @@ class PhotoAnalyzer:
             )
         # Also override injected clients: retries belong to the service's single
         # per-input budget, including explicit retries after a failed HTTP request.
-        response = await self._client.with_options(
-            max_retries=0, timeout=self.settings.analysis_timeout_seconds
-        ).responses.create(**payload)
+        observer = current_observer()
+        if observer is not None:
+            await observer.before_call()
+        response = None
+        try:
+            response = await self._client.with_options(
+                max_retries=0, timeout=self.settings.analysis_timeout_seconds
+            ).responses.create(**payload)
+        finally:
+            if observer is not None:
+                observer.after_call(
+                    response.usage if isinstance(response, Response) else None
+                )
         if not isinstance(response, Response):
             raise AnalysisFailure(
                 502,
