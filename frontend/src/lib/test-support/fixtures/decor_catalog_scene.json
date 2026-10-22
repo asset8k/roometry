@@ -7,6 +7,9 @@
     "height_m": 2.7,
     "measurements_source": "estimated"
   },
+  "finishes": null,
+  "wall_mapping": [],
+  "estimate_corrections": [],
   "openings": [
     {
       "id": "window_1",
@@ -39,6 +42,7 @@
         "height": 0.88
       },
       "color": "#9B9F89",
+      "material_colors": null,
       "placement": "floor",
       "support_object_id": null,
       "support_surface_id": null,
@@ -65,6 +69,7 @@
         "height": 0.42
       },
       "color": "#947356",
+      "material_colors": null,
       "placement": "floor",
       "support_object_id": null,
       "support_surface_id": null,
@@ -91,6 +96,7 @@
         "height": 0.85
       },
       "color": "#B7AF9E",
+      "material_colors": null,
       "placement": "floor",
       "support_object_id": null,
       "support_surface_id": null,
@@ -117,6 +123,7 @@
         "height": 0.015
       },
       "color": "#B9AA91",
+      "material_colors": null,
       "placement": "floor",
       "support_object_id": null,
       "support_surface_id": null,
@@ -143,6 +150,7 @@
         "height": 1.6
       },
       "color": "#B69A79",
+      "material_colors": null,
       "placement": "floor",
       "support_object_id": null,
       "support_surface_id": null,
@@ -169,6 +177,7 @@
         "height": 1.65
       },
       "color": "#A99068",
+      "material_colors": null,
       "placement": "floor",
       "support_object_id": null,
       "support_surface_id": null,
@@ -195,6 +204,7 @@
         "height": 0.55
       },
       "color": "#8C7660",
+      "material_colors": null,
       "placement": "wall",
       "support_object_id": null,
       "support_surface_id": null,
@@ -221,6 +231,7 @@
         "height": 0.32
       },
       "color": "#BA9863",
+      "material_colors": null,
       "placement": "wall",
       "support_object_id": null,
       "support_surface_id": null,
@@ -247,6 +258,7 @@
         "height": 2.2
       },
       "color": "#C4B49B",
+      "material_colors": null,
       "placement": "wall",
       "support_object_id": null,
       "support_surface_id": null,
@@ -273,6 +285,7 @@
         "height": 0.32
       },
       "color": "#B18468",
+      "material_colors": null,
       "placement": "surface",
       "support_object_id": "sideboard",
       "support_surface_id": null,
@@ -299,6 +312,7 @@
         "height": 0.25
       },
       "color": "#6B837D",
+      "material_colors": null,
       "placement": "surface",
       "support_object_id": "sideboard",
       "support_surface_id": null,
@@ -325,6 +339,7 @@
         "height": 0.22
       },
       "color": "#B39A70",
+      "material_colors": null,
       "placement": "surface",
       "support_object_id": "sideboard",
       "support_surface_id": null,
@@ -351,6 +366,7 @@
         "height": 0.09
       },
       "color": "#A6AA96",
+      "material_colors": null,
       "placement": "surface",
       "support_object_id": "coffee_table",
       "support_surface_id": null,
@@ -377,6 +393,7 @@
         "height": 0.14
       },
       "color": "#6B837D",
+      "material_colors": null,
       "placement": "surface",
       "support_object_id": "coffee_table",
       "support_surface_id": null,
@@ -403,6 +420,7 @@
         "height": 0.13
       },
       "color": "#B8BDB6",
+      "material_colors": null,
       "placement": "ceiling",
       "support_object_id": null,
       "support_surface_id": null,

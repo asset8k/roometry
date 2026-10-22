@@ -47,14 +47,15 @@ export default function RoomShell({ scene }: { scene: RoomScene }) {
   const wallMode = useContext(WallModeContext)
   const { width_m: width, length_m: length, height_m: height } = scene.room
 
+  const finishes = scene.finishes
   return (
     <group>
-      <mesh position={[width / 2, -0.06, length / 2]} receiveShadow>
+      <mesh name="room_floor" position={[width / 2, -0.06, length / 2]} receiveShadow>
         <boxGeometry args={[width, 0.12, length]} />
-        <meshStandardMaterial color="#d6bea0" roughness={0.95} />
+        <meshStandardMaterial color={finishes?.floor_color ?? '#d6bea0'} roughness={0.95} />
       </mesh>
 
-      {Array.from({ length: Math.ceil(width / 0.3) - 1 }, (_, index) => (
+      {(finishes?.floor_pattern ?? 'wood') === 'wood' && Array.from({ length: Math.ceil(width / 0.3) - 1 }, (_, index) => (
         <Line
           key={index}
           points={[[(index + 1) * 0.3, 0.001, 0], [(index + 1) * 0.3, 0.001, length]]}
@@ -63,14 +64,18 @@ export default function RoomShell({ scene }: { scene: RoomScene }) {
         />
       ))}
 
-      {wallMode !== 'hidden' && WALLS.map(wall => {
+      {finishes?.floor_pattern === 'tile' && <group name="tile_seams">
+        {Array.from({ length: Math.ceil(width / .6) - 1 }, (_, i) => <Line key={`x${i}`} points={[[((i + 1) * .6), .001, 0], [((i + 1) * .6), .001, length]]} color="#777777" lineWidth={.4} />)}
+        {Array.from({ length: Math.ceil(length / .6) - 1 }, (_, i) => <Line key={`z${i}`} points={[[0, .001, ((i + 1) * .6)], [width, .001, ((i + 1) * .6)]]} color="#777777" lineWidth={.4} />)}
+      </group>}
+      {wallMode !== 'hidden'  && WALLS.map(wall => {
         const frame = getWallFrame(scene.room, wall)
         return (
           <mesh key={wall} name={`wall_${wall}`} position={frame.position} rotation={[0, frame.rotationY, 0]} receiveShadow>
             <planeGeometry args={[frame.width, height]} />
             {/* Inward-facing planes create a cutaway without changing scene data. */}
             <meshStandardMaterial
-              color={wall === 'west' ? '#e7e3d6' : '#f3f0e7'}
+              color={finishes?.wall_color ?? (wall === 'west' ? '#e7e3d6' : '#f3f0e7')}
               side={wallMode === 'transparent' ? DoubleSide : FrontSide}
               transparent={wallMode === 'transparent'}
               opacity={wallMode === 'transparent' ? 0.18 : 1}

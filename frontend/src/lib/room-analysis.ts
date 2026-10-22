@@ -45,7 +45,8 @@ export function parseSceneProposal(data: unknown): SceneProposalResponse {
     || unresolved.some(item => !item.reason.entity_ids.includes(item.entity_id))
     || retained.some(id => unresolvedIds.has(id))
     || (status === 'ready' && (issues.length > 0 || unresolved.length > 0))
-    || (status === 'partial' && (!retained.length || !unresolved.length || !issues.length))
+    || (status === 'partial' && (!retained.length || !issues.length || (!unresolved.length && !issues.some(issue => issue.code === 'fidelity'))))
+    || (status === 'ready' && data.fidelity?.checks.some(check => check.required && !check.passed))
     || (status === 'needs_dimensions' && unresolved.length > 0)
     || (!renderable && scene !== null)
     || (renderable && (!scene || !validation?.valid || pending.length > 0

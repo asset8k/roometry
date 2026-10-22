@@ -13,9 +13,47 @@ export type WidthM = number;
 export type LengthM = number;
 export type HeightM = number;
 export type MeasurementsSource = "user_confirmed" | "estimated";
+export type FloorColor = string | null;
+export type WallColor = string | null;
+export type FloorPattern = ("wood" | "tile" | "plain") | null;
+/**
+ * @maxItems 4
+ */
+export type WallMapping =
+  | []
+  | [WallReference]
+  | [WallReference, WallReference]
+  | [WallReference, WallReference, WallReference]
+  | [WallReference, WallReference, WallReference, WallReference];
+export type ObservationId = string;
+export type Wall = "north" | "south" | "west" | "east";
+export type EntityId = string;
+export type Field = "width" | "depth" | "height" | "width_m" | "height_m" | "sill_height_m";
+export type PreviousM = number;
+export type RevisedM = number;
+export type Reason = string;
+/**
+ * @minItems 1
+ * @maxItems 10
+ */
+export type SourceImageIds =
+  | [string]
+  | [string, string]
+  | [string, string, string]
+  | [string, string, string, string]
+  | [string, string, string, string, string]
+  | [string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string, string];
+/**
+ * @maxItems 200
+ */
+export type EstimateCorrections = EstimateCorrection[];
 export type Id = string;
 export type Type = "door" | "window";
-export type Wall = "north" | "south" | "west" | "east";
+export type Wall1 = "north" | "south" | "west" | "east";
 export type OffsetM = number;
 export type WidthM1 = number;
 export type HeightM1 = number;
@@ -167,6 +205,11 @@ export type AssetId =
   | "towel_rack_standard_01"
   | "water_heater_standard_01"
   | "drying_rack_standard_01"
+  | "bed_futon_01"
+  | "sofa_sleeper_01"
+  | "chair_office_01"
+  | "shelf_metal_01"
+  | "ceiling_light_track_01"
   | "bed_crib_01"
   | "sofa_sectional_left_01"
   | "sofa_sectional_right_01"
@@ -207,10 +250,16 @@ export type Width = number;
 export type Depth = number;
 export type Height = number;
 export type Color = string;
+export type Wood = string | null;
+export type Metal = string | null;
+export type Linen = string | null;
+export type Inset = string | null;
+export type Rubber = string | null;
+export type Enamel = string | null;
 export type Placement = "floor" | "surface" | "wall" | "ceiling";
 export type SupportObjectId = string | null;
 export type SupportSurfaceId = string | null;
-export type Wall1 = ("north" | "south" | "west" | "east") | null;
+export type Wall2 = ("north" | "south" | "west" | "east") | null;
 export type OpeningId = string | null;
 export type Fixed = boolean;
 export type Locked = boolean;
@@ -276,6 +325,9 @@ export interface PreviewEditResponse {
 export interface RoomScene {
   schema_version: SchemaVersion;
   room: RoomDimensions;
+  finishes?: RoomFinishes | null;
+  wall_mapping?: WallMapping;
+  estimate_corrections?: EstimateCorrections;
   openings: Openings;
   objects: Objects;
   assumptions: Assumptions;
@@ -288,10 +340,30 @@ export interface RoomDimensions {
   height_m: HeightM;
   measurements_source: MeasurementsSource;
 }
+export interface RoomFinishes {
+  floor_color?: FloorColor;
+  wall_color?: WallColor;
+  floor_pattern?: FloorPattern;
+}
+export interface WallReference {
+  observation_id: ObservationId;
+  wall: Wall;
+}
+/**
+ * Auditable revision of a photo size hypothesis, never a user measurement.
+ */
+export interface EstimateCorrection {
+  entity_id: EntityId;
+  field: Field;
+  previous_m: PreviousM;
+  revised_m: RevisedM;
+  reason: Reason;
+  source_image_ids: SourceImageIds;
+}
 export interface Opening {
   id: Id;
   type: Type;
-  wall: Wall;
+  wall: Wall1;
   offset_m: OffsetM;
   width_m: WidthM1;
   height_m: HeightM1;
@@ -309,10 +381,11 @@ export interface SceneObject {
   rotation_y_rad: RotationYRad;
   dimensions_m: ObjectDimensions;
   color: Color;
+  material_colors?: MaterialColors | null;
   placement: Placement;
   support_object_id: SupportObjectId;
   support_surface_id?: SupportSurfaceId;
-  wall: Wall1;
+  wall: Wall2;
   opening_id: OpeningId;
   fixed: Fixed;
   locked: Locked;
@@ -331,6 +404,17 @@ export interface ObjectDimensions {
   width: Width;
   depth: Depth;
   height: Height;
+}
+/**
+ * Small, fixed palette of visible material roles; null keeps model defaults.
+ */
+export interface MaterialColors {
+  wood?: Wood;
+  metal?: Metal;
+  linen?: Linen;
+  inset?: Inset;
+  rubber?: Rubber;
+  enamel?: Enamel;
 }
 export interface EditIssue {
   code: Code;

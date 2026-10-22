@@ -903,4 +903,15 @@ register(
     dimensions=(("surface", (0.38, 0.45, 0.3)),),
 )
 
+_assets["ceiling_light_track_01"] = FurnitureAsset(
+    "ceiling_light_track_01", "ceiling_light", "Ceiling track with adjustable spotlights",
+    (1.8, .22, .24), "#25272B",
+    (part("track", (1, .16, .18), (0, .92, 0), radius=.006),
+     *tuple(p for i, x in enumerate((-.38, 0, .38)) for p in (
+         part(f"stem_{i}", (.035, .32, .06), (x, .68, 0), "metal"),
+         part(f"spot_{i}", (.15, .5, .8), (x, .27, 0), shape="cylinder"),
+         part(f"lens_{i}", (.12, .015, .65), (x, .012, 0), "light", shape="cylinder", collision=False),
+     ))), category="lighting",
+)
+
 EQUIPMENT_CATALOG = MappingProxyType(_assets)

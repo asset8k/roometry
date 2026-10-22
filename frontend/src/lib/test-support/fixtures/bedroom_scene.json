@@ -7,6 +7,9 @@
     "height_m": 2.6,
     "measurements_source": "user_confirmed"
   },
+  "finishes": null,
+  "wall_mapping": [],
+  "estimate_corrections": [],
   "openings": [
     {
       "id": "door_1",
@@ -52,6 +55,7 @@
         "height": 0.55
       },
       "color": "#808080",
+      "material_colors": null,
       "placement": "floor",
       "support_object_id": null,
       "support_surface_id": null,
@@ -78,6 +82,7 @@
         "height": 0.01
       },
       "color": "#008000",
+      "material_colors": null,
       "placement": "floor",
       "support_object_id": null,
       "support_surface_id": null,
@@ -104,6 +109,7 @@
         "height": 0.75
       },
       "color": "#B08968",
+      "material_colors": null,
       "placement": "floor",
       "support_object_id": null,
       "support_surface_id": null,
@@ -130,6 +136,7 @@
         "height": 0.45
       },
       "color": "#000000",
+      "material_colors": null,
       "placement": "surface",
       "support_object_id": "desk_1",
       "support_surface_id": null,
@@ -156,6 +163,7 @@
         "height": 0.6
       },
       "color": "#808080",
+      "material_colors": null,
       "placement": "wall",
       "support_object_id": null,
       "support_surface_id": null,
@@ -182,6 +190,7 @@
         "height": 0.3
       },
       "color": "#FFFF00",
+      "material_colors": null,
       "placement": "wall",
       "support_object_id": null,
       "support_surface_id": null,
@@ -208,6 +217,7 @@
         "height": 0.7
       },
       "color": "#D4AF37",
+      "material_colors": null,
       "placement": "ceiling",
       "support_object_id": null,
       "support_surface_id": null,
@@ -234,6 +244,7 @@
         "height": 1.4
       },
       "color": "#D9D2C5",
+      "material_colors": null,
       "placement": "wall",
       "support_object_id": null,
       "support_surface_id": null,
@@ -260,6 +271,7 @@
         "height": 2.1
       },
       "color": "#B8A48A",
+      "material_colors": null,
       "placement": "floor",
       "support_object_id": null,
       "support_surface_id": null,

@@ -112,3 +112,32 @@ or reconstruction benchmarks.
 Run `uv run pytest` at the repository root, then `npm test` and `npm run build`
 in `frontend/`. Model requests are mocked in automated tests. Live provider tests
 require a separate, explicitly authorized run.
+
+Reconstruction quality metadata is optional for older scenes. `wall_mapping` retains
+observed-wall identities; `finishes` records approximate floor/wall colors and a
+plain, wood or tile floor. Objects can override wood, metal, linen, inset, rubber
+and enamel colors independently. Unknown roles retain catalog defaults.
+
+Photo observations may include evidence-backed facing, wall topology, adjacency,
+support and wall coverage. Construction receives the same private normalized
+photos, places anchors before accessories and gets one bounded repair. Entered
+room measurements remain authoritative. Changed photo size estimates require
+`estimate_corrections` with exact before/after values, source views and a visual
+reason; observations remain unchanged. User identity/facing answers are stored as
+separate reconstruction constraints and reuse cached analysis.
+
+Proposal `fidelity` compares coverage and recorded relationships/proportions/colors
+separately from geometry. Unknown evidence is unassessed, not a successful check.
+A failed required relationship triggers repair rather than deleting the furniture
+to hide the mismatch. Partial scenes disclose missing anchors. Independent photo
+annotations in `data/evals/` catch omissions from analysis itself; reference scenes
+are hand-authored test arrangements, not evidence of live model accuracy. Run
+`scripts/run_evals.py --case data/evals/bedroom_multiview.json --run /tmp/run.json`
+against a saved agent response. Personal source photos are not copied into fixtures.
+
+Geometry-valid reconstructions with unresolved fidelity checks remain available as
+`partial` previews, even when every object is retained. Such previews carry
+`fidelity` issues, may have an empty `unresolved_entities` list, and must not be
+labeled `ready`. General observed `wall_id` references are advisory for floor
+furniture; only explicit relationships establish precise placement constraints.
+Construction failures do not imply that the user's input is missing information.

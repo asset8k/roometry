@@ -28,6 +28,8 @@ from roometry.vision.diagnostics import (
     validation_diagnostics,
 )
 from roometry.vision.errors import AnalysisFailure
+from roometry.vision.evidence import apply_constraints
+from roometry.vision.fidelity import evaluate_fidelity
 from roometry.vision.partial import assemble_partial
 from roometry.vision.importance import partial_quality
 from roometry.vision.proposal_request import build_proposal_request
@@ -419,6 +421,10 @@ class AnalysisService:
         state = await self._owned_analysis(request.analysis_id, owner)
         analysis = state.result
         assert analysis is not None
+        try:
+            analysis = apply_constraints(analysis, request.constraints)
+        except ValueError:
+            raise AnalysisFailure(422, "invalid_request", "The reconstruction answers do not match this room's observations.") from None
         # Agent runs carry their own confirmed answers. Another run using this
         # upload must not inherit them as silently confirmed measurements.
         confirmed_dimensions = {} if isolated_dimensions else state.confirmed_dimensions
@@ -478,6 +484,7 @@ class AnalysisService:
             {
                 "dimensions": measurements.dimensions.model_dump(),
                 "estimated": measurements.estimated,
+                "constraints": request.constraints.model_dump(),
             },
             sort_keys=True,
         )
@@ -520,9 +527,11 @@ class AnalysisService:
                 "analysis_unavailable",
                 "Scene proposal is disabled or not configured.",
             )
+        prepared = await anyio.to_thread.run_sync(self._resolve, analysis.input_id, owner)
+        images = await anyio.to_thread.run_sync(self._load_images, prepared, owner)
         draft, report, scene = None, None, None
         best_partial = None
-        best_quality = (-1, -1, -1, -1)
+        best_quality = (-1, -1, -10000, -1, -1)
         observed = {item.id: item for item in [*analysis.observations.objects, *analysis.observations.openings]}
         problems = []
         repair_failure: AnalysisFailure | None = None
@@ -535,6 +544,7 @@ class AnalysisService:
                     measurements,
                     draft,
                     problems,
+                    images,
                 )
             except AnalysisFailure as error:
                 if best_partial is None:
@@ -593,7 +603,10 @@ class AnalysisService:
                         )
                         retained = candidate[0]
                         if retained is not None:
-                            quality = partial_quality(retained, observed)
+                            major_high, major, secondary, total = partial_quality(retained, observed)
+                            candidate_fidelity = evaluate_fidelity(analysis, retained)
+                            failures = sum(check.required and not check.passed for check in candidate_fidelity.checks)
+                            quality = (major_high, major, -failures, secondary, total)
                             if quality > best_quality:
                                 best_partial = candidate
                                 best_quality = quality
@@ -721,11 +734,12 @@ class AnalysisService:
         result = SceneProposalResponse.model_validate(
             {
                 **base,
-                "status": ("partial" if unresolved else "ready")
+                "status": ("partial" if unresolved or problems else "ready")
                 if scene is not None
                 else "incomplete",
                 "scene": scene,
                 "validation": report,
+                "fidelity": evaluate_fidelity(analysis, scene) if scene is not None else None,
                 "issues": problems,
                 "unresolved_entities": unresolved,
             }

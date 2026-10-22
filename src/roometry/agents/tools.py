@@ -5,15 +5,22 @@ are accepted. MCP transport and furniture additions belong to later milestones.
 """
 
 from dataclasses import asdict
-from typing import Annotated, Literal
+from typing import Annotated
 
 import anyio
 from pydantic import Field
 
 from roometry.agents.clarification import question_for
 from roometry.agents.nodes import RunContext
+from roometry.agents.state import (
+    AgentState,
+    ClarificationKind,
+    RunModel,
+    RunStep,
+    ToolFeedback,
+    ToolName,
+)
 from roometry.agents.tool_policy import already_inspected, clarification_candidates
-from roometry.agents.state import AgentState, RunModel, RunStep, ToolFeedback, ToolName
 from roometry.scenes.assets import ASSET_REGISTRY, ObjectType, Placement
 from roometry.scenes.catalog import ASSET_CATALOG, dimensions_for, object_surfaces
 from roometry.scenes.edit_schemas import (
@@ -26,6 +33,8 @@ from roometry.scenes.schemas import FiniteNumber, Identifier
 from roometry.scenes.service import preview_edit
 from roometry.scenes.validation import GeometryReport, validate_geometry
 from roometry.vision.errors import AnalysisFailure
+from roometry.vision.evidence import apply_constraints
+from roometry.vision.fidelity import evaluate_fidelity
 from roometry.vision.proposal_schemas import SceneProposalRequest
 from roometry.vision.service import AnalysisService
 
@@ -51,7 +60,7 @@ class RotateArguments(RunModel):
 
 
 class ClarificationArguments(RunModel):
-    kind: Literal["room_dimensions", "object_mobility"]
+    kind: ClarificationKind
     object_id: Identifier | None
 
 
@@ -75,23 +84,31 @@ DESCRIPTIONS: dict[ToolName, str] = {
     "rotate_object": "Rotate an existing movable object about positive Y, in radians. Server validates and rolls back rejected edits.",
     "validate_scene": "Run deterministic component-aware geometry checks on the current scene.",
     "finish": "Finish with the existing validated scene or an honest incomplete result. Cannot fabricate successful geometry or resolve omitted observations.",
-    "request_clarification": "Ask one focused three-choice question about missing room measurements (object_id=null) or whether an existing movable object may move. At most three questions per run; answered facts cannot be asked again. The server constructs the choices and applies the answer as a real constraint.",
+    "request_clarification": "Ask one focused three-choice question about missing room measurements (object_id=null), an observed object identity or facing ambiguity before construction, or whether an existing movable object may move. At most three questions per run; answered facts cannot be asked again. The server constructs the choices and applies the answer as a real constraint.",
 }
 
 
-def available_tools(state: AgentState, *, reserve_decision: bool = True) -> list[ToolName]:
+def available_tools(
+    state: AgentState, *, reserve_decision: bool = True
+) -> list[ToolName]:
     tools: list[ToolName] = ["finish"]
     if state.analysis is None:
         tools.append("analyze_photos")
     elif state.working_scene is None:
         tools.append("propose_scene")
     if state.working_scene is not None:
-        inspection_tools: tuple[ToolName, ...] = ("read_scene", "search_catalog", "validate_scene")
+        inspection_tools: tuple[ToolName, ...] = (
+            "read_scene",
+            "search_catalog",
+            "validate_scene",
+        )
         for name in inspection_tools:
             if not already_inspected(state, name):
                 tools.append(name)
-        if any(not obj.fixed and not obj.locked and obj.placement in {"floor", "surface"}
-               for obj in state.working_scene.objects):
+        if any(
+            not obj.fixed and not obj.locked and obj.placement in {"floor", "surface"}
+            for obj in state.working_scene.objects
+        ):
             tools.extend(["move_object", "rotate_object"])
     if clarification_candidates(state, reserve_decision=reserve_decision):
         tools.append("request_clarification")
@@ -104,15 +121,26 @@ def tool_definitions(state: AgentState) -> list[dict]:
         schema = ARGUMENT_MODELS[name].model_json_schema()
         if name == "request_clarification":
             questions = clarification_candidates(state)
-            schema["properties"]["kind"]["enum"] = list(dict.fromkeys(q.kind for q in questions))
+            schema["properties"]["kind"]["enum"] = list(
+                dict.fromkeys(q.kind for q in questions)
+            )
             schema["properties"]["object_id"] = {
-                "enum": [*dict.fromkeys(q.entity_ids[0] if q.entity_ids else None for q in questions)],
+                "enum": [
+                    *dict.fromkeys(
+                        q.entity_ids[0] if q.entity_ids else None for q in questions
+                    )
+                ],
                 "type": ["string", "null"],
             }
-        definitions.append({
-            "type": "function", "name": name, "description": DESCRIPTIONS[name],
-            "parameters": schema, "strict": True,
-        })
+        definitions.append(
+            {
+                "type": "function",
+                "name": name,
+                "description": DESCRIPTIONS[name],
+                "parameters": schema,
+                "strict": True,
+            }
+        )
     return definitions
 
 
@@ -207,6 +235,7 @@ class SceneTools:
                     analysis_id=state.analysis.analysis_id,
                     dimensions=state.confirmed_dimensions,
                     allow_estimated_dimensions=True,
+                    constraints=state.reconstruction_constraints,
                 ),
                 context.owner,
                 isolated_dimensions=True,
@@ -338,10 +367,24 @@ class SceneTools:
             )
         if name == "validate_scene":
             report = await anyio.to_thread.run_sync(validate_geometry, scene)
+            fidelity = (
+                evaluate_fidelity(
+                    apply_constraints(state.analysis, state.reconstruction_constraints),
+                    scene,
+                )
+                if state.analysis
+                else None
+            )
             return RunStep(
                 action="continue",
                 feedback=feedback(
-                    "Current scene geometry checked.", report_summary(report)
+                    "Current scene geometry and reconstruction evidence checked.",
+                    {
+                        **report_summary(report),
+                        "fidelity": fidelity.model_dump(mode="json")
+                        if fidelity
+                        else None,
+                    },
                 ),
             )
         if isinstance(arguments, MoveArguments):
@@ -361,6 +404,39 @@ class SceneTools:
         result = await anyio.to_thread.run_sync(
             preview_edit, PreviewEditRequest(scene=scene, edit=edit)
         )
+        if result.accepted and state.analysis is not None:
+            effective = apply_constraints(
+                state.analysis, state.reconstruction_constraints
+            )
+            before = evaluate_fidelity(effective, scene)
+            after = evaluate_fidelity(effective, result.scene)
+            failed_before = {
+                (c.kind, tuple(c.entity_ids), c.message)
+                for c in before.checks
+                if c.required and not c.passed
+            }
+            new_failures = [
+                c
+                for c in after.checks
+                if c.required
+                and not c.passed
+                and (c.kind, tuple(c.entity_ids), c.message) not in failed_before
+            ]
+            if new_failures:
+                return RunStep(
+                    action="continue",
+                    feedback=feedback(
+                        "Edit rejected; it contradicts recorded reconstruction evidence. The current scene is unchanged.",
+                        {
+                            "accepted": False,
+                            "changed_object_ids": [],
+                            "fidelity": [
+                                c.model_dump(mode="json") for c in new_failures
+                            ],
+                        },
+                        rejected=True,
+                    ),
+                )
         details = {
             "accepted": result.accepted,
             "changed_object_ids": list(result.changed_object_ids),

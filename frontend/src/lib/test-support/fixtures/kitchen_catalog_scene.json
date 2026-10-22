@@ -7,6 +7,9 @@
     "height_m": 2.7,
     "measurements_source": "estimated"
   },
+  "finishes": null,
+  "wall_mapping": [],
+  "estimate_corrections": [],
   "openings": [],
   "objects": [
     {
@@ -25,6 +28,7 @@
         "height": 1.85
       },
       "color": "#BCC3BC",
+      "material_colors": null,
       "placement": "floor",
       "support_object_id": null,
       "support_surface_id": null,
@@ -51,6 +55,7 @@
         "height": 1.24
       },
       "color": "#A8B09D",
+      "material_colors": null,
       "placement": "floor",
       "support_object_id": null,
       "support_surface_id": null,
@@ -77,6 +82,7 @@
         "height": 0.94
       },
       "color": "#A8B09D",
+      "material_colors": null,
       "placement": "floor",
       "support_object_id": null,
       "support_surface_id": null,
@@ -103,6 +109,7 @@
         "height": 0.85
       },
       "color": "#BCC3BC",
+      "material_colors": null,
       "placement": "floor",
       "support_object_id": null,
       "support_surface_id": null,
@@ -129,6 +136,7 @@
         "height": 0.7
       },
       "color": "#A8B09D",
+      "material_colors": null,
       "placement": "wall",
       "support_object_id": null,
       "support_surface_id": null,
@@ -155,6 +163,7 @@
         "height": 0.72
       },
       "color": "#B3B9B3",
+      "material_colors": null,
       "placement": "wall",
       "support_object_id": null,
       "support_surface_id": null,
@@ -181,6 +190,7 @@
         "height": 0.92
       },
       "color": "#A8B09D",
+      "material_colors": null,
       "placement": "floor",
       "support_object_id": null,
       "support_surface_id": null,
@@ -207,6 +217,7 @@
         "height": 0.29
       },
       "color": "#BCC3BC",
+      "material_colors": null,
       "placement": "surface",
       "support_object_id": "island",
       "support_surface_id": null,
@@ -233,6 +244,7 @@
         "height": 0.27
       },
       "color": "#A8B09D",
+      "material_colors": null,
       "placement": "surface",
       "support_object_id": "island",
       "support_surface_id": null,
@@ -259,6 +271,7 @@
         "height": 0.2
       },
       "color": "#A8B09D",
+      "material_colors": null,
       "placement": "surface",
       "support_object_id": "island",
       "support_surface_id": null,
@@ -285,6 +298,7 @@
         "height": 0.9
       },
       "color": "#A8B09D",
+      "material_colors": null,
       "placement": "floor",
       "support_object_id": null,
       "support_surface_id": null,
@@ -311,6 +325,7 @@
         "height": 0.13
       },
       "color": "#B8BDB6",
+      "material_colors": null,
       "placement": "ceiling",
       "support_object_id": null,
       "support_surface_id": null,

@@ -7,6 +7,7 @@ from pydantic import AwareDatetime, Field, field_validator, model_validator
 from roometry.scenes.assets import Placement
 from roometry.scenes.schemas import (
     AssetId,
+    EstimateCorrection,
     FiniteNumber,
     Identifier,
     NonnegativeDistance,
@@ -19,7 +20,8 @@ from roometry.scenes.schemas import (
 )
 from roometry.scenes.validation import GeometryReport
 from roometry.uploads.schemas import InputDimensions, OpaqueId
-from roometry.vision.schemas import AnalysisModel, Notes, RoomHeight, SillHeight
+from roometry.vision.fidelity import FidelityReport
+from roometry.vision.schemas import AnalysisModel, Notes, RoomHeight, SillHeight, ReconstructionConstraints
 
 DimensionName = Literal["width_m", "length_m", "height_m"]
 AXES: tuple[DimensionName, ...] = ("width_m", "length_m", "height_m")
@@ -29,6 +31,7 @@ class SceneProposalRequest(AnalysisModel):
     analysis_id: OpaqueId
     dimensions: InputDimensions | None = None
     allow_estimated_dimensions: bool = False
+    constraints: ReconstructionConstraints = Field(default_factory=ReconstructionConstraints)
 
     @model_validator(mode="after")
     def confirmed_input(self) -> Self:
@@ -77,6 +80,7 @@ class DraftOpening(AnalysisModel):
 
 
 class DraftContent(AnalysisModel):
+    estimate_corrections: Annotated[list[EstimateCorrection], Field(max_length=200)] = Field(default_factory=list)
     wall_assignments: Annotated[list[WallAssignment], Field(max_length=4)]
     openings: Annotated[list[DraftOpening], Field(max_length=32)]
     assumptions: Notes
@@ -111,6 +115,7 @@ class ProposalIssue(AnalysisModel):
         "proposal_limit_reached",
         "dependency_unresolved",
         "repair_failed",
+        "fidelity",
     ]
     entity_ids: Annotated[list[Identifier], Field(max_length=200)]
     message: Annotated[str, Field(min_length=1, max_length=1000)]
@@ -139,6 +144,7 @@ class SceneProposalResponse(AnalysisModel):
     estimated_axes: Annotated[list[DimensionName], Field(max_length=3)]
     scene: RoomScene | None
     validation: GeometryReport | None
+    fidelity: FidelityReport | None = None
     issues: Annotated[list[ProposalIssue], Field(max_length=50)]
     unresolved_entities: Annotated[list[UnresolvedEntity], Field(max_length=232)] = Field(default_factory=list)
     warnings: Notes
@@ -185,8 +191,15 @@ class SceneProposalResponse(AnalysisModel):
                 raise ValueError("Unresolved observations cannot appear in the scene.")
             if self.status == "ready" and (self.issues or unresolved):
                 raise ValueError("Ready proposals cannot have unresolved issues.")
-            if self.status == "partial" and (not retained or not unresolved or not self.issues):
-                raise ValueError("Partial proposals require retained and unresolved observations with reasons.")
+            fidelity_pending = any(item.code == "fidelity" for item in self.issues)
+            if self.status == "partial" and (
+                not retained or not self.issues or (not unresolved and not fidelity_pending)
+            ):
+                raise ValueError("Partial proposals require retained observations and explicit omissions or fidelity issues.")
+            if self.status == "ready" and self.fidelity is not None and any(
+                check.required and not check.passed for check in self.fidelity.checks
+            ):
+                raise ValueError("Required fidelity failures cannot be labeled ready.")
             expected = self.dimensions.model_dump(
                 exclude_none=True, exclude={"measurements_source"}
             )

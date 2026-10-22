@@ -19,7 +19,7 @@ export function SceneObjectView({ object, room, selected = false, onSelect }: { 
       userData={{ assetId: object.asset_id, modelKind }}
       onClick={event => { event.stopPropagation(); if (event.delta <= 4) onSelect?.(object.id) }}
     >
-      <Model assetId={object.asset_id} color={object.color} placement={object.placement} />
+      <Model assetId={object.asset_id} color={object.color} materialColors={object.material_colors} placement={object.placement} />
       {selected && <mesh name="selection_bounds" position={[0, 0.5, 0]} raycast={() => undefined} renderOrder={10}>
         <boxGeometry args={[1.04, 1.04, 1.04]} />
         <meshBasicMaterial color="#496751" wireframe depthTest={false} />

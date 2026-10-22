@@ -188,6 +188,11 @@ _assets: dict[str, AssetDefinition] = {
 }
 _assets.update(
     {
+        "bed_futon_01": AssetDefinition("bed", frozenset({"floor"})),
+        "sofa_sleeper_01": AssetDefinition("sofa", frozenset({"floor"})),
+        "chair_office_01": AssetDefinition("chair", frozenset({"floor"})),
+        "shelf_metal_01": _standard_asset("shelf"),
+        "ceiling_light_track_01": _standard_asset("ceiling_light"),
         "bed_crib_01": _standard_asset("bed"),
         "sofa_sectional_left_01": _standard_asset("sofa"),
         "sofa_sectional_right_01": _standard_asset("sofa"),

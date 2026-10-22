@@ -47,6 +47,53 @@ describe('guided generation workspace', () => {
     expect(html).toContain('3D room viewer')
     expect(html).not.toContain('This run did not finish successfully')
   })
+  it('shows fidelity limitations separately from collision validity', () => {
+    const run = finishedRun(input, true)
+    run.proposal!.fidelity = {
+      policy_version: 'reconstruction_v1', major_object_coverage: .5,
+      relationship_score: .5, proportion_score: null, color_score: 1, recognizable: false,
+      checks: [{ kind: 'coverage', entity_ids: ['bed_observed'], passed: false, required: true, message: 'Retain the observed major furniture.' }],
+      unassessed: ['Sizes remain approximate.'],
+    }
+    const html = render({ phase: 'partial', run })
+    expect(html).toContain('The major arrangement is not yet established')
+    expect(html).toContain('Major furniture retained: 50%')
+    expect(html).toContain('Sizes remain approximate')
+    expect(html).toContain('3D room viewer')
+  })
+  it('opens a provisional scene even when every object is retained but fidelity needs correction', () => {
+    const run = finishedRun(input)
+    run.status = 'partial'
+    run.proposal!.status = 'partial'
+    run.proposal!.issues = [{ code: 'fidelity', entity_ids: ['bed_observed'], message: 'Facing direction needs correction.' }]
+    run.proposal!.unresolved_entities = []
+    run.proposal!.fidelity = {
+      policy_version: 'reconstruction_v1', major_object_coverage: 1, relationship_score: 0,
+      proportion_score: null, color_score: 1, recognizable: false,
+      checks: [{ kind: 'facing', entity_ids: ['bed_observed'], passed: false, required: true, message: 'Facing direction needs correction.' }], unassessed: [],
+    }
+    const html = render({ phase: 'partial', run })
+    expect(html).toContain('Your reconstruction preview')
+    expect(html).toContain('provisional reconstruction')
+    expect(html).toContain('Facing direction needs correction')
+    expect(html).toContain('3D room viewer')
+    expect(html).not.toContain('0 observations are unresolved')
+    expect(html).not.toContain('More information is needed')
+  })
+  it('describes construction failure accurately and keeps technical details collapsed', () => {
+    const run = finishedRun(input)
+    run.status = 'incomplete'
+    run.working_scene = run.base_scene = null
+    run.proposal!.status = 'incomplete'
+    run.proposal!.scene = null
+    run.proposal!.issues = [{ code: 'geometry', entity_ids: ['bed_observed'], message: 'object_outside_room: bounds exceed room.' }]
+    const html = render({ phase: 'incomplete', run })
+    expect(html).toContain('Reconstruction could not finish')
+    expect(html).toContain('couldn’t build a usable arrangement')
+    expect(html).toContain('<summary>Construction details</summary>')
+    expect(html).not.toContain('More information is needed')
+    expect(html).not.toContain('There isn’t enough information')
+  })
   it('shows failed and cancelled results honestly and offers safe network recovery', () => {
     expect(render({ phase: 'failed' })).toContain('Generation stopped')
     expect(render({ phase: 'cancelled' })).toContain('Generation cancelled')

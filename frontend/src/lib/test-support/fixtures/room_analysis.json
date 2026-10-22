@@ -68,6 +68,9 @@
           "22222222-2222-4222-8222-222222222222"
         ],
         "confidence": "medium",
+        "alternative_type": null,
+        "material_colors": null,
+        "wall_coverage": null,
         "relative_location": "Against the wall opposite the window wall.",
         "wall_id": null,
         "placement": "floor",
@@ -92,6 +95,9 @@
           "22222222-2222-4222-8222-222222222222"
         ],
         "confidence": "medium",
+        "alternative_type": null,
+        "material_colors": null,
+        "wall_coverage": null,
         "relative_location": "Near the window wall.",
         "wall_id": "window_wall",
         "placement": "floor",
@@ -109,6 +115,9 @@
           "22222222-2222-4222-8222-222222222222"
         ],
         "confidence": "medium",
+        "alternative_type": null,
+        "material_colors": null,
+        "wall_coverage": null,
         "relative_location": "On the desk.",
         "wall_id": null,
         "placement": "surface",
@@ -126,6 +135,9 @@
           "22222222-2222-4222-8222-222222222221"
         ],
         "confidence": "medium",
+        "alternative_type": null,
+        "material_colors": null,
+        "wall_coverage": null,
         "relative_location": null,
         "wall_id": null,
         "placement": "floor",
@@ -143,6 +155,9 @@
           "22222222-2222-4222-8222-222222222222"
         ],
         "confidence": "medium",
+        "alternative_type": null,
+        "material_colors": null,
+        "wall_coverage": null,
         "relative_location": null,
         "wall_id": null,
         "placement": "floor",
@@ -163,6 +178,9 @@
         ],
         "confidence": "high",
         "wall_id": "window_wall",
+        "alternative_type": null,
+        "material_colors": null,
+        "wall_coverage": null,
         "relative_location": "Near the middle of the window wall.",
         "estimated_width_m": 1.2,
         "estimated_height_m": 1.2,
@@ -179,6 +197,9 @@
         ],
         "confidence": "medium",
         "wall_id": "door_wall",
+        "alternative_type": null,
+        "material_colors": null,
+        "wall_coverage": null,
         "relative_location": null,
         "estimated_width_m": null,
         "estimated_height_m": null,
@@ -186,6 +207,8 @@
         "notes": []
       }
     ],
+    "relationships": [],
+    "finishes": null,
     "possible_duplicates": [
       {
         "entity_ids": [

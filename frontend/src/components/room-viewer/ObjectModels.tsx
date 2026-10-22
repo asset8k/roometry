@@ -6,6 +6,7 @@ import FurnitureModel from './FurnitureModel'
 export interface ModelProps {
   assetId: string
   color: string
+  materialColors?: SceneObject['material_colors']
   placement: SceneObject['placement']
 }
 

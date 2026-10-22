@@ -218,6 +218,85 @@ export type SourceImageIds1 =
   | [string, string, string, string, string, string, string, string, string]
   | [string, string, string, string, string, string, string, string, string, string];
 export type Confidence1 = "low" | "medium" | "high";
+export type AlternativeType =
+  | (
+      | "bed"
+      | "sofa"
+      | "armchair"
+      | "chair"
+      | "stool"
+      | "bench"
+      | "ottoman"
+      | "desk"
+      | "table"
+      | "coffee_table"
+      | "side_table"
+      | "nightstand"
+      | "wardrobe"
+      | "dresser"
+      | "shelf"
+      | "tv_stand"
+      | "shoe_rack"
+      | "sideboard"
+      | "wall_shelf"
+      | "storage_box"
+      | "basket"
+      | "bin"
+      | "computer"
+      | "laptop"
+      | "monitor"
+      | "printer"
+      | "game_console"
+      | "speaker"
+      | "tv"
+      | "projector"
+      | "rug"
+      | "picture"
+      | "clock"
+      | "window_covering"
+      | "souvenir"
+      | "vase"
+      | "book_stack"
+      | "household_accessory"
+      | "mirror"
+      | "plant"
+      | "floor_lamp"
+      | "table_lamp"
+      | "chandelier"
+      | "ceiling_light"
+      | "ceiling_fan"
+      | "radiator"
+      | "air_conditioner"
+      | "fan"
+      | "kitchen_cabinet"
+      | "kitchen_counter"
+      | "wall_cabinet"
+      | "extractor_hood"
+      | "refrigerator"
+      | "cooker"
+      | "dishwasher"
+      | "washing_machine"
+      | "dryer"
+      | "microwave"
+      | "kettle"
+      | "toaster"
+      | "sink"
+      | "toilet"
+      | "bathtub"
+      | "shower"
+      | "vanity"
+      | "towel_rack"
+      | "water_heater"
+      | "drying_rack"
+    )
+  | null;
+export type Wood = string | null;
+export type Metal = string | null;
+export type Linen = string | null;
+export type Inset = string | null;
+export type Rubber = string | null;
+export type Enamel = string | null;
+export type WallCoverage = number | null;
 export type RelativeLocation = string | null;
 export type WallId = string | null;
 export type Placement = ("floor" | "surface" | "wall" | "ceiling") | null;
@@ -254,6 +333,79 @@ export type SourceImageIds2 =
   | [string, string, string, string, string, string, string, string, string, string];
 export type Confidence2 = "low" | "medium" | "high";
 export type WallId1 = string | null;
+export type AlternativeType1 =
+  | (
+      | "bed"
+      | "sofa"
+      | "armchair"
+      | "chair"
+      | "stool"
+      | "bench"
+      | "ottoman"
+      | "desk"
+      | "table"
+      | "coffee_table"
+      | "side_table"
+      | "nightstand"
+      | "wardrobe"
+      | "dresser"
+      | "shelf"
+      | "tv_stand"
+      | "shoe_rack"
+      | "sideboard"
+      | "wall_shelf"
+      | "storage_box"
+      | "basket"
+      | "bin"
+      | "computer"
+      | "laptop"
+      | "monitor"
+      | "printer"
+      | "game_console"
+      | "speaker"
+      | "tv"
+      | "projector"
+      | "rug"
+      | "picture"
+      | "clock"
+      | "window_covering"
+      | "souvenir"
+      | "vase"
+      | "book_stack"
+      | "household_accessory"
+      | "mirror"
+      | "plant"
+      | "floor_lamp"
+      | "table_lamp"
+      | "chandelier"
+      | "ceiling_light"
+      | "ceiling_fan"
+      | "radiator"
+      | "air_conditioner"
+      | "fan"
+      | "kitchen_cabinet"
+      | "kitchen_counter"
+      | "wall_cabinet"
+      | "extractor_hood"
+      | "refrigerator"
+      | "cooker"
+      | "dishwasher"
+      | "washing_machine"
+      | "dryer"
+      | "microwave"
+      | "kettle"
+      | "toaster"
+      | "sink"
+      | "toilet"
+      | "bathtub"
+      | "shower"
+      | "vanity"
+      | "towel_rack"
+      | "water_heater"
+      | "drying_rack"
+    )
+  | null;
+export type WallCoverage1 = number | null;
 export type RelativeLocation1 = string | null;
 export type EstimatedWidthM = number | null;
 export type EstimatedHeightM = number | null;
@@ -266,6 +418,52 @@ export type Notes2 = string[];
  * @maxItems 32
  */
 export type Openings = OpeningObservation[];
+export type Id3 = string;
+export type SubjectId = string;
+export type TargetId = string;
+export type Kind = "faces" | "near" | "beside" | "against_wall" | "supported_by" | "opposite_wall" | "adjacent_wall";
+export type AlternativeTargetId = string | null;
+export type Confidence3 = "low" | "medium" | "high";
+/**
+ * @minItems 1
+ * @maxItems 10
+ */
+export type SourceImageIds3 =
+  | [string]
+  | [string, string]
+  | [string, string, string]
+  | [string, string, string, string]
+  | [string, string, string, string, string]
+  | [string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string, string];
+export type Evidence = string;
+/**
+ * @maxItems 200
+ */
+export type Relationships = SpatialRelationship[];
+export type FloorColor = string | null;
+export type WallColor = string | null;
+export type FloorPattern = ("wood" | "tile" | "plain") | null;
+export type Confidence4 = "low" | "medium" | "high";
+/**
+ * @minItems 1
+ * @maxItems 10
+ */
+export type SourceImageIds4 =
+  | [string]
+  | [string, string]
+  | [string, string, string]
+  | [string, string, string, string]
+  | [string, string, string, string, string]
+  | [string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string, string];
+export type Evidence1 = string;
 /**
  * @minItems 2
  * @maxItems 2
@@ -339,6 +537,8 @@ export interface RoomObservations {
   walls: Walls;
   objects: Objects;
   openings: Openings;
+  relationships?: Relationships;
+  finishes?: FinishObservation | null;
   possible_duplicates: PossibleDuplicates;
   unknowns: Unknowns;
   assumptions: Assumptions;
@@ -376,6 +576,9 @@ export interface ObjectObservation {
   label: Label1;
   source_image_ids: SourceImageIds1;
   confidence: Confidence1;
+  alternative_type?: AlternativeType;
+  material_colors?: MaterialColors | null;
+  wall_coverage?: WallCoverage;
   relative_location: RelativeLocation;
   wall_id: WallId;
   placement: Placement;
@@ -384,6 +587,17 @@ export interface ObjectObservation {
   color: Color;
   estimated_dimensions_m: EstimatedObjectDimensions | null;
   notes: Notes1;
+}
+/**
+ * Small, fixed palette of visible material roles; null keeps model defaults.
+ */
+export interface MaterialColors {
+  wood?: Wood;
+  metal?: Metal;
+  linen?: Linen;
+  inset?: Inset;
+  rubber?: Rubber;
+  enamel?: Enamel;
 }
 export interface EstimatedObjectDimensions {
   width: Width;
@@ -396,11 +610,38 @@ export interface OpeningObservation {
   source_image_ids: SourceImageIds2;
   confidence: Confidence2;
   wall_id: WallId1;
+  alternative_type?: AlternativeType1;
+  material_colors?: MaterialColors | null;
+  wall_coverage?: WallCoverage1;
   relative_location: RelativeLocation1;
   estimated_width_m: EstimatedWidthM;
   estimated_height_m: EstimatedHeightM;
   estimated_sill_height_m: EstimatedSillHeightM;
   notes: Notes2;
+}
+/**
+ * View-independent relationship between stable observation identities.
+ */
+export interface SpatialRelationship {
+  id: Id3;
+  subject_id: SubjectId;
+  target_id: TargetId;
+  kind: Kind;
+  alternative_target_id?: AlternativeTargetId;
+  confidence: Confidence3;
+  source_image_ids: SourceImageIds3;
+  evidence: Evidence;
+}
+export interface FinishObservation {
+  finishes: RoomFinishes;
+  confidence: Confidence4;
+  source_image_ids: SourceImageIds4;
+  evidence: Evidence1;
+}
+export interface RoomFinishes {
+  floor_color?: FloorColor;
+  wall_color?: WallColor;
+  floor_pattern?: FloorPattern;
 }
 /**
  * An unresolved match, not permission to merge or discard either instance.

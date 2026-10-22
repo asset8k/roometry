@@ -103,6 +103,48 @@
       "title": "EstimatedRoomDimensions",
       "type": "object"
     },
+    "FinishObservation": {
+      "additionalProperties": false,
+      "properties": {
+        "finishes": {
+          "$ref": "#/$defs/RoomFinishes"
+        },
+        "confidence": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "source_image_ids": {
+          "items": {
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "title": "Source Image Ids",
+          "type": "array"
+        },
+        "evidence": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Evidence",
+          "type": "string"
+        }
+      },
+      "required": [
+        "finishes",
+        "confidence",
+        "source_image_ids",
+        "evidence"
+      ],
+      "title": "FinishObservation",
+      "type": "object"
+    },
     "InputBudget": {
       "additionalProperties": false,
       "properties": {
@@ -182,6 +224,92 @@
         }
       },
       "title": "InputDimensions",
+      "type": "object"
+    },
+    "MaterialColors": {
+      "additionalProperties": false,
+      "description": "Small, fixed palette of visible material roles; null keeps model defaults.",
+      "properties": {
+        "wood": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Wood"
+        },
+        "metal": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Metal"
+        },
+        "linen": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Linen"
+        },
+        "inset": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Inset"
+        },
+        "rubber": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rubber"
+        },
+        "enamel": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enamel"
+        }
+      },
+      "title": "MaterialColors",
       "type": "object"
     },
     "ObjectObservation": {
@@ -301,6 +429,113 @@
           ],
           "title": "Confidence",
           "type": "string"
+        },
+        "alternative_type": {
+          "anyOf": [
+            {
+              "enum": [
+                "bed",
+                "sofa",
+                "armchair",
+                "chair",
+                "stool",
+                "bench",
+                "ottoman",
+                "desk",
+                "table",
+                "coffee_table",
+                "side_table",
+                "nightstand",
+                "wardrobe",
+                "dresser",
+                "shelf",
+                "tv_stand",
+                "shoe_rack",
+                "sideboard",
+                "wall_shelf",
+                "storage_box",
+                "basket",
+                "bin",
+                "computer",
+                "laptop",
+                "monitor",
+                "printer",
+                "game_console",
+                "speaker",
+                "tv",
+                "projector",
+                "rug",
+                "picture",
+                "clock",
+                "window_covering",
+                "souvenir",
+                "vase",
+                "book_stack",
+                "household_accessory",
+                "mirror",
+                "plant",
+                "floor_lamp",
+                "table_lamp",
+                "chandelier",
+                "ceiling_light",
+                "ceiling_fan",
+                "radiator",
+                "air_conditioner",
+                "fan",
+                "kitchen_cabinet",
+                "kitchen_counter",
+                "wall_cabinet",
+                "extractor_hood",
+                "refrigerator",
+                "cooker",
+                "dishwasher",
+                "washing_machine",
+                "dryer",
+                "microwave",
+                "kettle",
+                "toaster",
+                "sink",
+                "toilet",
+                "bathtub",
+                "shower",
+                "vanity",
+                "towel_rack",
+                "water_heater",
+                "drying_rack"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Alternative Type"
+        },
+        "material_colors": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MaterialColors"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "wall_coverage": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 1,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Wall Coverage"
         },
         "relative_location": {
           "anyOf": [
@@ -475,6 +710,113 @@
           ],
           "title": "Wall Id"
         },
+        "alternative_type": {
+          "anyOf": [
+            {
+              "enum": [
+                "bed",
+                "sofa",
+                "armchair",
+                "chair",
+                "stool",
+                "bench",
+                "ottoman",
+                "desk",
+                "table",
+                "coffee_table",
+                "side_table",
+                "nightstand",
+                "wardrobe",
+                "dresser",
+                "shelf",
+                "tv_stand",
+                "shoe_rack",
+                "sideboard",
+                "wall_shelf",
+                "storage_box",
+                "basket",
+                "bin",
+                "computer",
+                "laptop",
+                "monitor",
+                "printer",
+                "game_console",
+                "speaker",
+                "tv",
+                "projector",
+                "rug",
+                "picture",
+                "clock",
+                "window_covering",
+                "souvenir",
+                "vase",
+                "book_stack",
+                "household_accessory",
+                "mirror",
+                "plant",
+                "floor_lamp",
+                "table_lamp",
+                "chandelier",
+                "ceiling_light",
+                "ceiling_fan",
+                "radiator",
+                "air_conditioner",
+                "fan",
+                "kitchen_cabinet",
+                "kitchen_counter",
+                "wall_cabinet",
+                "extractor_hood",
+                "refrigerator",
+                "cooker",
+                "dishwasher",
+                "washing_machine",
+                "dryer",
+                "microwave",
+                "kettle",
+                "toaster",
+                "sink",
+                "toilet",
+                "bathtub",
+                "shower",
+                "vanity",
+                "towel_rack",
+                "water_heater",
+                "drying_rack"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Alternative Type"
+        },
+        "material_colors": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MaterialColors"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "wall_coverage": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 1,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Wall Coverage"
+        },
         "relative_location": {
           "anyOf": [
             {
@@ -584,6 +926,56 @@
         "reason"
       ],
       "title": "PossibleDuplicate",
+      "type": "object"
+    },
+    "RoomFinishes": {
+      "additionalProperties": false,
+      "properties": {
+        "floor_color": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Floor Color"
+        },
+        "wall_color": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Wall Color"
+        },
+        "floor_pattern": {
+          "anyOf": [
+            {
+              "enum": [
+                "wood",
+                "tile",
+                "plain"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Floor Pattern"
+        }
+      },
+      "title": "RoomFinishes",
       "type": "object"
     },
     "RoomInputOptions": {
@@ -826,6 +1218,25 @@
           "title": "Openings",
           "type": "array"
         },
+        "relationships": {
+          "items": {
+            "$ref": "#/$defs/SpatialRelationship"
+          },
+          "maxItems": 200,
+          "title": "Relationships",
+          "type": "array"
+        },
+        "finishes": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FinishObservation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "possible_duplicates": {
           "items": {
             "$ref": "#/$defs/PossibleDuplicate"
@@ -886,6 +1297,98 @@
         "warnings"
       ],
       "title": "RoomObservations",
+      "type": "object"
+    },
+    "SpatialRelationship": {
+      "additionalProperties": false,
+      "description": "View-independent relationship between stable observation identities.",
+      "properties": {
+        "id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "subject_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Subject Id",
+          "type": "string"
+        },
+        "target_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Target Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "faces",
+            "near",
+            "beside",
+            "against_wall",
+            "supported_by",
+            "opposite_wall",
+            "adjacent_wall"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "alternative_target_id": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Alternative Target Id"
+        },
+        "confidence": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "source_image_ids": {
+          "items": {
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "title": "Source Image Ids",
+          "type": "array"
+        },
+        "evidence": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Evidence",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "subject_id",
+        "target_id",
+        "kind",
+        "confidence",
+        "source_image_ids",
+        "evidence"
+      ],
+      "title": "SpatialRelationship",
       "type": "object"
     },
     "WallObservation": {

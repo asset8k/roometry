@@ -93,22 +93,30 @@ def assemble_partial(
         subset = analysis.model_copy(deep=True)
         subset.observations.objects = [obj for obj in subset.observations.objects if obj.id in remaining]
         subset.observations.openings = [obj for obj in subset.observations.openings if obj.id in remaining]
+        subset.observations.relationships = [r for r in subset.observations.relationships if all(key in remaining or key in {w.id for w in obs.walls} for key in (r.subject_id, r.target_id, *([r.alternative_target_id] if r.alternative_target_id else [])))]
         subset.observations.possible_duplicates = [
             pair for pair in subset.observations.possible_duplicates
             if all(entity_id not in unresolved for entity_id in pair.entity_ids)
         ]
         selected = draft.model_copy(deep=True)
         selected.objects = [obj for obj in selected.objects if obj.id in remaining]
+        selected.estimate_corrections = [c for c in selected.estimate_corrections if c.entity_id in remaining]
         selected.openings = [obj for obj in selected.openings if obj.id in remaining]
-        scene, report, problems = assemble(subset, measurements, selected)
+        scene, report, problems = assemble(subset, measurements, selected, require_fidelity=False)
         if scene is not None:
+            if problems and not (scene.objects or scene.openings):
+                return None, report, (reasons + problems)[:50], list(unresolved.values())
             if unresolved:
                 major = [getattr(observed[key], "label", observed[key].type) for key in unresolved if importance(observed[key]) == 0]
                 scene.warnings = notes(scene.warnings, [
                     *([("Important room elements remain unresolved: " + "; ".join(major))[:1000]] if major else []),
                     f"Partial reconstruction: {len(unresolved)} observed objects or openings are unresolved and omitted. Their observations are preserved separately; this is not a complete room."
                 ])
-            return scene, report, reasons[:50], list(unresolved.values())
+            if problems:
+                scene.warnings = notes(scene.warnings, [
+                    "Provisional reconstruction: geometry passed, but some observed spatial relationships still need correction."
+                ])
+            return scene, report, (reasons + problems)[:50], list(unresolved.values())
 
         if report is not None and report.errors:
             foundational_codes = {

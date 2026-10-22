@@ -171,7 +171,7 @@ async def test_ten_photos_analyzed_together_with_strict_output_and_owned_context
         and request["tools"] == []
         and request["truncation"] == "disabled"
     )
-    assert request["max_output_tokens"] == 8192 and request["model"] == "gpt-6-luna"
+    assert request["max_output_tokens"] == 16384 and request["model"] == "gpt-6-luna"
     assert request["text"]["format"]["strict"] is True
     assert request["text"]["format"]["schema"]["additionalProperties"] is False
     images = [

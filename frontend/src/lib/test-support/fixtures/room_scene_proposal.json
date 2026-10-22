@@ -19,6 +19,9 @@
       "height_m": 2.6,
       "measurements_source": "user_confirmed"
     },
+    "finishes": null,
+    "wall_mapping": [],
+    "estimate_corrections": [],
     "openings": [
       {
         "id": "window_observed",
@@ -64,6 +67,7 @@
           "height": 0.5
         },
         "color": "#808080",
+        "material_colors": null,
         "placement": "floor",
         "support_object_id": null,
         "support_surface_id": null,
@@ -90,6 +94,7 @@
           "height": 0.75
         },
         "color": "#808080",
+        "material_colors": null,
         "placement": "floor",
         "support_object_id": null,
         "support_surface_id": null,
@@ -116,6 +121,7 @@
           "height": 0.45
         },
         "color": "#000000",
+        "material_colors": null,
         "placement": "surface",
         "support_object_id": "desk_observed",
         "support_surface_id": null,
@@ -142,6 +148,7 @@
           "height": 0.8
         },
         "color": "#808080",
+        "material_colors": null,
         "placement": "floor",
         "support_object_id": null,
         "support_surface_id": null,
@@ -168,6 +175,7 @@
           "height": 0.8
         },
         "color": "#808080",
+        "material_colors": null,
         "placement": "floor",
         "support_object_id": null,
         "support_surface_id": null,
@@ -208,6 +216,7 @@
     ],
     "valid": true
   },
+  "fidelity": null,
   "issues": [],
   "unresolved_entities": [],
   "warnings": [

@@ -25,6 +25,8 @@ from roometry.scenes.schemas import (
     MAX_ROOM_HEIGHT_M,
     MAX_ROOM_SIDE_M,
     Color,
+    MaterialColors,
+    RoomFinishes,
     Identifier,
     Note,
     PositiveDistance,
@@ -98,6 +100,9 @@ class ObjectObservation(AnalysisModel):
     label: Label
     source_image_ids: ImageReferences
     confidence: Confidence
+    alternative_type: ObjectType | None = None
+    material_colors: MaterialColors | None = None
+    wall_coverage: Annotated[float, Field(gt=0, le=1)] | None = None
     relative_location: Note | None
     wall_id: Identifier | None
     placement: Placement | None
@@ -120,6 +125,9 @@ class OpeningObservation(AnalysisModel):
     source_image_ids: ImageReferences
     confidence: Confidence
     wall_id: Identifier | None
+    alternative_type: ObjectType | None = None
+    material_colors: MaterialColors | None = None
+    wall_coverage: Annotated[float, Field(gt=0, le=1)] | None = None
     relative_location: Note | None
     estimated_width_m: RoomSide | None
     estimated_height_m: RoomHeight | None
@@ -140,6 +148,33 @@ class PossibleDuplicate(AnalysisModel):
     reason: Note
 
 
+class SpatialRelationship(AnalysisModel):
+    """View-independent relationship between stable observation identities."""
+
+    id: Identifier
+    subject_id: Identifier
+    target_id: Identifier
+    kind: Literal["faces", "near", "beside", "against_wall", "supported_by", "opposite_wall", "adjacent_wall"]
+    alternative_target_id: Identifier | None = None
+    confidence: Confidence
+    source_image_ids: ImageReferences
+    evidence: Note
+
+
+class FinishObservation(AnalysisModel):
+    finishes: RoomFinishes
+    confidence: Confidence
+    source_image_ids: ImageReferences
+    evidence: Note
+
+
+class ReconstructionConstraints(AnalysisModel):
+    """User answers overlaid on a copy; source photo hypotheses stay immutable."""
+
+    object_types: Annotated[dict[Identifier, ObjectType | None], Field(max_length=3)] = Field(default_factory=dict)
+    facing_targets: Annotated[dict[Identifier, Identifier | None], Field(max_length=3)] = Field(default_factory=dict)
+
+
 class RoomObservations(AnalysisModel):
     schema_version: Literal[1]
     image_ids: ImageReferences
@@ -152,6 +187,8 @@ class RoomObservations(AnalysisModel):
     walls: Annotated[list[WallObservation], Field(max_length=4)]
     objects: Annotated[list[ObjectObservation], Field(max_length=MAX_OBJECTS)]
     openings: Annotated[list[OpeningObservation], Field(max_length=MAX_OPENINGS)]
+    relationships: Annotated[list[SpatialRelationship], Field(max_length=200)] = Field(default_factory=list)
+    finishes: FinishObservation | None = None
     possible_duplicates: Annotated[list[PossibleDuplicate], Field(max_length=100)]
     unknowns: Notes
     assumptions: Notes
@@ -198,6 +235,35 @@ class RoomObservations(AnalysisModel):
                     )
                 visited.add(support_id)
                 support_id = objects[support_id].support_object_id
+
+        relationship_ids = set()
+        for relation in self.relationships:
+            if relation.id in relationship_ids:
+                raise ValueError("Relationship IDs must be unique.")
+            relationship_ids.add(relation.id)
+            if relation.subject_id == relation.target_id or relation.subject_id not in by_id or relation.target_id not in by_id:
+                raise ValueError("Relationships need distinct existing observation endpoints.")
+            refs = relation.source_image_ids
+            if len(set(refs)) != len(refs) or not set(refs) <= image_ids:
+                raise ValueError("Relationship evidence must reference this upload.")
+            if not set(refs) <= set(by_id[relation.subject_id].source_image_ids) | set(by_id[relation.target_id].source_image_ids):
+                raise ValueError("Relationship evidence must include an endpoint's view.")
+            if relation.kind in {"opposite_wall", "adjacent_wall"}:
+                if relation.subject_id not in walls or relation.target_id not in walls:
+                    raise ValueError("Wall topology requires two walls.")
+            elif relation.subject_id not in objects:
+                raise ValueError("Object relationships require an object subject.")
+            if relation.kind == "against_wall" and relation.target_id not in walls:
+                raise ValueError("against_wall requires a wall target.")
+            if relation.kind == "supported_by" and (relation.target_id not in objects or objects[relation.subject_id].support_object_id != relation.target_id):
+                raise ValueError("Support relationships must agree with observed support.")
+            if relation.alternative_target_id is not None:
+                if relation.kind != "faces" or relation.alternative_target_id not in by_id or relation.alternative_target_id in {relation.subject_id, relation.target_id}:
+                    raise ValueError("Only facing uncertainties may name a distinct existing alternative.")
+        if self.finishes is not None:
+            refs = self.finishes.source_image_ids
+            if len(set(refs)) != len(refs) or not set(refs) <= image_ids:
+                raise ValueError("Finish evidence must reference this upload.")
 
         pairs: set[frozenset[str]] = set()
         for match in self.possible_duplicates:

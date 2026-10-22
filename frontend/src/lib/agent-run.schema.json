@@ -102,7 +102,9 @@
         "kind": {
           "enum": [
             "room_dimensions",
-            "object_mobility"
+            "object_mobility",
+            "object_identity",
+            "layout_orientation"
           ],
           "title": "Kind",
           "type": "string"
@@ -184,6 +186,69 @@
         "height_m"
       ],
       "title": "EnteredDimensions",
+      "type": "object"
+    },
+    "EstimateCorrection": {
+      "additionalProperties": false,
+      "description": "Auditable revision of a photo size hypothesis, never a user measurement.",
+      "properties": {
+        "entity_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "field": {
+          "enum": [
+            "width",
+            "depth",
+            "height",
+            "width_m",
+            "height_m",
+            "sill_height_m"
+          ],
+          "title": "Field",
+          "type": "string"
+        },
+        "previous_m": {
+          "maximum": 30.0,
+          "minimum": 0,
+          "title": "Previous M",
+          "type": "number"
+        },
+        "revised_m": {
+          "maximum": 30.0,
+          "minimum": 0,
+          "title": "Revised M",
+          "type": "number"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Reason",
+          "type": "string"
+        },
+        "source_image_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "title": "Source Image Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "entity_id",
+        "field",
+        "previous_m",
+        "revised_m",
+        "reason",
+        "source_image_ids"
+      ],
+      "title": "EstimateCorrection",
       "type": "object"
     },
     "EstimatedObjectDimensions": {
@@ -287,6 +352,190 @@
         "height_m"
       ],
       "title": "EstimatedRoomDimensions",
+      "type": "object"
+    },
+    "FidelityCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "coverage",
+            "facing",
+            "wall",
+            "adjacency",
+            "support",
+            "proportion",
+            "color"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "entity_ids": {
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "type": "string"
+          },
+          "title": "Entity Ids",
+          "type": "array"
+        },
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        },
+        "required": {
+          "title": "Required",
+          "type": "boolean"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "entity_ids",
+        "passed",
+        "required",
+        "message"
+      ],
+      "title": "FidelityCheck",
+      "type": "object"
+    },
+    "FidelityReport": {
+      "additionalProperties": false,
+      "properties": {
+        "policy_version": {
+          "const": "reconstruction_v1",
+          "default": "reconstruction_v1",
+          "title": "Policy Version",
+          "type": "string"
+        },
+        "major_object_coverage": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Major Object Coverage",
+          "type": "number"
+        },
+        "relationship_score": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Relationship Score"
+        },
+        "proportion_score": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Proportion Score"
+        },
+        "color_score": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Color Score"
+        },
+        "recognizable": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Recognizable"
+        },
+        "checks": {
+          "items": {
+            "$ref": "#/$defs/FidelityCheck"
+          },
+          "maxItems": 4000,
+          "title": "Checks",
+          "type": "array"
+        },
+        "unassessed": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Unassessed",
+          "type": "array"
+        }
+      },
+      "required": [
+        "major_object_coverage",
+        "relationship_score",
+        "proportion_score",
+        "color_score",
+        "recognizable",
+        "checks",
+        "unassessed"
+      ],
+      "title": "FidelityReport",
+      "type": "object"
+    },
+    "FinishObservation": {
+      "additionalProperties": false,
+      "properties": {
+        "finishes": {
+          "$ref": "#/$defs/RoomFinishes"
+        },
+        "confidence": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "source_image_ids": {
+          "items": {
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "title": "Source Image Ids",
+          "type": "array"
+        },
+        "evidence": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Evidence",
+          "type": "string"
+        }
+      },
+      "required": [
+        "finishes",
+        "confidence",
+        "source_image_ids",
+        "evidence"
+      ],
+      "title": "FinishObservation",
       "type": "object"
     },
     "GeometryIssue": {
@@ -457,6 +706,92 @@
       "type": "object"
     },
     "JsonValue": {},
+    "MaterialColors": {
+      "additionalProperties": false,
+      "description": "Small, fixed palette of visible material roles; null keeps model defaults.",
+      "properties": {
+        "wood": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Wood"
+        },
+        "metal": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Metal"
+        },
+        "linen": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Linen"
+        },
+        "inset": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Inset"
+        },
+        "rubber": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rubber"
+        },
+        "enamel": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enamel"
+        }
+      },
+      "title": "MaterialColors",
+      "type": "object"
+    },
     "ObjectDimensions": {
       "additionalProperties": false,
       "properties": {
@@ -604,6 +939,113 @@
           ],
           "title": "Confidence",
           "type": "string"
+        },
+        "alternative_type": {
+          "anyOf": [
+            {
+              "enum": [
+                "bed",
+                "sofa",
+                "armchair",
+                "chair",
+                "stool",
+                "bench",
+                "ottoman",
+                "desk",
+                "table",
+                "coffee_table",
+                "side_table",
+                "nightstand",
+                "wardrobe",
+                "dresser",
+                "shelf",
+                "tv_stand",
+                "shoe_rack",
+                "sideboard",
+                "wall_shelf",
+                "storage_box",
+                "basket",
+                "bin",
+                "computer",
+                "laptop",
+                "monitor",
+                "printer",
+                "game_console",
+                "speaker",
+                "tv",
+                "projector",
+                "rug",
+                "picture",
+                "clock",
+                "window_covering",
+                "souvenir",
+                "vase",
+                "book_stack",
+                "household_accessory",
+                "mirror",
+                "plant",
+                "floor_lamp",
+                "table_lamp",
+                "chandelier",
+                "ceiling_light",
+                "ceiling_fan",
+                "radiator",
+                "air_conditioner",
+                "fan",
+                "kitchen_cabinet",
+                "kitchen_counter",
+                "wall_cabinet",
+                "extractor_hood",
+                "refrigerator",
+                "cooker",
+                "dishwasher",
+                "washing_machine",
+                "dryer",
+                "microwave",
+                "kettle",
+                "toaster",
+                "sink",
+                "toilet",
+                "bathtub",
+                "shower",
+                "vanity",
+                "towel_rack",
+                "water_heater",
+                "drying_rack"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Alternative Type"
+        },
+        "material_colors": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MaterialColors"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "wall_coverage": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 1,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Wall Coverage"
         },
         "relative_location": {
           "anyOf": [
@@ -889,6 +1331,113 @@
           ],
           "title": "Wall Id"
         },
+        "alternative_type": {
+          "anyOf": [
+            {
+              "enum": [
+                "bed",
+                "sofa",
+                "armchair",
+                "chair",
+                "stool",
+                "bench",
+                "ottoman",
+                "desk",
+                "table",
+                "coffee_table",
+                "side_table",
+                "nightstand",
+                "wardrobe",
+                "dresser",
+                "shelf",
+                "tv_stand",
+                "shoe_rack",
+                "sideboard",
+                "wall_shelf",
+                "storage_box",
+                "basket",
+                "bin",
+                "computer",
+                "laptop",
+                "monitor",
+                "printer",
+                "game_console",
+                "speaker",
+                "tv",
+                "projector",
+                "rug",
+                "picture",
+                "clock",
+                "window_covering",
+                "souvenir",
+                "vase",
+                "book_stack",
+                "household_accessory",
+                "mirror",
+                "plant",
+                "floor_lamp",
+                "table_lamp",
+                "chandelier",
+                "ceiling_light",
+                "ceiling_fan",
+                "radiator",
+                "air_conditioner",
+                "fan",
+                "kitchen_cabinet",
+                "kitchen_counter",
+                "wall_cabinet",
+                "extractor_hood",
+                "refrigerator",
+                "cooker",
+                "dishwasher",
+                "washing_machine",
+                "dryer",
+                "microwave",
+                "kettle",
+                "toaster",
+                "sink",
+                "toilet",
+                "bathtub",
+                "shower",
+                "vanity",
+                "towel_rack",
+                "water_heater",
+                "drying_rack"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Alternative Type"
+        },
+        "material_colors": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MaterialColors"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "wall_coverage": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 1,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Wall Coverage"
+        },
         "relative_location": {
           "anyOf": [
             {
@@ -1051,7 +1600,8 @@
             "geometry",
             "proposal_limit_reached",
             "dependency_unresolved",
-            "repair_failed"
+            "repair_failed",
+            "fidelity"
           ],
           "title": "Code",
           "type": "string"
@@ -1080,6 +1630,129 @@
         "message"
       ],
       "title": "ProposalIssue",
+      "type": "object"
+    },
+    "ReconstructionConstraints": {
+      "additionalProperties": false,
+      "description": "User answers overlaid on a copy; source photo hypotheses stay immutable.",
+      "properties": {
+        "object_types": {
+          "maxProperties": 3,
+          "patternProperties": {
+            "^[a-z][a-z0-9_]*$": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "bed",
+                    "sofa",
+                    "armchair",
+                    "chair",
+                    "stool",
+                    "bench",
+                    "ottoman",
+                    "desk",
+                    "table",
+                    "coffee_table",
+                    "side_table",
+                    "nightstand",
+                    "wardrobe",
+                    "dresser",
+                    "shelf",
+                    "tv_stand",
+                    "shoe_rack",
+                    "sideboard",
+                    "wall_shelf",
+                    "storage_box",
+                    "basket",
+                    "bin",
+                    "computer",
+                    "laptop",
+                    "monitor",
+                    "printer",
+                    "game_console",
+                    "speaker",
+                    "tv",
+                    "projector",
+                    "rug",
+                    "picture",
+                    "clock",
+                    "window_covering",
+                    "souvenir",
+                    "vase",
+                    "book_stack",
+                    "household_accessory",
+                    "mirror",
+                    "plant",
+                    "floor_lamp",
+                    "table_lamp",
+                    "chandelier",
+                    "ceiling_light",
+                    "ceiling_fan",
+                    "radiator",
+                    "air_conditioner",
+                    "fan",
+                    "kitchen_cabinet",
+                    "kitchen_counter",
+                    "wall_cabinet",
+                    "extractor_hood",
+                    "refrigerator",
+                    "cooker",
+                    "dishwasher",
+                    "washing_machine",
+                    "dryer",
+                    "microwave",
+                    "kettle",
+                    "toaster",
+                    "sink",
+                    "toilet",
+                    "bathtub",
+                    "shower",
+                    "vanity",
+                    "towel_rack",
+                    "water_heater",
+                    "drying_rack"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1
+          },
+          "title": "Object Types",
+          "type": "object"
+        },
+        "facing_targets": {
+          "maxProperties": 3,
+          "patternProperties": {
+            "^[a-z][a-z0-9_]*$": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "minLength": 1,
+                  "pattern": "^[a-z][a-z0-9_]*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1
+          },
+          "title": "Facing Targets",
+          "type": "object"
+        }
+      },
+      "title": "ReconstructionConstraints",
       "type": "object"
     },
     "RoomAnalysisResponse": {
@@ -1183,6 +1856,56 @@
         "measurements_source"
       ],
       "title": "RoomDimensions",
+      "type": "object"
+    },
+    "RoomFinishes": {
+      "additionalProperties": false,
+      "properties": {
+        "floor_color": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Floor Color"
+        },
+        "wall_color": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Wall Color"
+        },
+        "floor_pattern": {
+          "anyOf": [
+            {
+              "enum": [
+                "wood",
+                "tile",
+                "plain"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Floor Pattern"
+        }
+      },
+      "title": "RoomFinishes",
       "type": "object"
     },
     "RoomInputOptions": {
@@ -1425,6 +2148,25 @@
           "title": "Openings",
           "type": "array"
         },
+        "relationships": {
+          "items": {
+            "$ref": "#/$defs/SpatialRelationship"
+          },
+          "maxItems": 200,
+          "title": "Relationships",
+          "type": "array"
+        },
+        "finishes": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FinishObservation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "possible_duplicates": {
           "items": {
             "$ref": "#/$defs/PossibleDuplicate"
@@ -1497,6 +2239,33 @@
         },
         "room": {
           "$ref": "#/$defs/RoomDimensions"
+        },
+        "finishes": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RoomFinishes"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "wall_mapping": {
+          "items": {
+            "$ref": "#/$defs/WallReference"
+          },
+          "maxItems": 4,
+          "title": "Wall Mapping",
+          "type": "array"
+        },
+        "estimate_corrections": {
+          "items": {
+            "$ref": "#/$defs/EstimateCorrection"
+          },
+          "maxItems": 200,
+          "title": "Estimate Corrections",
+          "type": "array"
         },
         "openings": {
           "items": {
@@ -1819,6 +2588,11 @@
             "towel_rack_standard_01",
             "water_heater_standard_01",
             "drying_rack_standard_01",
+            "bed_futon_01",
+            "sofa_sleeper_01",
+            "chair_office_01",
+            "shelf_metal_01",
+            "ceiling_light_track_01",
             "bed_crib_01",
             "sofa_sectional_left_01",
             "sofa_sectional_right_01",
@@ -1872,6 +2646,17 @@
           "pattern": "^#[0-9A-Fa-f]{6}$",
           "title": "Color",
           "type": "string"
+        },
+        "material_colors": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MaterialColors"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "placement": {
           "enum": [
@@ -2061,6 +2846,17 @@
             }
           ]
         },
+        "fidelity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FidelityReport"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "issues": {
           "items": {
             "$ref": "#/$defs/ProposalIssue"
@@ -2108,6 +2904,98 @@
         "expires_at"
       ],
       "title": "SceneProposalResponse",
+      "type": "object"
+    },
+    "SpatialRelationship": {
+      "additionalProperties": false,
+      "description": "View-independent relationship between stable observation identities.",
+      "properties": {
+        "id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "subject_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Subject Id",
+          "type": "string"
+        },
+        "target_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Target Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "faces",
+            "near",
+            "beside",
+            "against_wall",
+            "supported_by",
+            "opposite_wall",
+            "adjacent_wall"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "alternative_target_id": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Alternative Target Id"
+        },
+        "confidence": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "source_image_ids": {
+          "items": {
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "title": "Source Image Ids",
+          "type": "array"
+        },
+        "evidence": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Evidence",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "subject_id",
+        "target_id",
+        "kind",
+        "confidence",
+        "source_image_ids",
+        "evidence"
+      ],
+      "title": "SpatialRelationship",
       "type": "object"
     },
     "ToolCall": {
@@ -2297,6 +3185,34 @@
       ],
       "title": "WallObservation",
       "type": "object"
+    },
+    "WallReference": {
+      "additionalProperties": false,
+      "properties": {
+        "observation_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Observation Id",
+          "type": "string"
+        },
+        "wall": {
+          "enum": [
+            "north",
+            "south",
+            "west",
+            "east"
+          ],
+          "title": "Wall",
+          "type": "string"
+        }
+      },
+      "required": [
+        "observation_id",
+        "wall"
+      ],
+      "title": "WallReference",
+      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -2456,6 +3372,9 @@
       "title": "Submitted Answers",
       "type": "object"
     },
+    "reconstruction_constraints": {
+      "$ref": "#/$defs/ReconstructionConstraints"
+    },
     "object_mobility": {
       "maxProperties": 3,
       "patternProperties": {
@@ -2581,6 +3500,7 @@
     "pending_question",
     "questions",
     "submitted_answers",
+    "reconstruction_constraints",
     "object_mobility",
     "base_scene",
     "working_scene",

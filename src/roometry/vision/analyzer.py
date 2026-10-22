@@ -29,6 +29,7 @@ from roometry.vision.diagnostics import validation_diagnostics
 from roometry.vision.errors import AnalysisFailure
 from roometry.vision.prompts import OBSERVATION_INSTRUCTIONS, observation_context
 from roometry.vision.schemas import RoomObservations
+from roometry.vision.evidence import strict_schema
 
 
 class PhotoAnalyzer:
@@ -75,7 +76,7 @@ class PhotoAnalyzer:
         # Ground evidence at decoding time, not merely in prose instructions.
         # UUID shape alone cannot distinguish this upload from another room.
         image_ids = [image.image_id for image in prepared.images]
-        schema = RoomObservations.model_json_schema()
+        schema = strict_schema(RoomObservations)
         for properties in [schema["properties"], *(
             definition.get("properties", {}) for definition in schema.get("$defs", {}).values()
         )]:
@@ -277,7 +278,7 @@ def _normalize_observations(decoded: object, image_ids: list[str]) -> object:
         # ID must still fail; no evidence is inferred or reassigned.
         if set(manifest) == set(image_ids):
             normalized["image_ids"] = list(image_ids)
-    for kind in ("walls", "objects", "openings"):
+    for kind in ("walls", "objects", "openings", "relationships"):
         entities = normalized.get(kind)
         if isinstance(entities, list):
             for entity in entities:
@@ -286,6 +287,12 @@ def _normalize_observations(decoded: object, image_ids: list[str]) -> object:
                 references = entity.get("source_image_ids")
                 if isinstance(references, list) and all(isinstance(value, str) for value in references):
                     entity["source_image_ids"] = list(dict.fromkeys(references))
+
+    finishes = normalized.get("finishes")
+    if isinstance(finishes, dict):
+        refs = finishes.get("source_image_ids")
+        if isinstance(refs, list) and all(isinstance(value, str) for value in refs):
+            finishes["source_image_ids"] = list(dict.fromkeys(refs))
 
     def unknown(value: object, keys: set[str]) -> bool:
         return (

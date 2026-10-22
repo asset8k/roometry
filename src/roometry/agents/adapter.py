@@ -77,6 +77,8 @@ class RoomAgent:
             "questions": [q.model_dump(mode="json") for q in state.questions],
             "clarification_answers": state.clarification_answers,
             "object_mobility": state.object_mobility,
+            "reconstruction_constraints": state.reconstruction_constraints.model_dump(mode="json"),
+            "fidelity": state.proposal.fidelity.model_dump(mode="json") if state.proposal and state.proposal.fidelity else None,
             "observations": (
                 state.analysis.observations.model_dump(mode="json")
                 if state.analysis

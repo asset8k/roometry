@@ -183,7 +183,8 @@ def test_response_rejects_private_fields_invalid_states_and_invalid_times(data, 
 
 
 def test_model_output_schema_requires_explicit_nulls_and_forbids_extra_fields():
-    schema = deepcopy(RoomObservations.model_json_schema())
+    from roometry.vision.evidence import strict_schema
+    schema = strict_schema(RoomObservations)
     for model in [schema, *schema["$defs"].values()]:
         if model.get("type") == "object":
             assert model["additionalProperties"] is False

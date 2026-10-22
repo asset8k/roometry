@@ -11,8 +11,8 @@ interface Finish {
   transparent?: boolean; opacity?: number; depthWrite?: boolean
 }
 
-function palette(color: string): Record<FurnitureMaterial, Finish> {
-  return {
+export function palette(color: string, overrides?: ModelProps['materialColors']): Record<FurnitureMaterial, Finish> {
+  const result: Record<FurnitureMaterial, Finish> = {
     primary: { color, roughness: .78, metalness: 0 },
     primary_dark: { color: `#${new Color(color).multiplyScalar(.7).getHexString()}`, roughness: .88, metalness: 0 },
     primary_metal: { color, roughness: .35, metalness: .55 },
@@ -35,6 +35,13 @@ function palette(color: string): Record<FurnitureMaterial, Finish> {
     paper: { color: '#F0ECDD', roughness: .9, metalness: 0 },
     mirror: { color: '#B7CCCE', roughness: .08, metalness: .25 },
   }
+  if (overrides) {
+    for (const key of ['wood', 'metal', 'linen', 'inset', 'rubber', 'enamel'] as const) {
+      const value = overrides[key]
+      if (value) result[key] = { ...result[key], color: value }
+    }
+  }
+  return result
 }
 
 function RoundedGeometry({ part }: { part: FurniturePart }) {
@@ -100,11 +107,11 @@ function ArchedGeometry() {
   return <primitive object={geometry} attach="geometry" />
 }
 
-export function FurnitureParts({ assetId, color, collisionOnly = false, placement }: {
-  assetId: string; color: string; collisionOnly?: boolean; placement?: AssetPlacement
+export function FurnitureParts({ assetId, color, materialColors, collisionOnly = false, placement }: {
+  assetId: string; color: string; materialColors?: ModelProps['materialColors']; collisionOnly?: boolean; placement?: AssetPlacement
 }) {
   const asset = getCatalogAsset(assetId)
-  const materials = useMemo(() => palette(color), [color])
+  const materials = useMemo(() => palette(color, materialColors), [color, materialColors])
   if (!asset) return null
   const activePlacement = placement ?? asset.placements[0]
 
@@ -136,6 +143,6 @@ export function FurnitureParts({ assetId, color, collisionOnly = false, placemen
   </group>
 }
 
-export default function FurnitureModel({ assetId, color, placement }: ModelProps) {
-  return <FurnitureParts assetId={assetId} color={color} placement={placement} />
+export default function FurnitureModel({ assetId, color, materialColors, placement }: ModelProps) {
+  return <FurnitureParts assetId={assetId} color={color} materialColors={materialColors} placement={placement} />
 }

@@ -1,17 +1,18 @@
 """Pure measurement resolution and authoritative scene assembly."""
 
 from dataclasses import dataclass
-from math import isclose
 
 from pydantic import ValidationError
 
 from roometry.scenes.assets import ASSET_REGISTRY
 from roometry.scenes.catalog import ASSET_CATALOG, candidates, dimensions_for
-from roometry.scenes.schemas import Opening, RoomDimensions, RoomScene, SceneObject
+from roometry.scenes.schemas import Opening, RoomDimensions, RoomScene, SceneObject, WallReference
 from roometry.scenes.validation import GeometryReport, validate_geometry
 from roometry.uploads.schemas import InputDimensions
 from roometry.vision.attachments import anchor_placements
 from roometry.vision.catalog import bind_catalog
+from roometry.vision.corrections import correction_errors
+from roometry.vision.fidelity import evaluate_fidelity
 from roometry.vision.proposal_schemas import (
     AXES,
     DimensionName,
@@ -118,7 +119,8 @@ def notes(*groups: list[str]) -> list[str]:
 
 
 def assemble(
-    analysis: RoomAnalysisResponse, measurements: Measurements, draft: SceneDraft
+    analysis: RoomAnalysisResponse, measurements: Measurements, draft: SceneDraft,
+    *, require_fidelity: bool = True,
 ) -> tuple[RoomScene | None, GeometryReport | None, list[ProposalIssue]]:
     obs = analysis.observations
     issues: list[ProposalIssue] = []
@@ -155,6 +157,8 @@ def assemble(
     if bound is None:
         return None, None, issues
 
+    for entity_id, message in correction_errors(analysis, draft):
+        issues.append(issue("dimension_mismatch", message, entity_id))
     object_observations = {obj.id: obj for obj in obs.objects}
     opening_observations = {opening.id: opening for opening in obs.openings}
     objects, openings = [], []
@@ -192,19 +196,6 @@ def assemble(
                     obj.id,
                 )
             )
-        if source.estimated_dimensions_m is not None:
-            for axis in ("width", "depth", "height"):
-                known = getattr(source.estimated_dimensions_m, axis)
-                if known is not None and not isclose(
-                    getattr(obj.dimensions_m, axis), known, abs_tol=1e-6, rel_tol=0
-                ):
-                    issues.append(
-                        issue(
-                            "dimension_mismatch",
-                            "Preserve recorded object estimates; do not shrink objects to pass geometry checks.",
-                            obj.id,
-                        )
-                    )
         asset_id = obj.asset_id
         asset = ASSET_REGISTRY[asset_id]
         if obj.placement not in asset.placements:
@@ -223,6 +214,7 @@ def assemble(
                 "type": source.type,
                 "asset_id": asset_id,
                 "color": source.color or ASSET_CATALOG[asset_id].color,
+                "material_colors": source.material_colors,
                 "fixed": asset.fixed_by_default
                 or source.appears_fixed is True
                 or obj.placement in {"wall", "ceiling"},
@@ -249,18 +241,6 @@ def assemble(
                     opening.id,
                 )
             )
-        for field in ("width_m", "height_m", "sill_height_m"):
-            known = getattr(source, f"estimated_{field}")
-            if known is not None and not isclose(
-                getattr(opening, field), known, abs_tol=1e-6, rel_tol=0
-            ):
-                issues.append(
-                    issue(
-                        "dimension_mismatch",
-                        "Preserve recorded opening estimates.",
-                        opening.id,
-                    )
-                )
         openings.append(
             {
                 **opening.model_dump(),
@@ -393,6 +373,9 @@ def assemble(
                 room_type=analysis.input_options.room_type or obs.room_type or "other",
                 **measurements.dimensions.model_dump(),
             ),
+            finishes=obs.finishes.finishes if obs.finishes else None,
+            wall_mapping=[WallReference(observation_id=item.observation_id, wall=item.wall) for item in draft.wall_assignments],
+            estimate_corrections=draft.estimate_corrections,
             objects=parsed_objects,
             openings=parsed_openings,
             assumptions=notes(assumptions, obs.assumptions, draft.assumptions),
@@ -411,13 +394,24 @@ def assemble(
             ],
         )
     report = validate_geometry(scene)
-    if not report.valid:
-        return (
-            None,
-            report,
-            [
-                issue("geometry", f"{error.code}: {error.message}", *error.entity_ids)
-                for error in report.errors[:50]
-            ],
-        )
-    return scene, report, []
+    fidelity = evaluate_fidelity(analysis, scene, wall_map)
+    fidelity_problems = [
+        issue("fidelity", check.message, *check.entity_ids)
+        for check in fidelity.checks
+        if check.required and not check.passed and check.kind != "coverage"
+    ]
+    geometry_problems = [
+        issue("geometry", f"{error.code}: {error.message}", *error.entity_ids)
+        for error in report.errors
+    ]
+    if geometry_problems:
+        # The repair needs both classes of feedback in the same attempt. Waiting
+        # for every collision to be fixed used to hide relationship errors until
+        # the bounded repair allowance had already been consumed.
+        fidelity_feedback = fidelity_problems[:16]
+        return None, report, geometry_problems[:50 - len(fidelity_feedback)] + fidelity_feedback
+    if require_fidelity and fidelity_problems:
+        return None, report, fidelity_problems[:50]
+    # A provisional preview must still pass every schema and geometry check.
+    # Fidelity failures stay explicit; they are not reasons to delete furniture.
+    return scene, report, fidelity_problems[:50]

@@ -774,4 +774,53 @@ register(
 )
 register("bin", "Open waste bin", (0.28, 0.35, 0.28), "#8B9388", bin_model())
 
+def low_futon(*, seated: bool) -> tuple[list[FurniturePart], list[SupportSurface]]:
+    p = legs(.12, x=.43, z=.4, thickness=.045, material="metal")
+    deck = part("upholstered_base", (1, .35, 1), (0, .295, 0), "primary_dark", radius=.025)
+    p.append(deck)
+    for i in range(3):
+        p.append(part(f"tufted_cushion_{i}", (.325, .16, .84 if seated else .98), (-.33 + i * .33, .55, .06 if seated else 0), radius=.035))
+        for j in range(2):
+            p.append(part(f"tuft_{i}_{j}", (.025, .008, .025), (-.33 + i * .33, .632, -.2 + j * .4), "primary_dark", shape="cylinder", collision=False))
+    if seated:
+        p.append(part("low_back", (1, .65, .14), (0, .675, -.43), radius=.035))
+    else:
+        # Slim upholstered end; no conventional wood frame or white bedding.
+        p.append(part("bolster", (.98, .25, .12), (0, .755, -.44), radius=.035))
+    return p, [surface(cushion, purpose="seating" if seated else "sleeping") for cushion in p if cushion.name.startswith("tufted_cushion_")]
+
+
+def office_chair() -> tuple[list[FurniturePart], list[SupportSurface]]:
+    seat = part("seat", (.8, .12, .65), (0, .46, .05), radius=.035)
+    p = [seat, part("gas_lift", (.075, .3, .075), (0, .27, 0), "metal", shape="cylinder"),
+         part("high_back", (.65, .48, .12), (0, .76, -.28), "primary_dark", radius=.04),
+         part("headrest", (.42, .08, .12), (0, .96, -.28), radius=.025)]
+    for side in (-1, 1):
+        p += [part(f"back_color_{side}", (.09, .4, .025), (side * .25, .76, -.205), collision=False),
+              part(f"arm_post_{side}", (.045, .14, .08), (side * .43, .57, .05), "metal"),
+              part(f"armrest_{side}", (.12, .045, .42), (side * .43, .66, .05), "rubber")]
+    # Five-spoke base, with casters at visible endpoints.
+    from math import sin, cos, pi
+    for i in range(5):
+        angle = i * 2 * pi / 5
+        x, z = .4 * sin(angle), .4 * cos(angle)
+        p += [part(f"spoke_{i}", (.07, .045, .46), (x / 2, .105, z / 2), "metal", rotation=(0, angle, 0)),
+              part(f"caster_{i}", (.095, .08, .095), (x, .04, z), "rubber", shape="cylinder")]
+    return p, [surface(seat, purpose="seating")]
+
+
+def metal_shelf() -> tuple[list[FurniturePart], list[SupportSurface]]:
+    p = [part(f"upright_{i}", (.035, 1, .035), (x, .5, z), "metal", radius=.003)
+         for i, (x, z) in enumerate(((-.47, -.47), (.47, -.47), (-.47, .47), (.47, .47)))]
+    boards = [part(f"board_{i}", (.93, .025, .93), (0, .1 + i * .285, 0), "wood", radius=.004) for i in range(4)]
+    # A narrow front edge follows the main color; open sides and back stay open.
+    p.append(part("front_rail", (.91, .018, .02), (0, .97, .47), radius=.003))
+    return p + boards, [surface(board, inset=.015) for board in boards]
+
+
+register("bed", "Low tufted futon / sleeper", (1.2, .5, 2), "#292B2F", low_futon(seated=False), asset_id="bed_futon_01")
+register("sofa", "Low armless sleeper sofa", (2, .75, .95), "#292B2F", low_futon(seated=True), asset_id="sofa_sleeper_01")
+register("chair", "High-back office / gaming chair", (.7, 1.25, .7), "#28558A", office_chair(), asset_id="chair_office_01")
+register("shelf", "Narrow open metal and wood shelving", (.6, 1.8, .32), "#303436", metal_shelf(), asset_id="shelf_metal_01")
+
 FURNITURE_CATALOG = MappingProxyType(_assets)

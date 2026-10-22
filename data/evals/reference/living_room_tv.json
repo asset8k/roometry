@@ -1,0 +1,357 @@
+{
+  "fixture_kind": "hand_authored_regression_reference",
+  "analysis": {
+    "analysis_id": "22222222-2222-4222-8222-222222222222",
+    "input_id": "33333333-3333-4333-8333-333333333333",
+    "status": "analyzed",
+    "created_at": "2026-10-22T00:00:00Z",
+    "expires_at": "2026-10-22T01:00:00Z",
+    "input_options": {
+      "room_type": "living_room",
+      "description": null,
+      "goals": [
+        "general_analysis"
+      ],
+      "goal_text": null,
+      "dimensions": null,
+      "style": null,
+      "budget": null,
+      "constraints": null
+    },
+    "observations": {
+      "schema_version": 1,
+      "image_ids": [
+        "11111111-1111-4111-8111-000000000001"
+      ],
+      "room_type": "living_room",
+      "room_type_confidence": "high",
+      "room_shape": "rectangular",
+      "floor_visible": true,
+      "ceiling_visible": true,
+      "estimated_dimensions": null,
+      "walls": [
+        {
+          "id": "north_wall",
+          "label": "north reference wall",
+          "source_image_ids": [
+            "11111111-1111-4111-8111-000000000001"
+          ],
+          "confidence": "high",
+          "notes": []
+        },
+        {
+          "id": "south_wall",
+          "label": "south reference wall",
+          "source_image_ids": [
+            "11111111-1111-4111-8111-000000000001"
+          ],
+          "confidence": "high",
+          "notes": []
+        },
+        {
+          "id": "east_wall",
+          "label": "east reference wall",
+          "source_image_ids": [
+            "11111111-1111-4111-8111-000000000001"
+          ],
+          "confidence": "high",
+          "notes": []
+        },
+        {
+          "id": "west_wall",
+          "label": "west reference wall",
+          "source_image_ids": [
+            "11111111-1111-4111-8111-000000000001"
+          ],
+          "confidence": "high",
+          "notes": []
+        }
+      ],
+      "objects": [
+        {
+          "id": "sofa",
+          "type": "sofa",
+          "label": "sofa",
+          "source_image_ids": [
+            "11111111-1111-4111-8111-000000000001"
+          ],
+          "confidence": "high",
+          "alternative_type": null,
+          "material_colors": null,
+          "wall_coverage": null,
+          "relative_location": null,
+          "wall_id": null,
+          "placement": "floor",
+          "support_object_id": null,
+          "appears_fixed": false,
+          "color": "#484643",
+          "estimated_dimensions_m": null,
+          "notes": []
+        },
+        {
+          "id": "television",
+          "type": "tv",
+          "label": "television",
+          "source_image_ids": [
+            "11111111-1111-4111-8111-000000000001"
+          ],
+          "confidence": "high",
+          "alternative_type": null,
+          "material_colors": null,
+          "wall_coverage": null,
+          "relative_location": null,
+          "wall_id": null,
+          "placement": "wall",
+          "support_object_id": null,
+          "appears_fixed": true,
+          "color": "#25272A",
+          "estimated_dimensions_m": null,
+          "notes": []
+        },
+        {
+          "id": "console",
+          "type": "tv_stand",
+          "label": "console",
+          "source_image_ids": [
+            "11111111-1111-4111-8111-000000000001"
+          ],
+          "confidence": "high",
+          "alternative_type": null,
+          "material_colors": null,
+          "wall_coverage": null,
+          "relative_location": null,
+          "wall_id": null,
+          "placement": "floor",
+          "support_object_id": null,
+          "appears_fixed": false,
+          "color": "#62442E",
+          "estimated_dimensions_m": null,
+          "notes": []
+        },
+        {
+          "id": "coffee_table",
+          "type": "coffee_table",
+          "label": "coffee table",
+          "source_image_ids": [
+            "11111111-1111-4111-8111-000000000001"
+          ],
+          "confidence": "high",
+          "alternative_type": null,
+          "material_colors": null,
+          "wall_coverage": null,
+          "relative_location": null,
+          "wall_id": null,
+          "placement": "floor",
+          "support_object_id": null,
+          "appears_fixed": false,
+          "color": "#765036",
+          "estimated_dimensions_m": null,
+          "notes": []
+        }
+      ],
+      "openings": [
+        {
+          "id": "window_a",
+          "type": "window",
+          "source_image_ids": [
+            "11111111-1111-4111-8111-000000000001"
+          ],
+          "confidence": "high",
+          "wall_id": "north_wall",
+          "alternative_type": null,
+          "material_colors": null,
+          "wall_coverage": null,
+          "relative_location": null,
+          "estimated_width_m": null,
+          "estimated_height_m": null,
+          "estimated_sill_height_m": null,
+          "notes": []
+        },
+        {
+          "id": "window_b",
+          "type": "window",
+          "source_image_ids": [
+            "11111111-1111-4111-8111-000000000001"
+          ],
+          "confidence": "high",
+          "wall_id": "north_wall",
+          "alternative_type": null,
+          "material_colors": null,
+          "wall_coverage": null,
+          "relative_location": null,
+          "estimated_width_m": null,
+          "estimated_height_m": null,
+          "estimated_sill_height_m": null,
+          "notes": []
+        }
+      ],
+      "relationships": [],
+      "finishes": null,
+      "possible_duplicates": [],
+      "unknowns": [
+        "Metric dimensions are not established by these photos."
+      ],
+      "assumptions": [],
+      "warnings": []
+    }
+  },
+  "working_scene": {
+    "schema_version": 1,
+    "room": {
+      "room_type": "living_room",
+      "width_m": 5.0,
+      "length_m": 7.0,
+      "height_m": 3.0,
+      "measurements_source": "estimated"
+    },
+    "finishes": {
+      "floor_color": "#795C40",
+      "wall_color": "#DAD3C4",
+      "floor_pattern": "wood"
+    },
+    "wall_mapping": [],
+    "estimate_corrections": [],
+    "openings": [
+      {
+        "id": "window_a",
+        "type": "window",
+        "wall": "north",
+        "offset_m": 1.0,
+        "width_m": 1.1,
+        "height_m": 1.8,
+        "sill_height_m": 0.7,
+        "swing": "none",
+        "hinge": null,
+        "provenance": "photo_observed",
+        "measurements_source": "estimated"
+      },
+      {
+        "id": "window_b",
+        "type": "window",
+        "wall": "north",
+        "offset_m": 2.8,
+        "width_m": 1.1,
+        "height_m": 1.8,
+        "sill_height_m": 0.7,
+        "swing": "none",
+        "hinge": null,
+        "provenance": "photo_observed",
+        "measurements_source": "estimated"
+      }
+    ],
+    "objects": [
+      {
+        "id": "sofa",
+        "type": "sofa",
+        "asset_id": "sofa_sectional_left_01",
+        "position": {
+          "x": 4.1,
+          "y": 0.0,
+          "z": 4.0
+        },
+        "rotation_y_rad": 4.71238898038469,
+        "dimensions_m": {
+          "width": 2.8,
+          "depth": 1.65,
+          "height": 0.88
+        },
+        "color": "#484643",
+        "material_colors": null,
+        "placement": "floor",
+        "support_object_id": null,
+        "support_surface_id": null,
+        "wall": null,
+        "opening_id": null,
+        "fixed": false,
+        "locked": false,
+        "provenance": "photo_observed",
+        "measurements_source": "estimated"
+      },
+      {
+        "id": "television",
+        "type": "tv",
+        "asset_id": "tv_standard_01",
+        "position": {
+          "x": 0.04,
+          "y": 1.0,
+          "z": 4.0
+        },
+        "rotation_y_rad": 1.5707963267948966,
+        "dimensions_m": {
+          "width": 1.4,
+          "depth": 0.08,
+          "height": 0.9
+        },
+        "color": "#25272A",
+        "material_colors": null,
+        "placement": "wall",
+        "support_object_id": null,
+        "support_surface_id": null,
+        "wall": "west",
+        "opening_id": null,
+        "fixed": true,
+        "locked": false,
+        "provenance": "photo_observed",
+        "measurements_source": "estimated"
+      },
+      {
+        "id": "console",
+        "type": "tv_stand",
+        "asset_id": "tv_stand_standard_01",
+        "position": {
+          "x": 0.3,
+          "y": 0.0,
+          "z": 4.0
+        },
+        "rotation_y_rad": 1.5707963267948966,
+        "dimensions_m": {
+          "width": 1.8,
+          "depth": 0.42,
+          "height": 0.55
+        },
+        "color": "#62442E",
+        "material_colors": null,
+        "placement": "floor",
+        "support_object_id": null,
+        "support_surface_id": null,
+        "wall": null,
+        "opening_id": null,
+        "fixed": false,
+        "locked": false,
+        "provenance": "photo_observed",
+        "measurements_source": "estimated"
+      },
+      {
+        "id": "coffee_table",
+        "type": "coffee_table",
+        "asset_id": "coffee_table_standard_01",
+        "position": {
+          "x": 2.5,
+          "y": 0.0,
+          "z": 4.0
+        },
+        "rotation_y_rad": 0.0,
+        "dimensions_m": {
+          "width": 1.2,
+          "depth": 0.7,
+          "height": 0.4
+        },
+        "color": "#765036",
+        "material_colors": null,
+        "placement": "floor",
+        "support_object_id": null,
+        "support_surface_id": null,
+        "wall": null,
+        "opening_id": null,
+        "fixed": false,
+        "locked": false,
+        "provenance": "photo_observed",
+        "measurements_source": "estimated"
+      }
+    ],
+    "assumptions": [
+      "Hand-authored regression reference; dimensions and poses are illustrative, not measured photo ground truth."
+    ],
+    "warnings": []
+  }
+}

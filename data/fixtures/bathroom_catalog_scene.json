@@ -7,6 +7,9 @@
     "height_m": 2.6,
     "measurements_source": "estimated"
   },
+  "finishes": null,
+  "wall_mapping": [],
+  "estimate_corrections": [],
   "openings": [],
   "objects": [
     {
@@ -25,8 +28,10 @@
         "height": 0.62
       },
       "color": "#D4D8CF",
+      "material_colors": null,
       "placement": "floor",
       "support_object_id": null,
+      "support_surface_id": null,
       "wall": null,
       "opening_id": null,
       "fixed": true,
@@ -50,8 +55,10 @@
         "height": 2.1
       },
       "color": "#D4D8CF",
+      "material_colors": null,
       "placement": "floor",
       "support_object_id": null,
+      "support_surface_id": null,
       "wall": null,
       "opening_id": null,
       "fixed": true,
@@ -75,8 +82,10 @@
         "height": 1.1
       },
       "color": "#A8B09D",
+      "material_colors": null,
       "placement": "floor",
       "support_object_id": null,
+      "support_surface_id": null,
       "wall": null,
       "opening_id": null,
       "fixed": true,
@@ -100,8 +109,10 @@
         "height": 0.8
       },
       "color": "#D4D8CF",
+      "material_colors": null,
       "placement": "floor",
       "support_object_id": null,
+      "support_surface_id": null,
       "wall": null,
       "opening_id": null,
       "fixed": true,
@@ -125,8 +136,10 @@
         "height": 0.85
       },
       "color": "#C5C9C1",
+      "material_colors": null,
       "placement": "wall",
       "support_object_id": null,
+      "support_surface_id": null,
       "wall": "south",
       "opening_id": null,
       "fixed": true,
@@ -150,8 +163,10 @@
         "height": 0.35
       },
       "color": "#BCC3BC",
+      "material_colors": null,
       "placement": "wall",
       "support_object_id": null,
+      "support_surface_id": null,
       "wall": "east",
       "opening_id": null,
       "fixed": true,
@@ -175,8 +190,10 @@
         "height": 1.72
       },
       "color": "#C5C9C1",
+      "material_colors": null,
       "placement": "floor",
       "support_object_id": null,
+      "support_surface_id": null,
       "wall": null,
       "opening_id": null,
       "fixed": true,
@@ -200,8 +217,10 @@
         "height": 0.13
       },
       "color": "#B8BDB6",
+      "material_colors": null,
       "placement": "ceiling",
       "support_object_id": null,
+      "support_surface_id": null,
       "wall": null,
       "opening_id": null,
       "fixed": true,

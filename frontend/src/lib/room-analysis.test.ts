@@ -41,3 +41,17 @@ describe('analysis and proposal semantics', () => {
     expect(() => parseSceneProposal({ ...partial, unresolved_entities: unresolved })).toThrow()
   })
 })
+
+describe('provisional reconstruction semantics', () => {
+  it('accepts all retained objects when geometry passed but a relationship still needs correction', () => {
+    const ready = proposedRoom()
+    const issue = { code: 'fidelity' as const, entity_ids: ['bed_observed', 'window_observed'], message: 'Facing direction needs correction.' }
+    const fidelity = { policy_version: 'reconstruction_v1' as const, major_object_coverage: 1, relationship_score: 0, proportion_score: null, color_score: 1, recognizable: false,
+      checks: [{ kind: 'facing' as const, entity_ids: issue.entity_ids, passed: false, required: true, message: issue.message }], unassessed: [] }
+    const preview = parseSceneProposal({ ...ready, status: 'partial', fidelity, unresolved_entities: [], issues: [issue] })
+    expect(preview.scene?.objects).toEqual(ready.scene?.objects)
+    expect(preview.unresolved_entities).toEqual([])
+    expect(() => parseSceneProposal({ ...preview, status: 'ready', issues: [] })).toThrow()
+    expect(() => parseSceneProposal({ ...preview, validation: { ...preview.validation, valid: false } })).toThrow()
+  })
+})

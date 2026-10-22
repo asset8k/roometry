@@ -36,6 +36,69 @@
       "title": "EditIssue",
       "type": "object"
     },
+    "EstimateCorrection": {
+      "additionalProperties": false,
+      "description": "Auditable revision of a photo size hypothesis, never a user measurement.",
+      "properties": {
+        "entity_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "field": {
+          "enum": [
+            "width",
+            "depth",
+            "height",
+            "width_m",
+            "height_m",
+            "sill_height_m"
+          ],
+          "title": "Field",
+          "type": "string"
+        },
+        "previous_m": {
+          "maximum": 30.0,
+          "minimum": 0,
+          "title": "Previous M",
+          "type": "number"
+        },
+        "revised_m": {
+          "maximum": 30.0,
+          "minimum": 0,
+          "title": "Revised M",
+          "type": "number"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Reason",
+          "type": "string"
+        },
+        "source_image_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "title": "Source Image Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "entity_id",
+        "field",
+        "previous_m",
+        "revised_m",
+        "reason",
+        "source_image_ids"
+      ],
+      "title": "EstimateCorrection",
+      "type": "object"
+    },
     "GeometryIssue": {
       "additionalProperties": false,
       "properties": {
@@ -120,6 +183,92 @@
         "valid"
       ],
       "title": "GeometryReport",
+      "type": "object"
+    },
+    "MaterialColors": {
+      "additionalProperties": false,
+      "description": "Small, fixed palette of visible material roles; null keeps model defaults.",
+      "properties": {
+        "wood": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Wood"
+        },
+        "metal": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Metal"
+        },
+        "linen": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Linen"
+        },
+        "inset": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Inset"
+        },
+        "rubber": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rubber"
+        },
+        "enamel": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enamel"
+        }
+      },
+      "title": "MaterialColors",
       "type": "object"
     },
     "ObjectDimensions": {
@@ -349,6 +498,56 @@
       "title": "RoomDimensions",
       "type": "object"
     },
+    "RoomFinishes": {
+      "additionalProperties": false,
+      "properties": {
+        "floor_color": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Floor Color"
+        },
+        "wall_color": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Wall Color"
+        },
+        "floor_pattern": {
+          "anyOf": [
+            {
+              "enum": [
+                "wood",
+                "tile",
+                "plain"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Floor Pattern"
+        }
+      },
+      "title": "RoomFinishes",
+      "type": "object"
+    },
     "RoomScene": {
       "additionalProperties": false,
       "properties": {
@@ -359,6 +558,33 @@
         },
         "room": {
           "$ref": "#/$defs/RoomDimensions"
+        },
+        "finishes": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RoomFinishes"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "wall_mapping": {
+          "items": {
+            "$ref": "#/$defs/WallReference"
+          },
+          "maxItems": 4,
+          "title": "Wall Mapping",
+          "type": "array"
+        },
+        "estimate_corrections": {
+          "items": {
+            "$ref": "#/$defs/EstimateCorrection"
+          },
+          "maxItems": 200,
+          "title": "Estimate Corrections",
+          "type": "array"
         },
         "openings": {
           "items": {
@@ -564,6 +790,11 @@
             "towel_rack_standard_01",
             "water_heater_standard_01",
             "drying_rack_standard_01",
+            "bed_futon_01",
+            "sofa_sleeper_01",
+            "chair_office_01",
+            "shelf_metal_01",
+            "ceiling_light_track_01",
             "bed_crib_01",
             "sofa_sectional_left_01",
             "sofa_sectional_right_01",
@@ -617,6 +848,17 @@
           "pattern": "^#[0-9A-Fa-f]{6}$",
           "title": "Color",
           "type": "string"
+        },
+        "material_colors": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MaterialColors"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "placement": {
           "enum": [
@@ -732,6 +974,34 @@
         "measurements_source"
       ],
       "title": "SceneObject",
+      "type": "object"
+    },
+    "WallReference": {
+      "additionalProperties": false,
+      "properties": {
+        "observation_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Observation Id",
+          "type": "string"
+        },
+        "wall": {
+          "enum": [
+            "north",
+            "south",
+            "west",
+            "east"
+          ],
+          "title": "Wall",
+          "type": "string"
+        }
+      },
+      "required": [
+        "observation_id",
+        "wall"
+      ],
+      "title": "WallReference",
       "type": "object"
     }
   },

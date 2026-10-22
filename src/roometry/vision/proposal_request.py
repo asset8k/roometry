@@ -1,6 +1,7 @@
-"""Text-only structured scene request, reusing the bounded Responses transport."""
+"""Photo-grounded structured construction using the bounded Responses transport."""
 
 import json
+from openai.types.responses import ResponseInputContentParam
 from dataclasses import asdict
 
 from openai.types.responses.response_create_params import (
@@ -14,6 +15,8 @@ from roometry.scenes.geometry import catalog_surface_bounds
 from roometry.vision.attachments import anchor_placements
 from roometry.vision.catalog import bind_catalog, dimension_defaults
 from roometry.vision.errors import AnalysisFailure
+from roometry.vision.evidence import photo_content, strict_schema
+from roometry.vision.importance import importance
 from roometry.vision.prompts import SCENE_PROPOSAL_INSTRUCTIONS
 from roometry.vision.proposal_schemas import ProposalIssue, SceneDraft
 from roometry.vision.proposals import Measurements
@@ -26,6 +29,7 @@ def build_proposal_request(
     measurements: Measurements,
     draft: SceneDraft | None,
     issues: list[ProposalIssue],
+    images: list[bytes] | None = None,
 ) -> ResponseCreateParamsNonStreaming:
     bindings = []
     for obj in analysis.observations.objects:
@@ -102,24 +106,27 @@ def build_proposal_request(
         "room_dimensions": measurements.dimensions.model_dump(mode="json"),
         "estimated_axes": measurements.estimated,
         "asset_bindings": bindings,
+        "construction_order": {
+            "anchors": [item.id for item in [*analysis.observations.openings, *analysis.observations.objects] if importance(item) == 0],
+            "secondary": [item.id for item in analysis.observations.objects if importance(item) == 1],
+            "accessories": [item.id for item in analysis.observations.objects if importance(item) > 1],
+        },
         # Feedback describes the assembled poses, including server attachments,
         # so repair must see those same coordinates rather than the raw draft.
         "previous_draft": (normalized or draft).model_dump(mode="json") if draft is not None else None,
         "attachment_constraints": attachment_constraints,
         "validation_feedback": [item.model_dump(mode="json") for item in issues],
     }
+    content: list[ResponseInputContentParam] = [{"type": "input_text", "text": json.dumps(context, ensure_ascii=True)}]
+    if images is not None:
+        content.extend(photo_content(analysis.observations.image_ids, images, settings.analysis_max_request_bytes))
     payload: ResponseCreateParamsNonStreaming = {
         "model": settings.model_name,
         "instructions": SCENE_PROPOSAL_INSTRUCTIONS,
         "input": [
             {
                 "role": "user",
-                "content": [
-                    {
-                        "type": "input_text",
-                        "text": json.dumps(context, ensure_ascii=True),
-                    }
-                ],
+                "content": content,
             }
         ],
         "text": {
@@ -127,7 +134,7 @@ def build_proposal_request(
                 "type": "json_schema",
                 "name": "room_scene_draft",
                 "strict": True,
-                "schema": SceneDraft.model_json_schema(),
+                "schema": strict_schema(SceneDraft),
             }
         },
         "max_output_tokens": settings.scene_max_output_tokens,

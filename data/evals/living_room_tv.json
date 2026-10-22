@@ -1,0 +1,89 @@
+{
+  "id": "living_room_tv",
+  "photo_files": [
+    "IMG_2185.JPG"
+  ],
+  "annotation_notes": [
+    "Human annotations of the warm living-room photo. No metric dimensions are known.",
+    "The dark sectional faces the television. The television and sofa occupy opposite long walls. Two windows share the end wall."
+  ],
+  "objects": [
+    {
+      "id": "sofa",
+      "types": [
+        "sofa"
+      ],
+      "color": "#484643",
+      "allowed_assets": [
+        "sofa_sectional_left_01",
+        "sofa_sectional_right_01"
+      ]
+    },
+    {
+      "id": "television",
+      "types": [
+        "tv"
+      ],
+      "color": "#25272A"
+    },
+    {
+      "id": "console",
+      "types": [
+        "tv_stand"
+      ],
+      "color": "#62442E"
+    },
+    {
+      "id": "coffee_table",
+      "types": [
+        "coffee_table"
+      ],
+      "color": "#765036"
+    },
+    {
+      "id": "window_a",
+      "opening_type": "window"
+    },
+    {
+      "id": "window_b",
+      "opening_type": "window"
+    }
+  ],
+  "relationships": [
+    {
+      "kind": "faces",
+      "subject": "sofa",
+      "target": "television"
+    },
+    {
+      "kind": "faces",
+      "subject": "television",
+      "target": "sofa"
+    },
+    {
+      "kind": "opposite_end",
+      "subject": "sofa",
+      "target": "television"
+    },
+    {
+      "kind": "same_end",
+      "subject": "window_a",
+      "target": "window_b"
+    },
+    {
+      "kind": "near",
+      "subject": "console",
+      "target": "television"
+    },
+    {
+      "kind": "near",
+      "subject": "coffee_table",
+      "target": "sofa"
+    }
+  ],
+  "room_finishes": {
+    "floor_color": "#795C40",
+    "wall_color": "#DAD3C4",
+    "floor_pattern": "wood"
+  }
+}

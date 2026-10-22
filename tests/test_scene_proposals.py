@@ -181,7 +181,7 @@ async def test_scene_output_budget_and_reasoning_are_separate_from_analysis(
         json=body(analysis, dimensions=confirmed(length_m=4, height_m=2.6)),
     )
     assert response.json()["status"] == "ready", response.text
-    assert calls[0]["max_output_tokens"] == 8192
+    assert calls[0]["max_output_tokens"] == 16384
     assert "reasoning" not in calls[0]
     assert calls[1]["max_output_tokens"] == 12288
     assert calls[1]["model"] == calls[0]["model"] == "gpt-6-luna"
@@ -341,8 +341,9 @@ async def test_measurement_confirmation_cached_analysis_and_ready_scene(harness)
     assert request["store"] is False and request["tools"] == []
     assert request["model"] == "gpt-6-luna"
     assert request["text"]["format"]["strict"] is True
-    assert all(part["type"] == "input_text" for part in request["input"][0]["content"])
-    assert "data:image" not in json.dumps(request)
+    photos = [part for part in request["input"][0]["content"] if part["type"] == "input_image"]
+    assert len(photos) == len(analysis["observations"]["image_ids"])
+    assert all(part["image_url"].startswith("data:image/jpeg;base64,") for part in photos)
     response = await client.post("/api/rooms/propose-scene", json=body(analysis))
     assert response.json() == data
     assert response.headers["cache-control"] == "no-store"

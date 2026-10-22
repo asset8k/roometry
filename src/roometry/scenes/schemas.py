@@ -63,6 +63,34 @@ class SceneModel(BaseModel):
     )
 
 
+class MaterialColors(SceneModel):
+    """Small, fixed palette of visible material roles; null keeps model defaults."""
+
+    wood: Color | None = None
+    metal: Color | None = None
+    linen: Color | None = None
+    inset: Color | None = None
+    rubber: Color | None = None
+    enamel: Color | None = None
+
+
+class RoomFinishes(SceneModel):
+    floor_color: Color | None = None
+    wall_color: Color | None = None
+    floor_pattern: Literal["wood", "tile", "plain"] | None = None
+
+
+class EstimateCorrection(SceneModel):
+    """Auditable revision of a photo size hypothesis, never a user measurement."""
+
+    entity_id: Identifier
+    field: Literal["width", "depth", "height", "width_m", "height_m", "sill_height_m"]
+    previous_m: NonnegativeDistance
+    revised_m: NonnegativeDistance
+    reason: Note
+    source_image_ids: Annotated[list[str], Field(min_length=1, max_length=10)]
+
+
 class Position(SceneModel):
     """World-space bottom center, in meters; room containment is checked later."""
 
@@ -123,6 +151,7 @@ class SceneObject(SceneModel):
     rotation_y_rad: FiniteNumber
     dimensions_m: ObjectDimensions
     color: Color
+    material_colors: MaterialColors | None = None
     placement: Placement
     # Nullable references are deliberately required: use explicit JSON null.
     support_object_id: Identifier | None
@@ -185,9 +214,17 @@ class SceneObject(SceneModel):
         return self
 
 
+class WallReference(SceneModel):
+    observation_id: Identifier
+    wall: Wall
+
+
 class RoomScene(SceneModel):
     schema_version: Literal[1]
     room: RoomDimensions
+    finishes: RoomFinishes | None = None
+    wall_mapping: Annotated[list[WallReference], Field(max_length=4)] = Field(default_factory=list)
+    estimate_corrections: Annotated[list[EstimateCorrection], Field(max_length=200)] = Field(default_factory=list)
     openings: Annotated[list[Opening], Field(max_length=MAX_OPENINGS)]
     objects: Annotated[list[SceneObject], Field(max_length=MAX_OBJECTS)]
     assumptions: Annotated[list[Note], Field(max_length=MAX_NOTES)]

@@ -260,6 +260,85 @@ export type SourceImageIds1 =
   | [string, string, string, string, string, string, string, string, string]
   | [string, string, string, string, string, string, string, string, string, string];
 export type Confidence1 = "low" | "medium" | "high";
+export type AlternativeType =
+  | (
+      | "bed"
+      | "sofa"
+      | "armchair"
+      | "chair"
+      | "stool"
+      | "bench"
+      | "ottoman"
+      | "desk"
+      | "table"
+      | "coffee_table"
+      | "side_table"
+      | "nightstand"
+      | "wardrobe"
+      | "dresser"
+      | "shelf"
+      | "tv_stand"
+      | "shoe_rack"
+      | "sideboard"
+      | "wall_shelf"
+      | "storage_box"
+      | "basket"
+      | "bin"
+      | "computer"
+      | "laptop"
+      | "monitor"
+      | "printer"
+      | "game_console"
+      | "speaker"
+      | "tv"
+      | "projector"
+      | "rug"
+      | "picture"
+      | "clock"
+      | "window_covering"
+      | "souvenir"
+      | "vase"
+      | "book_stack"
+      | "household_accessory"
+      | "mirror"
+      | "plant"
+      | "floor_lamp"
+      | "table_lamp"
+      | "chandelier"
+      | "ceiling_light"
+      | "ceiling_fan"
+      | "radiator"
+      | "air_conditioner"
+      | "fan"
+      | "kitchen_cabinet"
+      | "kitchen_counter"
+      | "wall_cabinet"
+      | "extractor_hood"
+      | "refrigerator"
+      | "cooker"
+      | "dishwasher"
+      | "washing_machine"
+      | "dryer"
+      | "microwave"
+      | "kettle"
+      | "toaster"
+      | "sink"
+      | "toilet"
+      | "bathtub"
+      | "shower"
+      | "vanity"
+      | "towel_rack"
+      | "water_heater"
+      | "drying_rack"
+    )
+  | null;
+export type Wood = string | null;
+export type Metal = string | null;
+export type Linen = string | null;
+export type Inset = string | null;
+export type Rubber = string | null;
+export type Enamel = string | null;
+export type WallCoverage = number | null;
 export type RelativeLocation = string | null;
 export type WallId = string | null;
 export type Placement = ("floor" | "surface" | "wall" | "ceiling") | null;
@@ -296,6 +375,79 @@ export type SourceImageIds2 =
   | [string, string, string, string, string, string, string, string, string, string];
 export type Confidence2 = "low" | "medium" | "high";
 export type WallId1 = string | null;
+export type AlternativeType1 =
+  | (
+      | "bed"
+      | "sofa"
+      | "armchair"
+      | "chair"
+      | "stool"
+      | "bench"
+      | "ottoman"
+      | "desk"
+      | "table"
+      | "coffee_table"
+      | "side_table"
+      | "nightstand"
+      | "wardrobe"
+      | "dresser"
+      | "shelf"
+      | "tv_stand"
+      | "shoe_rack"
+      | "sideboard"
+      | "wall_shelf"
+      | "storage_box"
+      | "basket"
+      | "bin"
+      | "computer"
+      | "laptop"
+      | "monitor"
+      | "printer"
+      | "game_console"
+      | "speaker"
+      | "tv"
+      | "projector"
+      | "rug"
+      | "picture"
+      | "clock"
+      | "window_covering"
+      | "souvenir"
+      | "vase"
+      | "book_stack"
+      | "household_accessory"
+      | "mirror"
+      | "plant"
+      | "floor_lamp"
+      | "table_lamp"
+      | "chandelier"
+      | "ceiling_light"
+      | "ceiling_fan"
+      | "radiator"
+      | "air_conditioner"
+      | "fan"
+      | "kitchen_cabinet"
+      | "kitchen_counter"
+      | "wall_cabinet"
+      | "extractor_hood"
+      | "refrigerator"
+      | "cooker"
+      | "dishwasher"
+      | "washing_machine"
+      | "dryer"
+      | "microwave"
+      | "kettle"
+      | "toaster"
+      | "sink"
+      | "toilet"
+      | "bathtub"
+      | "shower"
+      | "vanity"
+      | "towel_rack"
+      | "water_heater"
+      | "drying_rack"
+    )
+  | null;
+export type WallCoverage1 = number | null;
 export type RelativeLocation1 = string | null;
 export type EstimatedWidthM = number | null;
 export type EstimatedHeightM = number | null;
@@ -308,6 +460,52 @@ export type Notes2 = string[];
  * @maxItems 32
  */
 export type Openings = OpeningObservation[];
+export type Id3 = string;
+export type SubjectId = string;
+export type TargetId = string;
+export type Kind = "faces" | "near" | "beside" | "against_wall" | "supported_by" | "opposite_wall" | "adjacent_wall";
+export type AlternativeTargetId = string | null;
+export type Confidence3 = "low" | "medium" | "high";
+/**
+ * @minItems 1
+ * @maxItems 10
+ */
+export type SourceImageIds3 =
+  | [string]
+  | [string, string]
+  | [string, string, string]
+  | [string, string, string, string]
+  | [string, string, string, string, string]
+  | [string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string, string];
+export type Evidence = string;
+/**
+ * @maxItems 200
+ */
+export type Relationships = SpatialRelationship[];
+export type FloorColor = string | null;
+export type WallColor = string | null;
+export type FloorPattern = ("wood" | "tile" | "plain") | null;
+export type Confidence4 = "low" | "medium" | "high";
+/**
+ * @minItems 1
+ * @maxItems 10
+ */
+export type SourceImageIds4 =
+  | [string]
+  | [string, string]
+  | [string, string, string]
+  | [string, string, string, string]
+  | [string, string, string, string, string]
+  | [string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string, string];
+export type Evidence1 = string;
 /**
  * @minItems 2
  * @maxItems 2
@@ -356,9 +554,44 @@ export type WidthM2 = number;
 export type LengthM2 = number;
 export type HeightM2 = number;
 export type MeasurementsSource1 = "user_confirmed" | "estimated";
-export type Id3 = string;
-export type Type2 = "door" | "window";
+/**
+ * @maxItems 4
+ */
+export type WallMapping =
+  | []
+  | [WallReference]
+  | [WallReference, WallReference]
+  | [WallReference, WallReference, WallReference]
+  | [WallReference, WallReference, WallReference, WallReference];
+export type ObservationId = string;
 export type Wall = "north" | "south" | "west" | "east";
+export type EntityId = string;
+export type Field = "width" | "depth" | "height" | "width_m" | "height_m" | "sill_height_m";
+export type PreviousM = number;
+export type RevisedM = number;
+export type Reason1 = string;
+/**
+ * @minItems 1
+ * @maxItems 10
+ */
+export type SourceImageIds5 =
+  | [string]
+  | [string, string]
+  | [string, string, string]
+  | [string, string, string, string]
+  | [string, string, string, string, string]
+  | [string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string, string];
+/**
+ * @maxItems 200
+ */
+export type EstimateCorrections = EstimateCorrection[];
+export type Id4 = string;
+export type Type2 = "door" | "window";
+export type Wall1 = "north" | "south" | "west" | "east";
 export type OffsetM = number;
 export type WidthM3 = number;
 export type HeightM3 = number;
@@ -371,7 +604,7 @@ export type MeasurementsSource2 = "user_confirmed" | "estimated";
  * @maxItems 32
  */
 export type Openings1 = Opening[];
-export type Id4 = string;
+export type Id5 = string;
 export type Type3 =
   | "bed"
   | "sofa"
@@ -510,6 +743,11 @@ export type AssetId =
   | "towel_rack_standard_01"
   | "water_heater_standard_01"
   | "drying_rack_standard_01"
+  | "bed_futon_01"
+  | "sofa_sleeper_01"
+  | "chair_office_01"
+  | "shelf_metal_01"
+  | "ceiling_light_track_01"
   | "bed_crib_01"
   | "sofa_sectional_left_01"
   | "sofa_sectional_right_01"
@@ -553,7 +791,7 @@ export type Color1 = string;
 export type Placement1 = "floor" | "surface" | "wall" | "ceiling";
 export type SupportObjectId1 = string | null;
 export type SupportSurfaceId = string | null;
-export type Wall1 = ("north" | "south" | "west" | "east") | null;
+export type Wall2 = ("north" | "south" | "west" | "east") | null;
 export type OpeningId = string | null;
 export type Fixed = boolean;
 export type Locked = boolean;
@@ -589,6 +827,22 @@ export type Message = string;
 export type Errors = GeometryIssue[];
 export type Warnings2 = GeometryIssue[];
 export type Valid = boolean;
+export type PolicyVersion1 = "reconstruction_v1";
+export type MajorObjectCoverage = number;
+export type RelationshipScore = number | null;
+export type ProportionScore = number | null;
+export type ColorScore = number | null;
+export type Recognizable = boolean | null;
+export type Kind1 = "coverage" | "facing" | "wall" | "adjacency" | "support" | "proportion" | "color";
+export type EntityIds2 = string[];
+export type Passed = boolean;
+export type Required = boolean;
+export type Message1 = string;
+/**
+ * @maxItems 4000
+ */
+export type Checks = FidelityCheck[];
+export type Unassessed = string[];
 export type Code1 =
   | "unsupported_room_shape"
   | "unknown_object"
@@ -605,18 +859,19 @@ export type Code1 =
   | "geometry"
   | "proposal_limit_reached"
   | "dependency_unresolved"
-  | "repair_failed";
+  | "repair_failed"
+  | "fidelity";
 /**
  * @maxItems 200
  */
-export type EntityIds2 = string[];
-export type Message1 = string;
+export type EntityIds3 = string[];
+export type Message2 = string;
 /**
  * @maxItems 50
  */
 export type Issues = ProposalIssue[];
-export type EntityId = string;
-export type Kind = "object" | "opening";
+export type EntityId1 = string;
+export type Kind2 = "object" | "opening";
 /**
  * @maxItems 232
  */
@@ -626,20 +881,20 @@ export type UnresolvedEntities = UnresolvedEntity[];
  */
 export type Warnings3 = string[];
 export type ExpiresAt2 = string;
-export type Id5 = string;
+export type Id6 = string;
 export type Question = string;
 /**
  * @minItems 3
  * @maxItems 3
  */
 export type Choices = [ClarificationChoice, ClarificationChoice, ClarificationChoice];
-export type Id6 = string;
+export type Id7 = string;
 export type Label2 = string;
 /**
  * @maxItems 200
  */
-export type EntityIds3 = string[];
-export type Kind1 = "room_dimensions" | "object_mobility";
+export type EntityIds4 = string[];
+export type Kind3 = "room_dimensions" | "object_mobility" | "object_identity" | "layout_orientation";
 /**
  * @maxItems 3
  */
@@ -825,7 +1080,7 @@ export type Name1 =
     )
   | null;
 export type Outcome = "success" | "rejected" | "error";
-export type Message2 = string;
+export type Message3 = string;
 export type Step = number;
 export type Status3 =
   | "queued"
@@ -862,6 +1117,7 @@ export interface AgentState {
   pending_question: ClarificationQuestion | null;
   questions: Questions;
   submitted_answers: SubmittedAnswers;
+  reconstruction_constraints: ReconstructionConstraints;
   object_mobility: ObjectMobility;
   base_scene: RoomScene | null;
   working_scene: RoomScene | null;
@@ -940,6 +1196,8 @@ export interface RoomObservations {
   walls: Walls;
   objects: Objects;
   openings: Openings;
+  relationships?: Relationships;
+  finishes?: FinishObservation | null;
   possible_duplicates: PossibleDuplicates;
   unknowns: Unknowns;
   assumptions: Assumptions;
@@ -977,6 +1235,9 @@ export interface ObjectObservation {
   label: Label1;
   source_image_ids: SourceImageIds1;
   confidence: Confidence1;
+  alternative_type?: AlternativeType;
+  material_colors?: MaterialColors | null;
+  wall_coverage?: WallCoverage;
   relative_location: RelativeLocation;
   wall_id: WallId;
   placement: Placement;
@@ -985,6 +1246,17 @@ export interface ObjectObservation {
   color: Color;
   estimated_dimensions_m: EstimatedObjectDimensions | null;
   notes: Notes1;
+}
+/**
+ * Small, fixed palette of visible material roles; null keeps model defaults.
+ */
+export interface MaterialColors {
+  wood?: Wood;
+  metal?: Metal;
+  linen?: Linen;
+  inset?: Inset;
+  rubber?: Rubber;
+  enamel?: Enamel;
 }
 export interface EstimatedObjectDimensions {
   width: Width;
@@ -997,11 +1269,38 @@ export interface OpeningObservation {
   source_image_ids: SourceImageIds2;
   confidence: Confidence2;
   wall_id: WallId1;
+  alternative_type?: AlternativeType1;
+  material_colors?: MaterialColors | null;
+  wall_coverage?: WallCoverage1;
   relative_location: RelativeLocation1;
   estimated_width_m: EstimatedWidthM;
   estimated_height_m: EstimatedHeightM;
   estimated_sill_height_m: EstimatedSillHeightM;
   notes: Notes2;
+}
+/**
+ * View-independent relationship between stable observation identities.
+ */
+export interface SpatialRelationship {
+  id: Id3;
+  subject_id: SubjectId;
+  target_id: TargetId;
+  kind: Kind;
+  alternative_target_id?: AlternativeTargetId;
+  confidence: Confidence3;
+  source_image_ids: SourceImageIds3;
+  evidence: Evidence;
+}
+export interface FinishObservation {
+  finishes: RoomFinishes;
+  confidence: Confidence4;
+  source_image_ids: SourceImageIds4;
+  evidence: Evidence1;
+}
+export interface RoomFinishes {
+  floor_color?: FloorColor;
+  wall_color?: WallColor;
+  floor_pattern?: FloorPattern;
 }
 /**
  * An unresolved match, not permission to merge or discard either instance.
@@ -1019,6 +1318,7 @@ export interface SceneProposalResponse {
   estimated_axes: EstimatedAxes;
   scene: RoomScene | null;
   validation: GeometryReport | null;
+  fidelity?: FidelityReport | null;
   issues: Issues;
   unresolved_entities?: UnresolvedEntities;
   warnings: Warnings3;
@@ -1027,6 +1327,9 @@ export interface SceneProposalResponse {
 export interface RoomScene {
   schema_version: SchemaVersion1;
   room: RoomDimensions;
+  finishes?: RoomFinishes | null;
+  wall_mapping?: WallMapping;
+  estimate_corrections?: EstimateCorrections;
   openings: Openings1;
   objects: Objects1;
   assumptions: Assumptions1;
@@ -1039,10 +1342,25 @@ export interface RoomDimensions {
   height_m: HeightM2;
   measurements_source: MeasurementsSource1;
 }
-export interface Opening {
-  id: Id3;
-  type: Type2;
+export interface WallReference {
+  observation_id: ObservationId;
   wall: Wall;
+}
+/**
+ * Auditable revision of a photo size hypothesis, never a user measurement.
+ */
+export interface EstimateCorrection {
+  entity_id: EntityId;
+  field: Field;
+  previous_m: PreviousM;
+  revised_m: RevisedM;
+  reason: Reason1;
+  source_image_ids: SourceImageIds5;
+}
+export interface Opening {
+  id: Id4;
+  type: Type2;
+  wall: Wall1;
   offset_m: OffsetM;
   width_m: WidthM3;
   height_m: HeightM3;
@@ -1053,17 +1371,18 @@ export interface Opening {
   measurements_source: MeasurementsSource2;
 }
 export interface SceneObject {
-  id: Id4;
+  id: Id5;
   type: Type3;
   asset_id: AssetId;
   position: Position;
   rotation_y_rad: RotationYRad;
   dimensions_m: ObjectDimensions;
   color: Color1;
+  material_colors?: MaterialColors | null;
   placement: Placement1;
   support_object_id: SupportObjectId1;
   support_surface_id?: SupportSurfaceId;
-  wall: Wall1;
+  wall: Wall2;
   opening_id: OpeningId;
   fixed: Fixed;
   locked: Locked;
@@ -1099,17 +1418,34 @@ export interface GeometryIssue {
   entity_ids: EntityIds1;
   message: Message;
 }
+export interface FidelityReport {
+  policy_version?: PolicyVersion1;
+  major_object_coverage: MajorObjectCoverage;
+  relationship_score: RelationshipScore;
+  proportion_score: ProportionScore;
+  color_score: ColorScore;
+  recognizable: Recognizable;
+  checks: Checks;
+  unassessed: Unassessed;
+}
+export interface FidelityCheck {
+  kind: Kind1;
+  entity_ids: EntityIds2;
+  passed: Passed;
+  required: Required;
+  message: Message1;
+}
 export interface ProposalIssue {
   code: Code1;
-  entity_ids: EntityIds2;
-  message: Message1;
+  entity_ids: EntityIds3;
+  message: Message2;
 }
 /**
  * An original observation omitted from the validated scene, never deleted.
  */
 export interface UnresolvedEntity {
-  entity_id: EntityId;
-  kind: Kind;
+  entity_id: EntityId1;
+  kind: Kind2;
   reason: ProposalIssue;
 }
 export interface ClarificationAnswers {
@@ -1123,15 +1459,15 @@ export interface ClarificationAnswers {
  * Three server-defined actions for one specific missing fact.
  */
 export interface ClarificationQuestion {
-  id: Id5;
+  id: Id6;
   question: Question;
   choices: Choices;
-  entity_ids: EntityIds3;
-  kind: Kind1;
+  entity_ids: EntityIds4;
+  kind: Kind3;
   dimension_axes: DimensionAxes;
 }
 export interface ClarificationChoice {
-  id: Id6;
+  id: Id7;
   label: Label2;
 }
 export interface SubmittedAnswers {
@@ -1154,6 +1490,96 @@ export interface EnteredDimensions {
   length_m: LengthM3;
   height_m: HeightM4;
 }
+/**
+ * User answers overlaid on a copy; source photo hypotheses stay immutable.
+ */
+export interface ReconstructionConstraints {
+  object_types?: ObjectTypes;
+  facing_targets?: FacingTargets;
+}
+export interface ObjectTypes {
+  /**
+   * This interface was referenced by `ObjectTypes`'s JSON-Schema definition
+   * via the `patternProperty` "^[a-z][a-z0-9_]*$".
+   */
+  [k: string]:
+    | "bed"
+    | "sofa"
+    | "armchair"
+    | "chair"
+    | "stool"
+    | "bench"
+    | "ottoman"
+    | "desk"
+    | "table"
+    | "coffee_table"
+    | "side_table"
+    | "nightstand"
+    | "wardrobe"
+    | "dresser"
+    | "shelf"
+    | "tv_stand"
+    | "shoe_rack"
+    | "sideboard"
+    | "wall_shelf"
+    | "storage_box"
+    | "basket"
+    | "bin"
+    | "computer"
+    | "laptop"
+    | "monitor"
+    | "printer"
+    | "game_console"
+    | "speaker"
+    | "tv"
+    | "projector"
+    | "rug"
+    | "picture"
+    | "clock"
+    | "window_covering"
+    | "souvenir"
+    | "vase"
+    | "book_stack"
+    | "household_accessory"
+    | "mirror"
+    | "plant"
+    | "floor_lamp"
+    | "table_lamp"
+    | "chandelier"
+    | "ceiling_light"
+    | "ceiling_fan"
+    | "radiator"
+    | "air_conditioner"
+    | "fan"
+    | "kitchen_cabinet"
+    | "kitchen_counter"
+    | "wall_cabinet"
+    | "extractor_hood"
+    | "refrigerator"
+    | "cooker"
+    | "dishwasher"
+    | "washing_machine"
+    | "dryer"
+    | "microwave"
+    | "kettle"
+    | "toaster"
+    | "sink"
+    | "toilet"
+    | "bathtub"
+    | "shower"
+    | "vanity"
+    | "towel_rack"
+    | "water_heater"
+    | "drying_rack"
+    | null;
+}
+export interface FacingTargets {
+  /**
+   * This interface was referenced by `FacingTargets`'s JSON-Schema definition
+   * via the `patternProperty` "^[a-z][a-z0-9_]*$".
+   */
+  [k: string]: string | null;
+}
 export interface ObjectMobility {
   /**
    * This interface was referenced by `ObjectMobility`'s JSON-Schema definition
@@ -1172,7 +1598,7 @@ export interface Arguments {
 export interface ToolFeedback1 {
   name: Name1;
   outcome: Outcome;
-  message: Message2;
+  message: Message3;
   details: Details;
 }
 export interface Details {

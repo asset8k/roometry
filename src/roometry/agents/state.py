@@ -22,7 +22,11 @@ from roometry.uploads.schemas import (
     Side,
 )
 from roometry.vision.proposal_schemas import DimensionName, SceneProposalResponse
-from roometry.vision.schemas import RoomAnalysisResponse
+from roometry.vision.schemas import ReconstructionConstraints, RoomAnalysisResponse
+
+ClarificationKind = Literal[
+    "room_dimensions", "object_mobility", "object_identity", "layout_orientation"
+]
 
 RunStatus = Literal[
     "queued",
@@ -40,7 +44,10 @@ RunStatus = Literal[
 
 class RunModel(BaseModel):
     model_config = ConfigDict(
-        extra="forbid", strict=True, frozen=True, revalidate_instances="always",
+        extra="forbid",
+        strict=True,
+        frozen=True,
+        revalidate_instances="always",
         json_schema_serialization_defaults_required=True,
     )
 
@@ -121,7 +128,7 @@ class ClarificationQuestion(RunModel):
     entity_ids: Annotated[list[Identifier], Field(max_length=200)] = Field(
         default_factory=list
     )
-    kind: Literal["room_dimensions", "object_mobility"]
+    kind: ClarificationKind
     dimension_axes: Annotated[list[DimensionName], Field(max_length=3)] = Field(
         default_factory=list
     )
@@ -170,6 +177,9 @@ class AgentState(RunModel):
     submitted_answers: Annotated[
         dict[Identifier, ClarificationAnswer], Field(max_length=3)
     ] = Field(default_factory=dict)
+    reconstruction_constraints: ReconstructionConstraints = Field(
+        default_factory=ReconstructionConstraints
+    )
     object_mobility: Annotated[dict[Identifier, bool | None], Field(max_length=3)] = (
         Field(default_factory=dict)
     )

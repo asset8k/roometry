@@ -15,6 +15,8 @@ from roometry.agents.clarification import answer_updates, question_for
 from roometry.agents.state import AgentState, ClarificationAnswer, RunStep, RunUsage
 from roometry.model_calls import observe_model_calls
 from roometry.scenes.validation import validate_geometry
+from roometry.vision.evidence import apply_constraints
+from roometry.vision.fidelity import evaluate_fidelity
 
 
 class StepAdapter(Protocol):
@@ -129,6 +131,26 @@ def check_step(state: AgentState, step: RunStep) -> None:
             exclude={"objects"}
         ):
             raise ValueError("Scene edits cannot change room geometry or provenance.")
+        if state.analysis is not None:
+            effective = apply_constraints(
+                state.analysis, state.reconstruction_constraints
+            )
+            before = evaluate_fidelity(effective, original)
+            after = evaluate_fidelity(effective, candidate)
+            old_failures = {
+                (c.kind, tuple(c.entity_ids), c.message)
+                for c in before.checks
+                if c.required and not c.passed
+            }
+            if any(
+                c.required
+                and not c.passed
+                and (c.kind, tuple(c.entity_ids), c.message) not in old_failures
+                for c in after.checks
+            ):
+                raise ValueError(
+                    "Agent pose edits must preserve evidence-backed relationships."
+                )
         originals = {obj.id: obj for obj in original.objects}
         if [obj.id for obj in original.objects] != [
             obj.id for obj in candidate.objects
@@ -303,7 +325,9 @@ def finalize(state: AgentState) -> dict[str, object]:
             status = "partial" if proposal.status == "partial" else "completed"
         elif status != "budget_exhausted":
             status = "incomplete"
-        reason = reason or ("budget_limit" if state.status == "budget_exhausted" else "finished")
+        reason = reason or (
+            "budget_limit" if state.status == "budget_exhausted" else "finished"
+        )
     return {
         "status": status,
         "stop_reason": reason,

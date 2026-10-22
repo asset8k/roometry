@@ -1,19 +1,32 @@
 """Eligible clarifications and reads for the current accepted scene revision."""
 
-from typing import Literal
-
 from roometry.agents.clarification import question_for
-from roometry.agents.state import AgentState, ClarificationQuestion
+from roometry.agents.state import AgentState, ClarificationKind, ClarificationQuestion
 
 
-def clarification_candidates(state: AgentState, *, reserve_decision: bool = True) -> list[ClarificationQuestion]:
+def clarification_candidates(
+    state: AgentState, *, reserve_decision: bool = True
+) -> list[ClarificationQuestion]:
     if state.analysis is None:
         return []
     # Advertising a question must leave work budget after the decision itself.
-    effective = state.model_copy(update={
-        "usage": state.usage.model_copy(update={"model_calls": state.usage.model_calls + int(reserve_decision)}),
-    })
-    targets: list[tuple[Literal["room_dimensions", "object_mobility"], str | None]] = [("room_dimensions", None)]
+    effective = state.model_copy(
+        update={
+            "usage": state.usage.model_copy(
+                update={"model_calls": state.usage.model_calls + int(reserve_decision)}
+            ),
+        }
+    )
+    targets: list[tuple[ClarificationKind, str | None]] = [("room_dimensions", None)]
+    if state.working_scene is None:
+        from roometry.vision.importance import importance
+
+        for obj in sorted(
+            state.analysis.observations.objects, key=lambda o: (importance(o), o.id)
+        ):
+            targets.extend(
+                [("object_identity", obj.id), ("layout_orientation", obj.id)]
+            )
     if state.working_scene:
         for obj in state.working_scene.objects:
             targets.append(("object_mobility", obj.id))

@@ -1,10 +1,9 @@
 """Pure question construction and answer effects, with no provider calls."""
 
-from typing import Literal
-
 from roometry.agents.state import (
     AgentState,
     ClarificationAnswer,
+    ClarificationKind,
     ClarificationQuestion,
     ToolFeedback,
 )
@@ -23,7 +22,7 @@ class AnswerConflict(ValueError):
 
 def question_for(
     state: AgentState,
-    kind: Literal["room_dimensions", "object_mobility"],
+    kind: ClarificationKind,
     object_id: str | None = None,
 ) -> ClarificationQuestion:
     if state.analysis is None or len(state.questions) >= 3:
@@ -52,7 +51,7 @@ def question_for(
         return ClarificationQuestion.model_validate(
             {
                 **common,
-            "question": f"What {'is' if len(missing) == 1 else 'are'} the room's {names} in meters? Enter the values you know; photos could not establish these dimensions.",
+                "question": f"What {'is' if len(missing) == 1 else 'are'} the room's {names} in meters? Enter the values you know; photos could not establish these dimensions.",
                 "dimension_axes": missing,
                 "choices": [
                     {"id": "enter_measurements", "label": "Enter the measurements"},
@@ -62,6 +61,81 @@ def question_for(
                     },
                     {"id": "cancel_run", "label": "Cancel this run"},
                 ],
+            }
+        )
+    if kind in {"object_identity", "layout_orientation"}:
+        if state.working_scene is not None:
+            raise ValueError("Resolve reconstruction hypotheses before construction.")
+        if any(q.kind == kind and q.entity_ids == [object_id] for q in state.questions):
+            raise ValueError("This reconstruction uncertainty has already been asked.")
+        source = next(
+            (o for o in state.analysis.observations.objects if o.id == object_id), None
+        )
+        if source is None:
+            raise ValueError("Choose an observed object.")
+        if kind == "object_identity":
+            if (
+                source.alternative_type is None
+                or source.type == source.alternative_type
+            ):
+                raise ValueError(
+                    "This observation has no distinct identity hypothesis."
+                )
+            primary = (
+                source.type.replace("_", " ") if source.type else "Unclassified item"
+            )
+            choices = [
+                {"id": "use_primary", "label": primary.title()},
+                {
+                    "id": "use_alternative",
+                    "label": source.alternative_type.replace("_", " ").title(),
+                },
+                {
+                    "id": "leave_unknown",
+                    "label": "Neither / not sure — leave this item unresolved",
+                },
+            ]
+            text = f"How should we represent {source.label}?"
+        else:
+            relations = [
+                r
+                for r in state.analysis.observations.relationships
+                if r.kind == "faces" and r.subject_id == source.id
+            ]
+            if len(relations) != 1 or relations[0].alternative_target_id is None:
+                raise ValueError("This object has no two-target facing uncertainty.")
+            relation = relations[0]
+            entities = {
+                o.id: o
+                for o in [
+                    *state.analysis.observations.objects,
+                    *state.analysis.observations.openings,
+                    *state.analysis.observations.walls,
+                ]
+            }
+
+            def label(key):
+                entity = entities[key]
+                return getattr(entity, "label", getattr(entity, "type", key))[:150]
+
+            choices = [
+                {"id": "face_primary", "label": "Toward " + label(relation.target_id)},
+                {
+                    "id": "face_alternative",
+                    "label": "Toward " + label(relation.alternative_target_id),
+                },
+                {
+                    "id": "leave_unknown",
+                    "label": "Not sure — keep the direction approximate",
+                },
+            ]
+            text = f"Which direction does {source.label} face?"
+        return ClarificationQuestion.model_validate(
+            {
+                **common,
+                "question": text[:500],
+                "entity_ids": [source.id],
+                "choices": choices,
             }
         )
     scene = state.working_scene
@@ -169,6 +243,38 @@ def answer_updates(state: AgentState, answer: ClarificationAnswer) -> dict[str, 
             message = (
                 "Measurements remain unknown; no complete reconstruction is claimed."
             )
+    elif question.kind in {"object_identity", "layout_orientation"}:
+        object_id = question.entity_ids[0]
+        assert state.analysis is not None
+        constraints = state.reconstruction_constraints.model_copy(deep=True)
+        if question.kind == "object_identity":
+            obj = next(
+                o for o in state.analysis.observations.objects if o.id == object_id
+            )
+            selected = (
+                obj.type
+                if answer.choice_id == "use_primary"
+                else obj.alternative_type
+                if answer.choice_id == "use_alternative"
+                else None
+            )
+            constraints.object_types[object_id] = selected
+        else:
+            relation = next(
+                r
+                for r in state.analysis.observations.relationships
+                if r.kind == "faces" and r.subject_id == object_id
+            )
+            selected = (
+                relation.target_id
+                if answer.choice_id == "face_primary"
+                else relation.alternative_target_id
+                if answer.choice_id == "face_alternative"
+                else None
+            )
+            constraints.facing_targets[object_id] = selected
+        result["reconstruction_constraints"] = constraints.model_dump()
+        message = "The user's reconstruction answer is recorded separately; reuse the original cached analysis and photos."
     else:
         object_id = question.entity_ids[0]
         allowed = answer.choice_id == "allow_movement"

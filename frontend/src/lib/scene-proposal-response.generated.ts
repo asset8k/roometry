@@ -35,9 +35,47 @@ export type WidthM1 = number;
 export type LengthM1 = number;
 export type HeightM1 = number;
 export type MeasurementsSource1 = "user_confirmed" | "estimated";
+export type FloorColor = string | null;
+export type WallColor = string | null;
+export type FloorPattern = ("wood" | "tile" | "plain") | null;
+/**
+ * @maxItems 4
+ */
+export type WallMapping =
+  | []
+  | [WallReference]
+  | [WallReference, WallReference]
+  | [WallReference, WallReference, WallReference]
+  | [WallReference, WallReference, WallReference, WallReference];
+export type ObservationId = string;
+export type Wall = "north" | "south" | "west" | "east";
+export type EntityId = string;
+export type Field = "width" | "depth" | "height" | "width_m" | "height_m" | "sill_height_m";
+export type PreviousM = number;
+export type RevisedM = number;
+export type Reason = string;
+/**
+ * @minItems 1
+ * @maxItems 10
+ */
+export type SourceImageIds =
+  | [string]
+  | [string, string]
+  | [string, string, string]
+  | [string, string, string, string]
+  | [string, string, string, string, string]
+  | [string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string, string];
+/**
+ * @maxItems 200
+ */
+export type EstimateCorrections = EstimateCorrection[];
 export type Id = string;
 export type Type = "door" | "window";
-export type Wall = "north" | "south" | "west" | "east";
+export type Wall1 = "north" | "south" | "west" | "east";
 export type OffsetM = number;
 export type WidthM2 = number;
 export type HeightM2 = number;
@@ -189,6 +227,11 @@ export type AssetId =
   | "towel_rack_standard_01"
   | "water_heater_standard_01"
   | "drying_rack_standard_01"
+  | "bed_futon_01"
+  | "sofa_sleeper_01"
+  | "chair_office_01"
+  | "shelf_metal_01"
+  | "ceiling_light_track_01"
   | "bed_crib_01"
   | "sofa_sectional_left_01"
   | "sofa_sectional_right_01"
@@ -229,10 +272,16 @@ export type Width = number;
 export type Depth = number;
 export type Height = number;
 export type Color = string;
+export type Wood = string | null;
+export type Metal = string | null;
+export type Linen = string | null;
+export type Inset = string | null;
+export type Rubber = string | null;
+export type Enamel = string | null;
 export type Placement = "floor" | "surface" | "wall" | "ceiling";
 export type SupportObjectId = string | null;
 export type SupportSurfaceId = string | null;
-export type Wall1 = ("north" | "south" | "west" | "east") | null;
+export type Wall2 = ("north" | "south" | "west" | "east") | null;
 export type OpeningId = string | null;
 export type Fixed = boolean;
 export type Locked = boolean;
@@ -268,6 +317,22 @@ export type Message = string;
 export type Errors = GeometryIssue[];
 export type Warnings1 = GeometryIssue[];
 export type Valid = boolean;
+export type PolicyVersion1 = "reconstruction_v1";
+export type MajorObjectCoverage = number;
+export type RelationshipScore = number | null;
+export type ProportionScore = number | null;
+export type ColorScore = number | null;
+export type Recognizable = boolean | null;
+export type Kind = "coverage" | "facing" | "wall" | "adjacency" | "support" | "proportion" | "color";
+export type EntityIds1 = string[];
+export type Passed = boolean;
+export type Required = boolean;
+export type Message1 = string;
+/**
+ * @maxItems 4000
+ */
+export type Checks = FidelityCheck[];
+export type Unassessed = string[];
 export type Code1 =
   | "unsupported_room_shape"
   | "unknown_object"
@@ -284,18 +349,19 @@ export type Code1 =
   | "geometry"
   | "proposal_limit_reached"
   | "dependency_unresolved"
-  | "repair_failed";
+  | "repair_failed"
+  | "fidelity";
 /**
  * @maxItems 200
  */
-export type EntityIds1 = string[];
-export type Message1 = string;
+export type EntityIds2 = string[];
+export type Message2 = string;
 /**
  * @maxItems 50
  */
 export type Issues = ProposalIssue[];
-export type EntityId = string;
-export type Kind = "object" | "opening";
+export type EntityId1 = string;
+export type Kind1 = "object" | "opening";
 /**
  * @maxItems 232
  */
@@ -315,6 +381,7 @@ export interface SceneProposalResponse {
   estimated_axes: EstimatedAxes;
   scene: RoomScene | null;
   validation: GeometryReport | null;
+  fidelity?: FidelityReport | null;
   issues: Issues;
   unresolved_entities?: UnresolvedEntities;
   warnings: Warnings2;
@@ -332,6 +399,9 @@ export interface InputDimensions {
 export interface RoomScene {
   schema_version: SchemaVersion;
   room: RoomDimensions;
+  finishes?: RoomFinishes | null;
+  wall_mapping?: WallMapping;
+  estimate_corrections?: EstimateCorrections;
   openings: Openings;
   objects: Objects;
   assumptions: Assumptions;
@@ -344,10 +414,30 @@ export interface RoomDimensions {
   height_m: HeightM1;
   measurements_source: MeasurementsSource1;
 }
+export interface RoomFinishes {
+  floor_color?: FloorColor;
+  wall_color?: WallColor;
+  floor_pattern?: FloorPattern;
+}
+export interface WallReference {
+  observation_id: ObservationId;
+  wall: Wall;
+}
+/**
+ * Auditable revision of a photo size hypothesis, never a user measurement.
+ */
+export interface EstimateCorrection {
+  entity_id: EntityId;
+  field: Field;
+  previous_m: PreviousM;
+  revised_m: RevisedM;
+  reason: Reason;
+  source_image_ids: SourceImageIds;
+}
 export interface Opening {
   id: Id;
   type: Type;
-  wall: Wall;
+  wall: Wall1;
   offset_m: OffsetM;
   width_m: WidthM2;
   height_m: HeightM2;
@@ -365,10 +455,11 @@ export interface SceneObject {
   rotation_y_rad: RotationYRad;
   dimensions_m: ObjectDimensions;
   color: Color;
+  material_colors?: MaterialColors | null;
   placement: Placement;
   support_object_id: SupportObjectId;
   support_surface_id?: SupportSurfaceId;
-  wall: Wall1;
+  wall: Wall2;
   opening_id: OpeningId;
   fixed: Fixed;
   locked: Locked;
@@ -389,6 +480,17 @@ export interface ObjectDimensions {
   height: Height;
 }
 /**
+ * Small, fixed palette of visible material roles; null keeps model defaults.
+ */
+export interface MaterialColors {
+  wood?: Wood;
+  metal?: Metal;
+  linen?: Linen;
+  inset?: Inset;
+  rubber?: Rubber;
+  enamel?: Enamel;
+}
+/**
  * `valid` means catalog component checks passed, not full scene acceptance.
  */
 export interface GeometryReport {
@@ -404,16 +506,33 @@ export interface GeometryIssue {
   entity_ids: EntityIds;
   message: Message;
 }
+export interface FidelityReport {
+  policy_version?: PolicyVersion1;
+  major_object_coverage: MajorObjectCoverage;
+  relationship_score: RelationshipScore;
+  proportion_score: ProportionScore;
+  color_score: ColorScore;
+  recognizable: Recognizable;
+  checks: Checks;
+  unassessed: Unassessed;
+}
+export interface FidelityCheck {
+  kind: Kind;
+  entity_ids: EntityIds1;
+  passed: Passed;
+  required: Required;
+  message: Message1;
+}
 export interface ProposalIssue {
   code: Code1;
-  entity_ids: EntityIds1;
-  message: Message1;
+  entity_ids: EntityIds2;
+  message: Message2;
 }
 /**
  * An original observation omitted from the validated scene, never deleted.
  */
 export interface UnresolvedEntity {
-  entity_id: EntityId;
-  kind: Kind;
+  entity_id: EntityId1;
+  kind: Kind1;
   reason: ProposalIssue;
 }

@@ -158,9 +158,9 @@ def test_200_colliding_objects_are_selected_in_a_batch_and_the_subset_is_revalid
     calls = []
     original = partial_module.assemble
 
-    def counted(*args):
+    def counted(*args, **kwargs):
         calls.append(1)
-        return original(*args)
+        return original(*args, **kwargs)
 
     monkeypatch.setattr(partial_module, "assemble", counted)
     scene, _, _, unresolved = select(analysis, data)
@@ -264,10 +264,10 @@ async def test_repair_request_limit_preserves_partial_without_an_extra_paid_call
     actions.append(scene_action(bad))
     original = service_module.build_proposal_request
 
-    def limited(settings, analysis, measurements, draft, issues):
+    def limited(settings, analysis, measurements, draft, issues, images=None):
         if draft is not None:
             raise AnalysisFailure(413, "request_too_large", "The repair request exceeds its input limit.")
-        return original(settings, analysis, measurements, draft, issues)
+        return original(settings, analysis, measurements, draft, issues, images)
 
     monkeypatch.setattr(service_module, "build_proposal_request", limited)
     req = body(analysis, dimensions=confirmed(length_m=4, height_m=2.6))
