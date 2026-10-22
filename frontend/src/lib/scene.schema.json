@@ -766,6 +766,42 @@
       "title": "SceneObject",
       "type": "object"
     },
+    "WallAxisBinding": {
+      "additionalProperties": false,
+      "properties": {
+        "observation_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Observation Id",
+          "type": "string"
+        },
+        "axis": {
+          "enum": [
+            "width_m",
+            "length_m"
+          ],
+          "title": "Axis",
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "photo",
+            "user",
+            "estimated"
+          ],
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "observation_id",
+        "axis",
+        "source"
+      ],
+      "title": "WallAxisBinding",
+      "type": "object"
+    },
     "WallReference": {
       "additionalProperties": false,
       "properties": {
@@ -815,6 +851,14 @@
         }
       ],
       "default": null
+    },
+    "wall_axis_bindings": {
+      "items": {
+        "$ref": "#/$defs/WallAxisBinding"
+      },
+      "maxItems": 4,
+      "title": "Wall Axis Bindings",
+      "type": "array"
     },
     "wall_mapping": {
       "items": {

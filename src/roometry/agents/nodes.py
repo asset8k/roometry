@@ -117,7 +117,7 @@ def check_step(state: AgentState, step: RunStep) -> None:
         expected = question_for(
             effective,
             question.kind,
-            question.entity_ids[0] if question.entity_ids else None,
+            None if question.kind in {"room_dimensions", "room_wall_axis"} else question.entity_ids[0] if question.entity_ids else None,
         )
         if question != expected or step.action != "continue":
             raise ValueError(
@@ -133,7 +133,8 @@ def check_step(state: AgentState, step: RunStep) -> None:
             raise ValueError("Scene edits cannot change room geometry or provenance.")
         if state.analysis is not None:
             effective = apply_constraints(
-                state.analysis, state.reconstruction_constraints
+                state.analysis, state.reconstruction_constraints,
+                wall_axes=state.proposal.wall_axes if state.proposal else None,
             )
             before = evaluate_fidelity(effective, original)
             after = evaluate_fidelity(effective, candidate)

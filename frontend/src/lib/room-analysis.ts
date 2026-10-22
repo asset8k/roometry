@@ -39,6 +39,7 @@ export function parseSceneProposal(data: unknown): SceneProposalResponse {
     || estimated.some(axis => dimensions[axis] == null)
     || (dimensions.measurements_source === 'user_confirmed' && estimated.length > 0)
     || (status === 'needs_dimensions' && !pending.length)
+    || (status === 'needs_wall_assignment' && (data.wall_axes?.status !== 'needs_clarification' || pending.length > 0 || unresolved.length > 0))
     || (status === 'incomplete' && !issues.length)
     || (validation !== null && validation.valid !== (validation.errors.length === 0))
     || unresolvedIds.size !== unresolved.length || new Set(retained).size !== retained.length

@@ -31,7 +31,8 @@ and its successful validation are already in context. Avoid inspecting merely
 to fill remaining budget; choose finish when there is no evidence-backed edit.
 Use eligible_questions only; do not invent a question for another object.
 Use request_clarification only when its answer materially changes reconstruction:
-missing room dimensions, important object_identity or layout_orientation
+missing room dimensions, room_wall_axis (which physical wall matches a measured
+side), important object_identity or layout_orientation
 uncertainties BEFORE building, or whether a specific movable object may move.
 Prioritize major anchor ambiguities from eligible_questions; do not spend the
 question cap on accessory details. Use reconstruction_constraints as authoritative

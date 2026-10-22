@@ -1,6 +1,7 @@
 """Photo-grounded structured construction using the bounded Responses transport."""
 
 import json
+from copy import deepcopy
 from openai.types.responses import ResponseInputContentParam
 from dataclasses import asdict
 
@@ -21,6 +22,7 @@ from roometry.vision.prompts import SCENE_PROPOSAL_INSTRUCTIONS
 from roometry.vision.proposal_schemas import ProposalIssue, SceneDraft
 from roometry.vision.proposals import Measurements
 from roometry.vision.schemas import RoomAnalysisResponse
+from roometry.vision.wall_axes import AXIS_WALLS
 
 
 def build_proposal_request(
@@ -105,6 +107,7 @@ def build_proposal_request(
         "input_options": analysis.input_options.model_dump(mode="json"),
         "room_dimensions": measurements.dimensions.model_dump(mode="json"),
         "estimated_axes": measurements.estimated,
+        "wall_axes": analysis.wall_axes.model_dump(mode="json") if analysis.wall_axes else None,
         "asset_bindings": bindings,
         "construction_order": {
             "anchors": [item.id for item in [*analysis.observations.openings, *analysis.observations.objects] if importance(item) == 0],
@@ -117,6 +120,19 @@ def build_proposal_request(
         "attachment_constraints": attachment_constraints,
         "validation_feedback": [item.model_dump(mode="json") for item in issues],
     }
+    schema = strict_schema(SceneDraft)
+    # Constrain each observed wall's axis at decoding time. Uniqueness and
+    # topology still receive deterministic checks after decoding.
+    if analysis.observations.walls:
+        by_id = {b.observation_id: b for b in analysis.wall_axes.bindings} if analysis.wall_axes else {}
+        variants = []
+        for observed_wall in analysis.observations.walls:
+            variant = deepcopy(schema["$defs"]["WallAssignment"])
+            variant["properties"]["observation_id"]["enum"] = [observed_wall.id]
+            if observed_wall.id in by_id:
+                variant["properties"]["wall"]["enum"] = list(AXIS_WALLS[by_id[observed_wall.id].axis])
+            variants.append(variant)
+        schema["properties"]["wall_assignments"].update(items={"anyOf": variants}, minItems=len(variants), maxItems=len(variants))
     content: list[ResponseInputContentParam] = [{"type": "input_text", "text": json.dumps(context, ensure_ascii=True)}]
     if images is not None:
         content.extend(photo_content(analysis.observations.image_ids, images, settings.analysis_max_request_bytes))
@@ -134,7 +150,7 @@ def build_proposal_request(
                 "type": "json_schema",
                 "name": "room_scene_draft",
                 "strict": True,
-                "schema": strict_schema(SceneDraft),
+                "schema": schema,
             }
         },
         "max_output_tokens": settings.scene_max_output_tokens,

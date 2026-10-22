@@ -214,6 +214,12 @@ class SceneObject(SceneModel):
         return self
 
 
+class WallAxisBinding(SceneModel):
+    observation_id: Identifier
+    axis: Literal["width_m", "length_m"]
+    source: Literal["photo", "user", "estimated"]
+
+
 class WallReference(SceneModel):
     observation_id: Identifier
     wall: Wall
@@ -223,6 +229,7 @@ class RoomScene(SceneModel):
     schema_version: Literal[1]
     room: RoomDimensions
     finishes: RoomFinishes | None = None
+    wall_axis_bindings: Annotated[list[WallAxisBinding], Field(max_length=4)] = Field(default_factory=list)
     wall_mapping: Annotated[list[WallReference], Field(max_length=4)] = Field(default_factory=list)
     estimate_corrections: Annotated[list[EstimateCorrection], Field(max_length=200)] = Field(default_factory=list)
     openings: Annotated[list[Opening], Field(max_length=MAX_OPENINGS)]
@@ -246,6 +253,14 @@ class RoomScene(SceneModel):
                 raise ValueError(f"Duplicate scene ID: {item.id}")
             seen.add(item.id)
 
+        mapped_walls = {item.observation_id: item.wall for item in self.wall_mapping}
+        axis_ids = [item.observation_id for item in self.wall_axis_bindings]
+        if len(axis_ids) != len(set(axis_ids)):
+            raise ValueError("Wall-axis bindings must be unique.")
+        for binding in self.wall_axis_bindings:
+            host = mapped_walls.get(binding.observation_id)
+            if host is None or ((host in {"north", "south"}) != (binding.axis == "width_m")):
+                raise ValueError("Wall assignments must preserve their resolved dimension axis.")
         objects = {obj.id: obj for obj in self.objects}
         openings = {opening.id: opening for opening in self.openings}
         for obj in self.objects:

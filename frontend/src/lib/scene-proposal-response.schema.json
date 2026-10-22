@@ -787,6 +787,14 @@
           ],
           "default": null
         },
+        "wall_axis_bindings": {
+          "items": {
+            "$ref": "#/$defs/WallAxisBinding"
+          },
+          "maxItems": 4,
+          "title": "Wall Axis Bindings",
+          "type": "array"
+        },
         "wall_mapping": {
           "items": {
             "$ref": "#/$defs/WallReference"
@@ -1224,6 +1232,125 @@
       "title": "UnresolvedEntity",
       "type": "object"
     },
+    "WallAxisBinding": {
+      "additionalProperties": false,
+      "properties": {
+        "observation_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Observation Id",
+          "type": "string"
+        },
+        "axis": {
+          "enum": [
+            "width_m",
+            "length_m"
+          ],
+          "title": "Axis",
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "photo",
+            "user",
+            "estimated"
+          ],
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "observation_id",
+        "axis",
+        "source"
+      ],
+      "title": "WallAxisBinding",
+      "type": "object"
+    },
+    "WallAxisResolution": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "not_applicable",
+            "resolved",
+            "needs_clarification",
+            "estimated"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "reference_axis": {
+          "anyOf": [
+            {
+              "enum": [
+                "width_m",
+                "length_m"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reference Axis"
+        },
+        "reference_span_m": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 30.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reference Span M"
+        },
+        "candidate_wall_ids": {
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "type": "string"
+          },
+          "maxItems": 2,
+          "title": "Candidate Wall Ids",
+          "type": "array"
+        },
+        "bindings": {
+          "items": {
+            "$ref": "#/$defs/WallAxisBinding"
+          },
+          "maxItems": 4,
+          "title": "Bindings",
+          "type": "array"
+        },
+        "warnings": {
+          "items": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          "maxItems": 50,
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status",
+        "reference_axis",
+        "reference_span_m",
+        "candidate_wall_ids",
+        "bindings",
+        "warnings"
+      ],
+      "title": "WallAxisResolution",
+      "type": "object"
+    },
     "WallReference": {
       "additionalProperties": false,
       "properties": {
@@ -1268,6 +1395,7 @@
     "status": {
       "enum": [
         "needs_dimensions",
+        "needs_wall_assignment",
         "ready",
         "partial",
         "incomplete"
@@ -1328,6 +1456,17 @@
       "anyOf": [
         {
           "$ref": "#/$defs/FidelityReport"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "wall_axes": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/WallAxisResolution"
         },
         {
           "type": "null"

@@ -124,6 +124,24 @@ export type SourceImageIds =
   | [string, string, string, string, string, string, string, string, string]
   | [string, string, string, string, string, string, string, string, string, string];
 export type Confidence = "low" | "medium" | "high";
+export type Role = "shorter" | "longer";
+export type Confidence1 = "low" | "medium" | "high";
+/**
+ * @minItems 1
+ * @maxItems 10
+ */
+export type SourceImageIds1 =
+  | [string]
+  | [string, string]
+  | [string, string, string]
+  | [string, string, string, string]
+  | [string, string, string, string, string]
+  | [string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string, string];
+export type Evidence = string;
 /**
  * @maxItems 50
  */
@@ -206,7 +224,7 @@ export type Label1 = string;
  * @minItems 1
  * @maxItems 10
  */
-export type SourceImageIds1 =
+export type SourceImageIds2 =
   | [string]
   | [string, string]
   | [string, string, string]
@@ -217,7 +235,7 @@ export type SourceImageIds1 =
   | [string, string, string, string, string, string, string, string]
   | [string, string, string, string, string, string, string, string, string]
   | [string, string, string, string, string, string, string, string, string, string];
-export type Confidence1 = "low" | "medium" | "high";
+export type Confidence2 = "low" | "medium" | "high";
 export type AlternativeType =
   | (
       | "bed"
@@ -320,7 +338,7 @@ export type Type1 = "door" | "window";
  * @minItems 1
  * @maxItems 10
  */
-export type SourceImageIds2 =
+export type SourceImageIds3 =
   | [string]
   | [string, string]
   | [string, string, string]
@@ -331,7 +349,7 @@ export type SourceImageIds2 =
   | [string, string, string, string, string, string, string, string]
   | [string, string, string, string, string, string, string, string, string]
   | [string, string, string, string, string, string, string, string, string, string];
-export type Confidence2 = "low" | "medium" | "high";
+export type Confidence3 = "low" | "medium" | "high";
 export type WallId1 = string | null;
 export type AlternativeType1 =
   | (
@@ -423,30 +441,6 @@ export type SubjectId = string;
 export type TargetId = string;
 export type Kind = "faces" | "near" | "beside" | "against_wall" | "supported_by" | "opposite_wall" | "adjacent_wall";
 export type AlternativeTargetId = string | null;
-export type Confidence3 = "low" | "medium" | "high";
-/**
- * @minItems 1
- * @maxItems 10
- */
-export type SourceImageIds3 =
-  | [string]
-  | [string, string]
-  | [string, string, string]
-  | [string, string, string, string]
-  | [string, string, string, string, string]
-  | [string, string, string, string, string, string]
-  | [string, string, string, string, string, string, string]
-  | [string, string, string, string, string, string, string, string]
-  | [string, string, string, string, string, string, string, string, string]
-  | [string, string, string, string, string, string, string, string, string, string];
-export type Evidence = string;
-/**
- * @maxItems 200
- */
-export type Relationships = SpatialRelationship[];
-export type FloorColor = string | null;
-export type WallColor = string | null;
-export type FloorPattern = ("wood" | "tile" | "plain") | null;
 export type Confidence4 = "low" | "medium" | "high";
 /**
  * @minItems 1
@@ -464,6 +458,30 @@ export type SourceImageIds4 =
   | [string, string, string, string, string, string, string, string, string]
   | [string, string, string, string, string, string, string, string, string, string];
 export type Evidence1 = string;
+/**
+ * @maxItems 200
+ */
+export type Relationships = SpatialRelationship[];
+export type FloorColor = string | null;
+export type WallColor = string | null;
+export type FloorPattern = ("wood" | "tile" | "plain") | null;
+export type Confidence5 = "low" | "medium" | "high";
+/**
+ * @minItems 1
+ * @maxItems 10
+ */
+export type SourceImageIds5 =
+  | [string]
+  | [string, string]
+  | [string, string, string]
+  | [string, string, string, string]
+  | [string, string, string, string, string]
+  | [string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string, string];
+export type Evidence2 = string;
 /**
  * @minItems 2
  * @maxItems 2
@@ -486,6 +504,29 @@ export type Assumptions = string[];
  * @maxItems 50
  */
 export type Warnings = string[];
+export type Status1 = "not_applicable" | "resolved" | "needs_clarification" | "estimated";
+export type ReferenceAxis = ("width_m" | "length_m") | null;
+export type ReferenceSpanM = number | null;
+/**
+ * @maxItems 2
+ */
+export type CandidateWallIds = [] | [string] | [string, string];
+/**
+ * @maxItems 4
+ */
+export type Bindings =
+  | []
+  | [WallAxisBinding]
+  | [WallAxisBinding, WallAxisBinding]
+  | [WallAxisBinding, WallAxisBinding, WallAxisBinding]
+  | [WallAxisBinding, WallAxisBinding, WallAxisBinding, WallAxisBinding];
+export type ObservationId = string;
+export type Axis = "width_m" | "length_m";
+export type Source = "photo" | "user" | "estimated";
+/**
+ * @maxItems 50
+ */
+export type Warnings1 = string[];
 
 /**
  * An analyzed input, not a scene, optimization result, or durable project.
@@ -501,6 +542,7 @@ export interface RoomAnalysisResponse {
   expires_at: ExpiresAt;
   input_options: RoomInputOptions;
   observations: RoomObservations;
+  wall_axes?: WallAxisResolution | null;
 }
 export interface RoomInputOptions {
   room_type?: RoomType;
@@ -560,7 +602,14 @@ export interface WallObservation {
   label: Label;
   source_image_ids: SourceImageIds;
   confidence: Confidence;
+  span?: WallSpanEvidence | null;
   notes: Notes;
+}
+export interface WallSpanEvidence {
+  role: Role;
+  confidence: Confidence1;
+  source_image_ids: SourceImageIds1;
+  evidence: Evidence;
 }
 /**
  * One tentative physical instance; multiple chairs retain separate IDs.
@@ -574,8 +623,8 @@ export interface ObjectObservation {
   id: Id1;
   type: Type;
   label: Label1;
-  source_image_ids: SourceImageIds1;
-  confidence: Confidence1;
+  source_image_ids: SourceImageIds2;
+  confidence: Confidence2;
   alternative_type?: AlternativeType;
   material_colors?: MaterialColors | null;
   wall_coverage?: WallCoverage;
@@ -607,8 +656,8 @@ export interface EstimatedObjectDimensions {
 export interface OpeningObservation {
   id: Id2;
   type: Type1;
-  source_image_ids: SourceImageIds2;
-  confidence: Confidence2;
+  source_image_ids: SourceImageIds3;
+  confidence: Confidence3;
   wall_id: WallId1;
   alternative_type?: AlternativeType1;
   material_colors?: MaterialColors | null;
@@ -628,15 +677,15 @@ export interface SpatialRelationship {
   target_id: TargetId;
   kind: Kind;
   alternative_target_id?: AlternativeTargetId;
-  confidence: Confidence3;
-  source_image_ids: SourceImageIds3;
-  evidence: Evidence;
-}
-export interface FinishObservation {
-  finishes: RoomFinishes;
   confidence: Confidence4;
   source_image_ids: SourceImageIds4;
   evidence: Evidence1;
+}
+export interface FinishObservation {
+  finishes: RoomFinishes;
+  confidence: Confidence5;
+  source_image_ids: SourceImageIds5;
+  evidence: Evidence2;
 }
 export interface RoomFinishes {
   floor_color?: FloorColor;
@@ -649,4 +698,17 @@ export interface RoomFinishes {
 export interface PossibleDuplicate {
   entity_ids: EntityIds;
   reason: Reason;
+}
+export interface WallAxisResolution {
+  status: Status1;
+  reference_axis: ReferenceAxis;
+  reference_span_m: ReferenceSpanM;
+  candidate_wall_ids: CandidateWallIds;
+  bindings: Bindings;
+  warnings: Warnings1;
+}
+export interface WallAxisBinding {
+  observation_id: ObservationId;
+  axis: Axis;
+  source: Source;
 }

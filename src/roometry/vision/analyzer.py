@@ -284,6 +284,11 @@ def _normalize_observations(decoded: object, image_ids: list[str]) -> object:
             for entity in entities:
                 if not isinstance(entity, dict):
                     continue
+                span = entity.get("span")
+                if isinstance(span, dict):
+                    refs = span.get("source_image_ids")
+                    if isinstance(refs, list) and all(isinstance(value, str) for value in refs):
+                        span["source_image_ids"] = list(dict.fromkeys(refs))
                 references = entity.get("source_image_ids")
                 if isinstance(references, list) and all(isinstance(value, str) for value in references):
                     entity["source_image_ids"] = list(dict.fromkeys(references))

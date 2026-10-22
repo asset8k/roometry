@@ -39,6 +39,27 @@ describe('guided generation workspace', () => {
     expect(html).toContain('Reset layout')
     expect(html).not.toContain('Example bedroom')
   })
+  it('asks about the measured wall with three choices and no redundant measurement inputs', () => {
+    const run = waitingRun(input)
+    run.pending_question = { id: 'q1', kind: 'room_wall_axis', question: 'Which wall measures 4 m?', dimension_axes: ['width_m'], entity_ids: ['window_wall', 'tv_wall'],
+      choices: [{ id: 'wall_first', label: 'Window wall' }, { id: 'wall_second', label: 'TV wall' }, { id: 'not_sure', label: 'Not sure — use an approximate orientation' }] }
+    run.questions = [run.pending_question]
+    const html = render({ phase: 'awaiting_answer', run })
+    expect(html).toContain('Which wall measures 4 m?')
+    expect(html).toContain('Window wall')
+    expect(html).toContain('TV wall')
+    expect(html.match(/type="radio"/g)).toHaveLength(3)
+    expect(html).not.toContain('type="number"')
+    expect(html).not.toContain('3D room viewer')
+  })
+  it('labels an unanswered wall assignment as approximate in the preview', () => {
+    const run = finishedRun(input, true)
+    run.proposal!.wall_axes = { status: 'estimated', reference_axis: 'width_m', reference_span_m: 4, candidate_wall_ids: [], bindings: [], warnings: [] }
+    const html = render({ phase: 'partial', run })
+    expect(html).toContain('<summary>Wall dimensions</summary>')
+    expect(html).toContain('wall-to-measurement assignment is unconfirmed')
+    expect(html).toContain('3D room viewer')
+  })
   it('shows a usable partial scene and an honest limit notice after free finalization', () => {
     const run = { ...finishedRun(input, true), stop_reason: 'budget_limit' as const }
     const html = render({ phase: 'partial', run })

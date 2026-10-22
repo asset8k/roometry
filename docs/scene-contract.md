@@ -126,6 +126,16 @@ room measurements remain authoritative. Changed photo size estimates require
 reason; observations remain unchanged. User identity/facing answers are stored as
 separate reconstruction constraints and reuse cached analysis.
 
+Observed walls can carry shorter/longer-span evidence with confidence and source
+views. Before construction, `wall_axes` resolves physical walls to `width_m`
+(north/south) or `length_m` (east/west), without sorting or swapping entered
+dimensions. An ambiguous rectangular room gets one three-choice wall question;
+square rooms do not need it. The answer overrides photo hypotheses and is retained
+separately from observations. Construction's strict schema restricts wall choices
+to the resolved axis, assembly checks them before furniture, and scenes retain
+`wall_axis_bindings` for validation. “Not sure” or an exhausted question allowance
+keeps orientation explicitly estimated and any usable scene provisional.
+
 Proposal `fidelity` compares coverage and recorded relationships/proportions/colors
 separately from geometry. Unknown evidence is unassessed, not a successful check.
 A failed required relationship triggers repair rather than deleting the furniture

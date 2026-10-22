@@ -3,6 +3,14 @@ import { parseRoomAnalysis, parseSceneProposal, RoomAnalysisError } from './room
 import { analyzedRoom, proposedRoom, needsDimensions, partialRoom } from './test-support/room-analysis'
 
 describe('analysis and proposal semantics', () => {
+  it('accepts a pending physical wall assignment without a scene or missing numeric dimensions', () => {
+    const pending = { ...proposedRoom(), status: 'needs_wall_assignment', scene: null, validation: null,
+      wall_axes: { status: 'needs_clarification', reference_axis: 'width_m', reference_span_m: 4, candidate_wall_ids: ['window_wall', 'tv_wall'], bindings: [], warnings: [] } }
+    expect(parseSceneProposal(pending).status).toBe('needs_wall_assignment')
+    expect(() => parseSceneProposal({ ...pending, wall_axes: null })).toThrow()
+    expect(() => parseSceneProposal({ ...pending, dimensions_to_confirm: ['width_m'] })).toThrow()
+    expect(() => parseSceneProposal({ ...pending, scene: proposedRoom().scene })).toThrow()
+  })
   it('accepts an honest dimension request and incomplete result without opening a scene', () => {
     expect(parseSceneProposal(needsDimensions()).scene).toBeNull()
     expect(parseSceneProposal({ ...proposedRoom(), status: 'incomplete', scene: null, validation: null,

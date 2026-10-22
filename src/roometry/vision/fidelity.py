@@ -12,6 +12,7 @@ from pydantic import Field
 from roometry.scenes.schemas import Identifier, RoomScene, SceneModel, Wall
 from roometry.vision.importance import importance
 from roometry.vision.spatial import planar_gap
+from roometry.vision.wall_axes import wall_axis
 from roometry.vision.schemas import RoomAnalysisResponse
 
 
@@ -64,6 +65,9 @@ def evaluate_fidelity(analysis: RoomAnalysisResponse, scene: RoomScene, wall_map
         hz = (s * obj.dimensions_m.width + c * obj.dimensions_m.depth) / 2
         return {"north": obj.position.z - hz, "south": room.length_m - obj.position.z - hz, "west": obj.position.x - hx, "east": room.width_m - obj.position.x - hx}[wall]
 
+    for binding in scene.wall_axis_bindings:
+        assigned = wall_map.get(binding.observation_id)
+        check("wall", [binding.observation_id], assigned is not None and wall_axis(assigned) == binding.axis, "Preserve this wall's assignment to the measured room dimension.", binding.source != "estimated")
     major = [o for o in obs.objects if importance(o) == 0 and o.confidence != "low"]
     for source in major:
         check("coverage", [source.id], source.id in objects, "Retain the observed major furniture.")
@@ -137,6 +141,10 @@ def evaluate_fidelity(analysis: RoomAnalysisResponse, scene: RoomScene, wall_map
     if not any(c.kind == "proportion" for c in checks):
         unassessed.append("Furniture proportions have no independent photo size or wall-coverage estimates to compare.")
     recognizable = coverage >= .8 and all(c.passed for c in required_layout) if required_layout else None
+    if analysis.wall_axes is not None and analysis.wall_axes.status == "estimated":
+        unassessed.append("The physical wall corresponding to each entered room dimension is unconfirmed.")
+        if recognizable:
+            recognizable = None
     if coverage < .8 or any(o.confidence == "high" and o.id not in objects for o in major):
         recognizable = False
     elif recognizable and unoriented:

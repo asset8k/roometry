@@ -25,7 +25,7 @@ from roometry.vision.proposal_schemas import DimensionName, SceneProposalRespons
 from roometry.vision.schemas import ReconstructionConstraints, RoomAnalysisResponse
 
 ClarificationKind = Literal[
-    "room_dimensions", "object_mobility", "object_identity", "layout_orientation"
+    "room_dimensions", "room_wall_axis", "object_mobility", "object_identity", "layout_orientation"
 ]
 
 RunStatus = Literal[

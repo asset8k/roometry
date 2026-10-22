@@ -19,13 +19,25 @@ export type FloorPattern = ("wood" | "tile" | "plain") | null;
 /**
  * @maxItems 4
  */
+export type WallAxisBindings =
+  | []
+  | [WallAxisBinding]
+  | [WallAxisBinding, WallAxisBinding]
+  | [WallAxisBinding, WallAxisBinding, WallAxisBinding]
+  | [WallAxisBinding, WallAxisBinding, WallAxisBinding, WallAxisBinding];
+export type ObservationId = string;
+export type Axis = "width_m" | "length_m";
+export type Source = "photo" | "user" | "estimated";
+/**
+ * @maxItems 4
+ */
 export type WallMapping =
   | []
   | [WallReference]
   | [WallReference, WallReference]
   | [WallReference, WallReference, WallReference]
   | [WallReference, WallReference, WallReference, WallReference];
-export type ObservationId = string;
+export type ObservationId1 = string;
 export type Wall = "north" | "south" | "west" | "east";
 export type EntityId = string;
 export type Field = "width" | "depth" | "height" | "width_m" | "height_m" | "sill_height_m";
@@ -326,6 +338,7 @@ export interface RoomScene {
   schema_version: SchemaVersion;
   room: RoomDimensions;
   finishes?: RoomFinishes | null;
+  wall_axis_bindings?: WallAxisBindings;
   wall_mapping?: WallMapping;
   estimate_corrections?: EstimateCorrections;
   openings: Openings;
@@ -345,8 +358,13 @@ export interface RoomFinishes {
   wall_color?: WallColor;
   floor_pattern?: FloorPattern;
 }
-export interface WallReference {
+export interface WallAxisBinding {
   observation_id: ObservationId;
+  axis: Axis;
+  source: Source;
+}
+export interface WallReference {
+  observation_id: ObservationId1;
   wall: Wall;
 }
 /**

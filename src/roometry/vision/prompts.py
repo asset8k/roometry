@@ -29,6 +29,17 @@ IDs. For uncertain matches retain both observations and add a possible_duplicate
 pair; never merge merely because two objects share a type or color. Apply the same
 principle to walls and openings. Every entity ID must be unique across kinds.
 
+For each visible wall, record span only when there is evidence about whether
+it belongs to the shorter or longer pair of walls. Include supporting image IDs,
+a concrete visual explanation and confidence. A single oblique view usually
+leaves this medium/low confidence: apparent image width is distorted by perspective,
+and a cropped wall is not necessarily shorter. Use high only when the room's
+relative spans are clearly established across visible boundaries or views. User
+width/length values do not identify a physical wall by themselves. Windows and
+doors can occur on either short or long walls; do not use their presence as proof.
+Use null when no relative-span evidence exists. Explicitly record adjacent_wall
+and opposite_wall relationships when visible; descriptive identities must remain
+consistent across viewpoints, independent of compass labels.
 Name walls descriptively (such as window_wall), not geographic north/south inferred
 from the camera. Relative locations must identify their reference or be null.
 Represent a visible architectural ledge that supports objects (for example a
@@ -106,7 +117,15 @@ Preserve explicit relationships and wall coverage, not merely collision freedom.
 TV screen faces +Z, bed headboard is at -Z. Rotation 0 faces south (+Z), pi/2 east
 (+X), pi north (-Z), 3*pi/2 west (-X). A sofa facing a TV must point toward the TV's
 position, not toward the wall behind the sofa. Preserve window/door end topology.
-Map each observed wall to a distinct north/south/east/west wall consistently.
+Resolve wall_assignments FIRST, using wall_axes bindings, before any furniture
+poses. A width_m binding permits ONLY north/south; a length_m binding permits ONLY
+west/east. North/south span room width, west/east span room length. A 4 x 6 room
+has two 4 m walls and two 6 m walls; never stretch a physical short wall onto the
+6 m axis or swap the user measurements. Human wall-axis answers override photo
+span hypotheses. Follow the supplied axis-restricted assignment schema. Remaining
+unknown axes are estimates and must stay labeled. For square rooms either axis
+has the same span. Map each observed wall to a distinct north/south/east/west wall
+consistently, preserving known adjacency and opposition.
 Choose asset_id from that observation's asset_bindings models, using its label,
 shape and placement. null uses an eligible standard model. A composite model is
 only suitable when the observation already describes that whole item; never

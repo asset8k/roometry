@@ -10,6 +10,8 @@ from roometry.agents.state import (
 from roometry.uploads.schemas import InputDimensions
 from roometry.vision.proposal_schemas import AXES
 from roometry.vision.proposals import resolve_measurements
+from roometry.vision.schemas import WallAxisAnswer
+from roometry.vision.wall_axes import resolve_wall_axes
 
 
 class InvalidAnswer(ValueError):
@@ -63,6 +65,34 @@ def question_for(
                 ],
             }
         )
+    if kind == "room_wall_axis":
+        if object_id is not None or state.working_scene is not None or any(q.kind == kind for q in state.questions):
+            raise ValueError("Room orientation is clarified once, before construction.")
+        confirmed = {axis: value for axis in AXES if (value := getattr(state.confirmed_dimensions, axis, None)) is not None}
+        measurements = resolve_measurements(state.analysis, confirmed, True)
+        if measurements.to_confirm:
+            raise ValueError("Resolve missing measurements before their wall assignment.")
+        resolution = resolve_wall_axes(state.analysis, measurements.dimensions, state.reconstruction_constraints)
+        if resolution.status != "needs_clarification" or resolution.reference_axis is None:
+            raise ValueError("Room axes do not need clarification.")
+        assert resolution.reference_span_m is not None
+        walls = {wall.id: wall for wall in state.analysis.observations.walls}
+        first = resolution.candidate_wall_ids[0]
+        if len(resolution.candidate_wall_ids) == 2:
+            choices = [
+                {"id": "wall_first", "label": walls[first].label[:190]},
+                {"id": "wall_second", "label": walls[resolution.candidate_wall_ids[1]].label[:190]},
+            ]
+            text = f"Which wall measures {resolution.reference_span_m:g} m?"
+        else:
+            other_axis = "length_m" if resolution.reference_axis == "width_m" else "width_m"
+            choices = [
+                {"id": "wall_first", "label": f"{resolution.reference_span_m:g} m"},
+                {"id": "wall_second", "label": f"{getattr(measurements.dimensions, other_axis):g} m"},
+            ]
+            text = f"Which length belongs to {walls[first].label}?"[:500]
+        choices.append({"id": "not_sure", "label": "Not sure — use an approximate orientation"})
+        return ClarificationQuestion.model_validate({**common, "question": text, "choices": choices, "entity_ids": resolution.candidate_wall_ids, "dimension_axes": [resolution.reference_axis]})
     if kind in {"object_identity", "layout_orientation"}:
         if state.working_scene is not None:
             raise ValueError("Resolve reconstruction hypotheses before construction.")
@@ -243,6 +273,22 @@ def answer_updates(state: AgentState, answer: ClarificationAnswer) -> dict[str, 
             message = (
                 "Measurements remain unknown; no complete reconstruction is claimed."
             )
+    elif question.kind == "room_wall_axis":
+        constraints = state.reconstruction_constraints.model_copy(deep=True)
+        axis = question.dimension_axes[0]
+        assert axis in {"width_m", "length_m"}
+        selected = None
+        if answer.choice_id != "not_sure":
+            if answer.choice_id == "wall_first":
+                selected = question.entity_ids[0]
+            elif len(question.entity_ids) == 2:
+                selected = question.entity_ids[1]
+            else:
+                selected = question.entity_ids[0]
+                axis = "length_m" if axis == "width_m" else "width_m"
+        constraints.wall_axis = WallAxisAnswer(axis=axis, wall_id=selected)
+        result["reconstruction_constraints"] = constraints.model_dump()
+        message = "The user's wall-to-dimension answer is recorded without changing measurements or repeating photo analysis."
     elif question.kind in {"object_identity", "layout_orientation"}:
         object_id = question.entity_ids[0]
         assert state.analysis is not None

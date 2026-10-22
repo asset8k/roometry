@@ -20,6 +20,8 @@ def after_guard(state: AgentState) -> str:
 
 
 def after_advance(state: AgentState) -> str:
+    if state.status == "awaiting_answer" and state.pending_question is not None:
+        return "clarify"
     return (
         "tools"
         if state.status == "running" and state.pending_tool is not None
@@ -50,7 +52,7 @@ def build_graph(
         "guard", after_guard, {"advance": "advance", "finalize": "finalize"}
     )
     graph.add_conditional_edges(
-        "advance", after_advance, {"tools": "tools", "guard": "guard"}
+        "advance", after_advance, {"tools": "tools", "guard": "guard", "clarify": "clarify"}
     )
     graph.add_conditional_edges(
         "tools", after_tools, {"clarify": "clarify", "guard": "guard"}

@@ -30,6 +30,7 @@ export default function RoomGenerationWorkspace({ state, controller, onConnectio
   const partial = run?.proposal?.status === 'partial'
   const omittedCount = run?.proposal?.unresolved_entities?.length ?? 0
   const needsDimensions = state.phase === 'incomplete' && run?.proposal?.status === 'needs_dimensions'
+  const needsWall = state.phase === 'incomplete' && run?.proposal?.status === 'needs_wall_assignment'
   const preview = partial && omittedCount === 0
   const objects = run?.analysis?.observations.objects ?? []
   const entityName = (id: string) => objects.find(obj => obj.id === id)?.label ?? run?.analysis?.observations.walls.find(wall => wall.id === id)?.label ?? id.replaceAll('_', ' ')
@@ -37,7 +38,7 @@ export default function RoomGenerationWorkspace({ state, controller, onConnectio
   return <section className="analysis-workspace generation-workspace" aria-label="Room generation">
     <div className="analysis-card" aria-live="polite">
       <span className="section-label">From photos to your room</span>
-      <h2 ref={card} tabIndex={-1}>{needsDimensions ? 'Room measurements are still needed' : preview ? 'Your reconstruction preview' : titles[state.phase] ?? 'Creating your room'}</h2>
+      <h2 ref={card} tabIndex={-1}>{needsDimensions ? 'Room measurements are still needed' : needsWall ? 'Room orientation still needs identifying' : preview ? 'Your reconstruction preview' : titles[state.phase] ?? 'Creating your room'}</h2>
       {!terminal && <div className="upload-progress" role="status">
         {state.phase !== 'awaiting_answer' && <progress aria-label="Room generation progress" />}
         <span>{generationProgress(state)}</span>
@@ -46,7 +47,7 @@ export default function RoomGenerationWorkspace({ state, controller, onConnectio
       {state.phase === 'completed' && <p>Your approximate reconstruction is ready to explore and edit. This shows your current room; you can try your own arrangement in the editor.</p>}
       {run?.stop_reason === 'budget_limit' && ['completed', 'partial'].includes(state.phase) && <p className="input-help">Your validated reconstruction is available. Additional checks stopped at the run limit.</p>}
       {state.phase === 'partial' && <p>{preview ? 'Your scene is available to explore and edit. Some photo relationships still need correction, so this is a provisional reconstruction.' : 'The included geometry passed validation. Some observations remain unresolved and are listed below.'}</p>}
-      {state.phase === 'incomplete' && <p>{needsDimensions ? 'Some room measurements remain unknown. Your selected photos and entered details are kept.' : 'We couldn’t build a usable arrangement from this attempt. Your selected photos, entered details, and available photo analysis are kept.'}</p>}
+      {state.phase === 'incomplete' && <p>{needsDimensions ? 'Some room measurements remain unknown. Your selected photos and entered details are kept.' : needsWall ? 'The measurements are available, but their physical wall assignment is still unknown. Your photos and entered dimensions are kept.' : 'We couldn’t build a usable arrangement from this attempt. Your selected photos, entered details, and available photo analysis are kept.'}</p>}
       {state.phase === 'failed' && <p>The service couldn’t finish this generation. Your selected photos and entered details are kept.</p>}
       {state.phase === 'budget_exhausted' && <p>The run stopped at its work limit. Any validated geometry is available below.</p>}
       {state.phase === 'cancelled' && <p>No further generation work will be started. Your selected photos are kept.</p>}
@@ -68,6 +69,11 @@ export default function RoomGenerationWorkspace({ state, controller, onConnectio
           <p>Major furniture retained: {Math.round(run.proposal.fidelity.major_object_coverage * 100)}%.</p>
           <ul>{run.proposal.fidelity.checks.filter(check => !check.passed).map((check, i) => <li key={i}>{check.entity_ids.map(entityName).join(', ')}: {check.message}</li>)}</ul>
           <ul>{run.proposal.fidelity.unassessed.map((note, i) => <li key={i}>{note}</li>)}</ul>
+        </details>}
+        {run?.proposal?.wall_axes && run.proposal.wall_axes.status !== 'not_applicable' && <details className="analysis-notes" open={run.proposal.wall_axes.status === 'estimated'}>
+          <summary>Wall dimensions</summary>
+          {run.proposal.wall_axes.status === 'estimated' && <p>The wall-to-measurement assignment is unconfirmed. Room orientation remains approximate; your entered dimensions are preserved.</p>}
+          <ul>{run.proposal.wall_axes.bindings.map(binding => <li key={binding.observation_id}>{entityName(binding.observation_id)} · {scene.room[binding.axis]} m · {binding.source === 'user' ? 'from your answer' : 'from photo evidence'}</li>)}</ul>
         </details>}
         {(scene.estimate_corrections?.length ?? 0) > 0 && <details className="analysis-notes"><summary>Revised photo estimates</summary><ul>{scene.estimate_corrections?.map((c, i) => <li key={i}>{entityName(c.entity_id)} · {c.field}: {c.previous_m} → {c.revised_m} m. {c.reason}</li>)}</ul></details>}
         {partial && omittedCount > 0 && <div className="analysis-caution" role="status"><h3>Some observations still need resolving</h3>

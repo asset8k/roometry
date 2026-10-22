@@ -13,6 +13,7 @@ from roometry.vision.attachments import anchor_placements
 from roometry.vision.catalog import bind_catalog
 from roometry.vision.corrections import correction_errors
 from roometry.vision.fidelity import evaluate_fidelity
+from roometry.vision.wall_axes import wall_axis, AXIS_WALLS
 from roometry.vision.proposal_schemas import (
     AXES,
     DimensionName,
@@ -137,6 +138,11 @@ def assemble(
                 "Map every observed wall exactly once to a distinct scene wall.",
             )
         )
+    if analysis.wall_axes is not None:
+        for binding in analysis.wall_axes.bindings:
+            assigned = wall_map.get(binding.observation_id)
+            if assigned is not None and wall_axis(assigned) != binding.axis:
+                issues.append(issue("wall_mapping", f"Map {binding.observation_id} to {' or '.join(AXIS_WALLS[binding.axis])}: this wall spans the {getattr(measurements.dimensions, binding.axis):g} m measured side. Preserve room width and length.", binding.observation_id))
     for candidates, observed in (
         (draft.objects, obs.objects),
         (draft.openings, obs.openings),
@@ -374,12 +380,13 @@ def assemble(
                 **measurements.dimensions.model_dump(),
             ),
             finishes=obs.finishes.finishes if obs.finishes else None,
+            wall_axis_bindings=analysis.wall_axes.bindings if analysis.wall_axes else [],
             wall_mapping=[WallReference(observation_id=item.observation_id, wall=item.wall) for item in draft.wall_assignments],
             estimate_corrections=draft.estimate_corrections,
             objects=parsed_objects,
             openings=parsed_openings,
             assumptions=notes(assumptions, obs.assumptions, draft.assumptions),
-            warnings=notes(warnings, obs.warnings, draft.warnings),
+            warnings=notes(warnings, obs.warnings, draft.warnings, analysis.wall_axes.warnings if analysis.wall_axes else []),
         )
     except ValidationError:
         # Never echo arbitrary model text or raw Pydantic inputs in feedback.

@@ -7,7 +7,7 @@ from openai.types.responses import ResponseInputContentParam
 from pydantic import BaseModel
 
 from roometry.vision.errors import AnalysisFailure
-from roometry.vision.schemas import ReconstructionConstraints, RoomAnalysisResponse
+from roometry.vision.schemas import ReconstructionConstraints, RoomAnalysisResponse, WallAxisResolution
 
 
 def strict_schema(model: type[BaseModel]) -> dict:
@@ -43,9 +43,13 @@ def photo_content(image_ids: list[str], images: list[bytes], max_bytes: int) -> 
     return content
 
 
-def apply_constraints(analysis: RoomAnalysisResponse, constraints: ReconstructionConstraints) -> RoomAnalysisResponse:
+def apply_constraints(analysis: RoomAnalysisResponse, constraints: ReconstructionConstraints, *, wall_axes: WallAxisResolution | None = None) -> RoomAnalysisResponse:
     """User choices override hypotheses only; never invent observations or images."""
     effective = analysis.model_copy(deep=True)
+    if wall_axes is not None:
+        effective.wall_axes = wall_axes.model_copy(deep=True)
+    if constraints.wall_axis is not None and constraints.wall_axis.wall_id is not None and constraints.wall_axis.wall_id not in {w.id for w in analysis.observations.walls}:
+        raise ValueError("The wall-axis answer must reference an observed wall.")
     by_id = {obj.id: obj for obj in effective.observations.objects}
     for object_id, selected in constraints.object_types.items():
         source = by_id.get(object_id)

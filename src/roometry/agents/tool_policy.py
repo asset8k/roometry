@@ -17,7 +17,7 @@ def clarification_candidates(
             ),
         }
     )
-    targets: list[tuple[ClarificationKind, str | None]] = [("room_dimensions", None)]
+    targets: list[tuple[ClarificationKind, str | None]] = [("room_dimensions", None), ("room_wall_axis", None)]
     if state.working_scene is None:
         from roometry.vision.importance import importance
 
@@ -50,3 +50,7 @@ def already_inspected(state: AgentState, tool: str) -> bool:
         if feedback.name == tool and feedback.outcome == "success":
             return True
     return False
+
+
+def clarification_target(question: ClarificationQuestion) -> str | None:
+    return None if question.kind in {"room_dimensions", "room_wall_axis"} else question.entity_ids[0] if question.entity_ids else None

@@ -21,7 +21,7 @@ from roometry.scenes.schemas import (
 from roometry.scenes.validation import GeometryReport
 from roometry.uploads.schemas import InputDimensions, OpaqueId
 from roometry.vision.fidelity import FidelityReport
-from roometry.vision.schemas import AnalysisModel, Notes, RoomHeight, SillHeight, ReconstructionConstraints
+from roometry.vision.schemas import AnalysisModel, Notes, RoomHeight, SillHeight, ReconstructionConstraints, WallAxisResolution
 
 DimensionName = Literal["width_m", "length_m", "height_m"]
 AXES: tuple[DimensionName, ...] = ("width_m", "length_m", "height_m")
@@ -138,13 +138,14 @@ class UnresolvedEntity(AnalysisModel):
 class SceneProposalResponse(AnalysisModel):
     analysis_id: OpaqueId
     input_id: OpaqueId
-    status: Literal["needs_dimensions", "ready", "partial", "incomplete"]
+    status: Literal["needs_dimensions", "needs_wall_assignment", "ready", "partial", "incomplete"]
     dimensions: InputDimensions
     dimensions_to_confirm: Annotated[list[DimensionName], Field(max_length=3)]
     estimated_axes: Annotated[list[DimensionName], Field(max_length=3)]
     scene: RoomScene | None
     validation: GeometryReport | None
     fidelity: FidelityReport | None = None
+    wall_axes: WallAxisResolution | None = None
     issues: Annotated[list[ProposalIssue], Field(max_length=50)]
     unresolved_entities: Annotated[list[UnresolvedEntity], Field(max_length=232)] = Field(default_factory=list)
     warnings: Notes
@@ -219,6 +220,11 @@ class SceneProposalResponse(AnalysisModel):
                 raise ValueError("Identify every unconfirmed scene dimension.")
         elif self.scene is not None:
             raise ValueError("Unvalidated proposals cannot expose a scene.")
+        if self.status == "needs_wall_assignment" and (
+            self.wall_axes is None or self.wall_axes.status != "needs_clarification"
+            or self.dimensions_to_confirm or self.unresolved_entities
+        ):
+            raise ValueError("Pending wall assignment requires an unresolved orientation and resolved room dimensions.")
         if self.status == "needs_dimensions" and not self.dimensions_to_confirm:
             raise ValueError("Missing dimensions must be identified.")
         if self.status == "needs_dimensions" and self.unresolved_entities:

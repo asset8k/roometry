@@ -27,6 +27,7 @@ from roometry.scenes.schemas import (
     Color,
     MaterialColors,
     RoomFinishes,
+    WallAxisBinding,
     Identifier,
     Note,
     PositiveDistance,
@@ -76,6 +77,27 @@ class EstimatedObjectDimensions(AnalysisModel):
         return self
 
 
+class WallSpanEvidence(AnalysisModel):
+    role: Literal["shorter", "longer"]
+    confidence: Confidence
+    source_image_ids: ImageReferences
+    evidence: Note
+
+
+class WallAxisAnswer(AnalysisModel):
+    axis: Literal["width_m", "length_m"]
+    wall_id: Identifier | None
+
+
+class WallAxisResolution(AnalysisModel):
+    status: Literal["not_applicable", "resolved", "needs_clarification", "estimated"]
+    reference_axis: Literal["width_m", "length_m"] | None
+    reference_span_m: RoomSide | None
+    candidate_wall_ids: Annotated[list[Identifier], Field(max_length=2)]
+    bindings: Annotated[list[WallAxisBinding], Field(max_length=4)]
+    warnings: Notes
+
+
 class WallObservation(AnalysisModel):
     """A stable descriptive wall ID, not a compass direction inferred from a photo."""
 
@@ -83,6 +105,7 @@ class WallObservation(AnalysisModel):
     label: Label
     source_image_ids: ImageReferences
     confidence: Confidence
+    span: WallSpanEvidence | None = None
     notes: Notes
 
 
@@ -171,6 +194,7 @@ class FinishObservation(AnalysisModel):
 class ReconstructionConstraints(AnalysisModel):
     """User answers overlaid on a copy; source photo hypotheses stay immutable."""
 
+    wall_axis: WallAxisAnswer | None = None
     object_types: Annotated[dict[Identifier, ObjectType | None], Field(max_length=3)] = Field(default_factory=dict)
     facing_targets: Annotated[dict[Identifier, Identifier | None], Field(max_length=3)] = Field(default_factory=dict)
 
@@ -220,6 +244,11 @@ class RoomObservations(AnalysisModel):
             if len(set(sources)) != len(sources) or not set(sources) <= image_ids:
                 raise ValueError("Evidence must reference distinct analysis image IDs.")
 
+        for wall in self.walls:
+            if wall.span is not None:
+                refs = wall.span.source_image_ids
+                if len(set(refs)) != len(refs) or not set(refs) <= set(wall.source_image_ids):
+                    raise ValueError("Wall-span evidence must reference distinct views of that wall.")
         walls = {wall.id for wall in self.walls}
         objects = {obj.id: obj for obj in self.objects}
         for entity in [*self.objects, *self.openings]:
@@ -305,6 +334,7 @@ class RoomAnalysisResponse(AnalysisModel):
     expires_at: AwareDatetime
     input_options: RoomInputOptions
     observations: RoomObservations
+    wall_axes: WallAxisResolution | None = None
 
     @model_validator(mode="after")
     def expiry_follows_creation(self) -> Self:

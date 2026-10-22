@@ -8,6 +8,7 @@
     "measurements_source": "user_confirmed"
   },
   "finishes": null,
+  "wall_axis_bindings": [],
   "wall_mapping": [],
   "estimate_corrections": [],
   "openings": [

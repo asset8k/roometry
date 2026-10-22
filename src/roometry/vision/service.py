@@ -29,6 +29,7 @@ from roometry.vision.diagnostics import (
 )
 from roometry.vision.errors import AnalysisFailure
 from roometry.vision.evidence import apply_constraints
+from roometry.vision.wall_axes import resolve_wall_axes
 from roometry.vision.fidelity import evaluate_fidelity
 from roometry.vision.partial import assemble_partial
 from roometry.vision.importance import partial_quality
@@ -387,6 +388,7 @@ class AnalysisService:
         owner: str,
         *,
         isolated_dimensions: bool = False,
+        allow_ambiguous_axes: bool = False,
     ) -> SceneProposalResponse:
         try:
             self._capacity.acquire_nowait()
@@ -400,7 +402,7 @@ class AnalysisService:
             # the repair's entire time budget. The total remains bounded.
             with anyio.fail_after(2 * self.settings.analysis_timeout_seconds):
                 return await self._propose(
-                    request, owner, isolated_dimensions=isolated_dimensions
+                    request, owner, isolated_dimensions=isolated_dimensions, allow_ambiguous_axes=allow_ambiguous_axes
                 )
         except TimeoutError:
             raise AnalysisFailure(
@@ -417,6 +419,7 @@ class AnalysisService:
         owner: str,
         *,
         isolated_dimensions: bool = False,
+        allow_ambiguous_axes: bool = False,
     ) -> SceneProposalResponse:
         state = await self._owned_analysis(request.analysis_id, owner)
         analysis = state.result
@@ -457,6 +460,13 @@ class AnalysisService:
                     "issues": [],
                 }
             )
+        analysis.wall_axes = resolve_wall_axes(analysis, measurements.dimensions, request.constraints, allow_ambiguous=allow_ambiguous_axes)
+        base["wall_axes"] = analysis.wall_axes
+        if analysis.wall_axes.status == "needs_clarification":
+            if state.scene_attempts >= 2:
+                return SceneProposalResponse.model_validate({**base, "status": "incomplete", "scene": None, "validation": None, "issues": [issue("proposal_limit_reached", "This analysis has used its initial scene attempt and repair allowance.")]})
+            return SceneProposalResponse.model_validate({**base, "status": "needs_wall_assignment", "scene": None, "validation": None, "issues": []})
+        base["warnings"].extend(analysis.wall_axes.warnings)
         problems = preflight(analysis)
         if any(not problem.entity_ids for problem in problems):
             logging.getLogger(__name__).warning(
@@ -485,6 +495,7 @@ class AnalysisService:
                 "dimensions": measurements.dimensions.model_dump(),
                 "estimated": measurements.estimated,
                 "constraints": request.constraints.model_dump(),
+                "wall_axis_status": analysis.wall_axes.status,
             },
             sort_keys=True,
         )
@@ -731,6 +742,8 @@ class AnalysisService:
             )
             if scene is not None or unresolved:
                 report, problems = partial_report, partial_problems
+        if scene is not None and analysis.wall_axes.status == "estimated":
+            problems = [*problems, issue("fidelity", "The wall-to-measurement assignment remains unconfirmed; this preview uses an approximate orientation.", *analysis.wall_axes.candidate_wall_ids)][:50]
         result = SceneProposalResponse.model_validate(
             {
                 **base,

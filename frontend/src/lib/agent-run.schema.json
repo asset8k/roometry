@@ -102,6 +102,7 @@
         "kind": {
           "enum": [
             "room_dimensions",
+            "room_wall_axis",
             "object_mobility",
             "object_identity",
             "layout_orientation"
@@ -1636,6 +1637,17 @@
       "additionalProperties": false,
       "description": "User answers overlaid on a copy; source photo hypotheses stay immutable.",
       "properties": {
+        "wall_axis": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WallAxisAnswer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "object_types": {
           "maxProperties": 3,
           "patternProperties": {
@@ -1789,6 +1801,17 @@
         },
         "observations": {
           "$ref": "#/$defs/RoomObservations"
+        },
+        "wall_axes": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WallAxisResolution"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -2250,6 +2273,14 @@
             }
           ],
           "default": null
+        },
+        "wall_axis_bindings": {
+          "items": {
+            "$ref": "#/$defs/WallAxisBinding"
+          },
+          "maxItems": 4,
+          "title": "Wall Axis Bindings",
+          "type": "array"
         },
         "wall_mapping": {
           "items": {
@@ -2790,6 +2821,7 @@
         "status": {
           "enum": [
             "needs_dimensions",
+            "needs_wall_assignment",
             "ready",
             "partial",
             "incomplete"
@@ -2850,6 +2882,17 @@
           "anyOf": [
             {
               "$ref": "#/$defs/FidelityReport"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "wall_axes": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WallAxisResolution"
             },
             {
               "type": "null"
@@ -3127,6 +3170,158 @@
       "title": "UnresolvedEntity",
       "type": "object"
     },
+    "WallAxisAnswer": {
+      "additionalProperties": false,
+      "properties": {
+        "axis": {
+          "enum": [
+            "width_m",
+            "length_m"
+          ],
+          "title": "Axis",
+          "type": "string"
+        },
+        "wall_id": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Wall Id"
+        }
+      },
+      "required": [
+        "axis",
+        "wall_id"
+      ],
+      "title": "WallAxisAnswer",
+      "type": "object"
+    },
+    "WallAxisBinding": {
+      "additionalProperties": false,
+      "properties": {
+        "observation_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Observation Id",
+          "type": "string"
+        },
+        "axis": {
+          "enum": [
+            "width_m",
+            "length_m"
+          ],
+          "title": "Axis",
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "photo",
+            "user",
+            "estimated"
+          ],
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "observation_id",
+        "axis",
+        "source"
+      ],
+      "title": "WallAxisBinding",
+      "type": "object"
+    },
+    "WallAxisResolution": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "not_applicable",
+            "resolved",
+            "needs_clarification",
+            "estimated"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "reference_axis": {
+          "anyOf": [
+            {
+              "enum": [
+                "width_m",
+                "length_m"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reference Axis"
+        },
+        "reference_span_m": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 30.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reference Span M"
+        },
+        "candidate_wall_ids": {
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "type": "string"
+          },
+          "maxItems": 2,
+          "title": "Candidate Wall Ids",
+          "type": "array"
+        },
+        "bindings": {
+          "items": {
+            "$ref": "#/$defs/WallAxisBinding"
+          },
+          "maxItems": 4,
+          "title": "Bindings",
+          "type": "array"
+        },
+        "warnings": {
+          "items": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          "maxItems": 50,
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status",
+        "reference_axis",
+        "reference_span_m",
+        "candidate_wall_ids",
+        "bindings",
+        "warnings"
+      ],
+      "title": "WallAxisResolution",
+      "type": "object"
+    },
     "WallObservation": {
       "additionalProperties": false,
       "description": "A stable descriptive wall ID, not a compass direction inferred from a photo.",
@@ -3163,6 +3358,17 @@
           ],
           "title": "Confidence",
           "type": "string"
+        },
+        "span": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WallSpanEvidence"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "notes": {
           "items": {
@@ -3212,6 +3418,53 @@
         "wall"
       ],
       "title": "WallReference",
+      "type": "object"
+    },
+    "WallSpanEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "role": {
+          "enum": [
+            "shorter",
+            "longer"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "confidence": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "source_image_ids": {
+          "items": {
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "title": "Source Image Ids",
+          "type": "array"
+        },
+        "evidence": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Evidence",
+          "type": "string"
+        }
+      },
+      "required": [
+        "role",
+        "confidence",
+        "source_image_ids",
+        "evidence"
+      ],
+      "title": "WallSpanEvidence",
       "type": "object"
     }
   },

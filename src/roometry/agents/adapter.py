@@ -17,7 +17,7 @@ from pydantic import ValidationError
 from roometry.agents.nodes import RunContext
 from roometry.agents.prompts import AGENT_INSTRUCTIONS
 from roometry.agents.state import AgentState, RunStep, ToolCall, ToolFeedback
-from roometry.agents.tool_policy import clarification_candidates
+from roometry.agents.tool_policy import clarification_candidates, clarification_target
 from roometry.agents.tools import ARGUMENT_MODELS, available_tools, tool_definitions
 from roometry.config import Settings
 from roometry.vision.analyzer import PhotoAnalyzer
@@ -60,6 +60,11 @@ class RoomAgent:
             or not self.settings.openai_api_key.get_secret_value().strip()
         ):
             return failed("analysis_unavailable")
+        # This pure clarification runs after the analysis checkpoint, before any
+        # paid construction/decision, and never inside replayed interrupt code.
+        axis_question = next((q for q in clarification_candidates(state, reserve_decision=False) if q.kind == "room_wall_axis"), None)
+        if axis_question is not None:
+            return RunStep(action="continue", pending_question=axis_question, feedback=ToolFeedback(name="request_clarification", outcome="success", message="Identify the measured side before constructing the room."))
         definitions = tool_definitions(state)
         if all(tool["name"] == "finish" for tool in definitions):
             return RunStep(action="finish", feedback=ToolFeedback(
@@ -85,7 +90,7 @@ class RoomAgent:
                 else None
             ),
             "eligible_questions": [
-                {"kind": q.kind, "object_id": q.entity_ids[0] if q.entity_ids else None}
+                {"kind": q.kind, "object_id": clarification_target(q)}
                 for q in clarification_candidates(state)
             ],
             "scene_validation": (

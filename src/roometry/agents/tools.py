@@ -20,7 +20,7 @@ from roometry.agents.state import (
     ToolFeedback,
     ToolName,
 )
-from roometry.agents.tool_policy import already_inspected, clarification_candidates
+from roometry.agents.tool_policy import already_inspected, clarification_candidates, clarification_target
 from roometry.scenes.assets import ASSET_REGISTRY, ObjectType, Placement
 from roometry.scenes.catalog import ASSET_CATALOG, dimensions_for, object_surfaces
 from roometry.scenes.edit_schemas import (
@@ -84,7 +84,7 @@ DESCRIPTIONS: dict[ToolName, str] = {
     "rotate_object": "Rotate an existing movable object about positive Y, in radians. Server validates and rolls back rejected edits.",
     "validate_scene": "Run deterministic component-aware geometry checks on the current scene.",
     "finish": "Finish with the existing validated scene or an honest incomplete result. Cannot fabricate successful geometry or resolve omitted observations.",
-    "request_clarification": "Ask one focused three-choice question about missing room measurements (object_id=null), an observed object identity or facing ambiguity before construction, or whether an existing movable object may move. At most three questions per run; answered facts cannot be asked again. The server constructs the choices and applies the answer as a real constraint.",
+    "request_clarification": "For room_wall_axis use object_id=null to identify which wall matches a measured side before construction. Ask one focused three-choice question about missing room measurements (object_id=null), an observed object identity or facing ambiguity before construction, or whether an existing movable object may move. At most three questions per run; answered facts cannot be asked again. The server constructs the choices and applies the answer as a real constraint.",
 }
 
 
@@ -127,7 +127,7 @@ def tool_definitions(state: AgentState) -> list[dict]:
             schema["properties"]["object_id"] = {
                 "enum": [
                     *dict.fromkeys(
-                        q.entity_ids[0] if q.entity_ids else None for q in questions
+                        clarification_target(q) for q in questions
                     )
                 ],
                 "type": ["string", "null"],
@@ -230,6 +230,12 @@ class SceneTools:
             )
         if name == "propose_scene":
             assert state.analysis is not None
+            try:
+                axis_question = question_for(state, "room_wall_axis")
+            except ValueError:
+                axis_question = None
+            if axis_question is not None:
+                return RunStep(action="continue", pending_question=axis_question, feedback=feedback("Waiting to identify which observed wall matches the entered room dimension."))
             proposal = await self.analysis.propose(
                 SceneProposalRequest(
                     analysis_id=state.analysis.analysis_id,
@@ -239,16 +245,17 @@ class SceneTools:
                 ),
                 context.owner,
                 isolated_dimensions=True,
+                allow_ambiguous_axes=True,
             )
             question = None
-            if proposal.status == "needs_dimensions" and len(state.questions) < 3:
+            if proposal.status in {"needs_dimensions", "needs_wall_assignment"} and len(state.questions) < 3:
                 try:
-                    question = question_for(state, "room_dimensions")
+                    question = question_for(state, "room_dimensions" if proposal.status == "needs_dimensions" else "room_wall_axis")
                 except ValueError:
                     pass
             return RunStep(
                 action="finish"
-                if proposal.status in {"needs_dimensions", "incomplete"}
+                if proposal.status in {"needs_dimensions", "needs_wall_assignment", "incomplete"}
                 and question is None
                 else "continue",
                 proposal=proposal,
@@ -369,7 +376,7 @@ class SceneTools:
             report = await anyio.to_thread.run_sync(validate_geometry, scene)
             fidelity = (
                 evaluate_fidelity(
-                    apply_constraints(state.analysis, state.reconstruction_constraints),
+                    apply_constraints(state.analysis, state.reconstruction_constraints, wall_axes=state.proposal.wall_axes if state.proposal else None),
                     scene,
                 )
                 if state.analysis
@@ -406,7 +413,8 @@ class SceneTools:
         )
         if result.accepted and state.analysis is not None:
             effective = apply_constraints(
-                state.analysis, state.reconstruction_constraints
+                state.analysis, state.reconstruction_constraints,
+                wall_axes=state.proposal.wall_axes if state.proposal else None,
             )
             before = evaluate_fidelity(effective, scene)
             after = evaluate_fidelity(effective, result.scene)

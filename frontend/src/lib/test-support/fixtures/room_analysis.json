@@ -46,6 +46,7 @@
           "22222222-2222-4222-8222-222222222222"
         ],
         "confidence": "high",
+        "span": null,
         "notes": []
       },
       {
@@ -55,6 +56,7 @@
           "22222222-2222-4222-8222-222222222221"
         ],
         "confidence": "medium",
+        "span": null,
         "notes": []
       }
     ],
@@ -230,5 +232,6 @@
       "Photos do not establish exact dimensions.",
       "A scene has not been generated or geometrically validated."
     ]
-  }
+  },
+  "wall_axes": null
 }

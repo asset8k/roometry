@@ -805,7 +805,7 @@ async def test_explicit_measurement_correction_preserves_other_confirmations(har
     actions.append(scene_action())
     response = await client.post(
         "/api/rooms/propose-scene",
-        json=body(analysis, dimensions=confirmed(width_m=5, height_m=2.6)),
+        json=body(analysis, dimensions=confirmed(width_m=5, height_m=2.6), constraints={"wall_axis": {"axis": "width_m", "wall_id": "window_wall"}}),
     )
     assert response.json()["status"] == "ready"
     assert response.json()["scene"]["room"]["width_m"] == 5

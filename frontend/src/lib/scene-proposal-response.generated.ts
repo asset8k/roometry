@@ -7,7 +7,7 @@
 
 export type AnalysisId = string;
 export type InputId = string;
-export type Status = "needs_dimensions" | "ready" | "partial" | "incomplete";
+export type Status = "needs_dimensions" | "needs_wall_assignment" | "ready" | "partial" | "incomplete";
 export type WidthM = number | null;
 export type LengthM = number | null;
 export type HeightM = number | null;
@@ -41,13 +41,25 @@ export type FloorPattern = ("wood" | "tile" | "plain") | null;
 /**
  * @maxItems 4
  */
+export type WallAxisBindings =
+  | []
+  | [WallAxisBinding]
+  | [WallAxisBinding, WallAxisBinding]
+  | [WallAxisBinding, WallAxisBinding, WallAxisBinding]
+  | [WallAxisBinding, WallAxisBinding, WallAxisBinding, WallAxisBinding];
+export type ObservationId = string;
+export type Axis = "width_m" | "length_m";
+export type Source = "photo" | "user" | "estimated";
+/**
+ * @maxItems 4
+ */
 export type WallMapping =
   | []
   | [WallReference]
   | [WallReference, WallReference]
   | [WallReference, WallReference, WallReference]
   | [WallReference, WallReference, WallReference, WallReference];
-export type ObservationId = string;
+export type ObservationId1 = string;
 export type Wall = "north" | "south" | "west" | "east";
 export type EntityId = string;
 export type Field = "width" | "depth" | "height" | "width_m" | "height_m" | "sill_height_m";
@@ -333,6 +345,26 @@ export type Message1 = string;
  */
 export type Checks = FidelityCheck[];
 export type Unassessed = string[];
+export type Status1 = "not_applicable" | "resolved" | "needs_clarification" | "estimated";
+export type ReferenceAxis = ("width_m" | "length_m") | null;
+export type ReferenceSpanM = number | null;
+/**
+ * @maxItems 2
+ */
+export type CandidateWallIds = [] | [string] | [string, string];
+/**
+ * @maxItems 4
+ */
+export type Bindings =
+  | []
+  | [WallAxisBinding]
+  | [WallAxisBinding, WallAxisBinding]
+  | [WallAxisBinding, WallAxisBinding, WallAxisBinding]
+  | [WallAxisBinding, WallAxisBinding, WallAxisBinding, WallAxisBinding];
+/**
+ * @maxItems 50
+ */
+export type Warnings2 = string[];
 export type Code1 =
   | "unsupported_room_shape"
   | "unknown_object"
@@ -369,7 +401,7 @@ export type UnresolvedEntities = UnresolvedEntity[];
 /**
  * @maxItems 50
  */
-export type Warnings2 = string[];
+export type Warnings3 = string[];
 export type ExpiresAt = string;
 
 export interface SceneProposalResponse {
@@ -382,9 +414,10 @@ export interface SceneProposalResponse {
   scene: RoomScene | null;
   validation: GeometryReport | null;
   fidelity?: FidelityReport | null;
+  wall_axes?: WallAxisResolution | null;
   issues: Issues;
   unresolved_entities?: UnresolvedEntities;
-  warnings: Warnings2;
+  warnings: Warnings3;
   expires_at: ExpiresAt;
 }
 /**
@@ -400,6 +433,7 @@ export interface RoomScene {
   schema_version: SchemaVersion;
   room: RoomDimensions;
   finishes?: RoomFinishes | null;
+  wall_axis_bindings?: WallAxisBindings;
   wall_mapping?: WallMapping;
   estimate_corrections?: EstimateCorrections;
   openings: Openings;
@@ -419,8 +453,13 @@ export interface RoomFinishes {
   wall_color?: WallColor;
   floor_pattern?: FloorPattern;
 }
-export interface WallReference {
+export interface WallAxisBinding {
   observation_id: ObservationId;
+  axis: Axis;
+  source: Source;
+}
+export interface WallReference {
+  observation_id: ObservationId1;
   wall: Wall;
 }
 /**
@@ -522,6 +561,14 @@ export interface FidelityCheck {
   passed: Passed;
   required: Required;
   message: Message1;
+}
+export interface WallAxisResolution {
+  status: Status1;
+  reference_axis: ReferenceAxis;
+  reference_span_m: ReferenceSpanM;
+  candidate_wall_ids: CandidateWallIds;
+  bindings: Bindings;
+  warnings: Warnings2;
 }
 export interface ProposalIssue {
   code: Code1;
