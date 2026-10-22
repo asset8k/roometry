@@ -282,3 +282,10 @@ footer { margin-top: 30px; text-align: center; color: #858a7e; font-size: 10px; 
   .analysis-workspace button { min-height: 44px; }
   .clarification-choices { grid-template-columns: minmax(0, 1fr); }
 }
+
+.layout-assessment { padding: 1rem 1.5rem; border-top: 1px solid var(--border, #dce0d3); font-size: .875rem; }
+.layout-assessment h3 { margin: 0 0 .5rem; }
+.layout-assessment p, .layout-assessment li, .layout-assessment dd { line-height: 1.6; }
+.layout-assessment summary { cursor: pointer; }
+.layout-assessment dt { font-weight: 600; margin-top: .5rem; }
+.layout-assessment dd { margin-left: 0; }

@@ -5,6 +5,7 @@ from roometry.scenes.edit_schemas import (
     PreviewEditRequest,
     PreviewEditResponse,
 )
+from roometry.scenes.clearance_acceptance import clearance_regressions
 from roometry.scenes.mutations import EditRejected, apply_edit
 from roometry.scenes.validation import validate_geometry
 
@@ -63,6 +64,14 @@ def preview_edit(request: PreviewEditRequest) -> PreviewEditResponse:
             changed_object_ids=(),
             edit_errors=(),
             base_validation=base_validation,
+            candidate_validation=candidate_validation,
+        )
+
+    clearance_errors = clearance_regressions(base_validation, candidate_validation)
+    if clearance_errors:
+        return PreviewEditResponse(
+            accepted=False, scene=base, changed_object_ids=(),
+            edit_errors=clearance_errors, base_validation=base_validation,
             candidate_validation=candidate_validation,
         )
 

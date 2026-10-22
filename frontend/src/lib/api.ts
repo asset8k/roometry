@@ -1,3 +1,5 @@
+import { parseLayoutScore } from './layout-scoring'
+import type { ScoreLayoutRequest } from './layout-scoring'
 import type { HealthResponse } from './types'
 import type { RoomScene } from './scene.generated'
 import type { PreviewEditResponse } from './edit-response.generated'
@@ -83,4 +85,15 @@ export async function discardRoomInput(inputId: string, signal: AbortSignal): Pr
   if (response.status === 204 || response.status === 404) return
   if (response.ok) throw new RoomInputError('The service did not confirm deletion. Please try again.', [], true)
   await uploadResponse(response)
+}
+
+/** Deterministic assessment only; no model request is made. */
+export async function requestLayoutScore(scene: RoomScene, goals: ScoreLayoutRequest['goals'], signal: AbortSignal) {
+  const response = await fetch(`${baseUrl}/scenes/score`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ scene, goals }), cache: 'no-store',
+    signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]),
+  })
+  if (!response.ok) throw new Error(`Layout assessment failed: ${response.status}`)
+  return parseLayoutScore(await response.json())
 }

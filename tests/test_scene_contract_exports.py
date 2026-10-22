@@ -12,6 +12,7 @@ from roometry.agents.router import StartRunRequest, RunErrorResponse
 
 from roometry.scenes.edit_schemas import PreviewEditRequest, PreviewEditResponse
 from roometry.scenes.schemas import RoomScene
+from roometry.scenes.scoring import LayoutScoreReport, ScoreLayoutRequest, score_layout
 from roometry.scenes.validation import validate_geometry
 from roometry.scenes.service import preview_edit
 from roometry.uploads.schemas import RoomInputOptions, UploadLimits, PreparedRoomInput, UploadErrorResponse
@@ -22,6 +23,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.mark.parametrize("filename,model,mode", [
+    ("layout-score-request.schema.json", ScoreLayoutRequest, "validation"),
+    ("layout-score-response.schema.json", LayoutScoreReport, "serialization"),
     ("agent-run.schema.json", AgentState, "serialization"),
     ("agent-start.schema.json", StartRunRequest, "validation"),
     ("agent-answer.schema.json", ClarificationAnswer, "validation"),
@@ -39,6 +42,12 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_frontend_contract_matches_python(filename, model, mode):
     exported = json.loads((ROOT / "frontend/src/lib" / filename).read_text())
     assert exported == model.model_json_schema(mode=mode)
+
+
+def test_exported_scoring_fixture_matches_the_authoritative_scene():
+    scene = RoomScene.model_validate_json((ROOT / "data/fixtures/bedroom_scene.json").read_text())
+    exported = json.loads((ROOT / "frontend/src/lib/test-support/fixtures/layout_score.json").read_text())
+    assert exported == score_layout(scene).model_dump(mode="json")
 
 
 @pytest.mark.parametrize("filename", ["bedroom_scene.json", "bedroom_after_scene.json"])

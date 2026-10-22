@@ -69,8 +69,86 @@ Geometry policy `components-v1` checks rotated room containment, conservative
 solid components, catalog support areas, attachments, opening bounds, and
 wall-object/opening conflicts. Furniture may fit into another object's empty
 space; a table's entire outer box is not treated as solid. Rugs have explicit
-overlap exceptions. A passing report does not establish photo accuracy, door
-swing clearance, walking/headroom clearance, stability, or room-specific quality.
+overlap exceptions. `valid` covers these component errors. Door access, swing,
+and walking-route findings remain advisory, so poor existing clearance does not
+hide a reconstruction. A passing report does not establish photo accuracy,
+continuous-space walkability, full headroom, stability, or room-specific quality.
+
+`door_clearance` uses policy `door-clearance-v1`: a full-door-width access zone
+extends 0.8 m into the room by default. Catalog solid components between the
+configured 0.02 m floor gap and the door head are tested; rugs are excluded.
+Known inward hinges use a 90-degree quarter-circle sweep, respecting all four
+walls and both offset-based hinge ends. Unknown direction/hinge is unassessed;
+outward swings are outside this room's scope. Sliding/non-swinging doors still
+get an access check. Results identify the door and blocking objects in structured
+warnings and per-door statuses. `/api/scenes/validate` accepts optional
+`door_policy` overrides for access depth and floor gap. These are planning
+heuristics, not building-code measurements.
+
+Manual and agent pose edits compare clearance against the current accepted scene
+using server defaults. New door blockers, lost entrance connections, worse route
+statuses, and increased significant disconnected space reject the entire edit,
+including carried children. Unknown swings remain unknown. A previously assessed
+check becoming unavailable also rejects the edit; an already unassessed baseline
+cannot establish route protection. Existing defects and no-op/corrective edits
+remain allowed. Disconnected-area increases up to four grid cells (at least
+0.05 m²) are ignored as sampling noise. Scores cannot override this policy.
+`clearance_regression` edit issues explain rollback separately from component
+validity. Graph state enforces the same rule independently of tool dispatch.
+
+`walking_space` uses policy `walking-v1`, with a 0.6 m minimum and 0.8 m preferred
+passage width, a 1.8 m upright circular probe, and a requested 0.1 m grid. Policy
+values are configurable via `walking_policy` on `/api/scenes/validate`. Collision
+parts between the 0.02 m floor gap and probe height are projected into the floor
+plan; rugs and higher parts are excluded. Every grid edge and entrance connector
+checks continuous clearance against rotated components, so thin obstacles cannot
+be jumped and diagonal corners are not cut. Door openings must fit the probe.
+
+Reports identify entrance routes to the largest minimum-width region, connectivity
+between known doors, substantial disconnected regions, and regions connected only
+at the narrower width. Regions under 0.5 m² of probe-center area do not alone
+trigger disconnected/narrow-region warnings. Reported areas describe sampled
+probe centers, not floor area or an openness score. Grid steps are reported
+explicitly and may coarsen at the 40,000-cell cap. Raster and entrance-connection
+work are bounded; missing entrances or exhausted work return `unassessed`, never
+invented successful routes. Found routes are conditional on modeled openings;
+door leaf motion and external corridors remain outside this route model. A
+sampled failure can miss a path between grid points and is an advisory finding.
+
+Soft layout scoring is a separate stateless calculation: `/api/scenes/score`
+accepts `scene`, existing `goals`, and optional `policy`, returning
+`layout-score-v1`. Scores range from 0 to 100, with formulas, measurements, and
+the policy echoed in the response:
+
+- **Openness:** 100 × the sampled unoccupied floor fraction. Standing-height
+  component projections are unioned, so stacked/overlapping projections are not
+  counted twice. Rugs and higher components are excluded. This is separate from
+  entrance reachability; grid steps and the bounded work limit are explicit.
+- **Storage:** 100 × V / (V + reference), with a default 1 m³ reference. V sums
+  nominal outer volumes of declared standalone storage types; surface containers
+  are excluded. This is a size proxy, not verified internal or accessible capacity.
+- **Workspace:** the best declared desk's capped usable-width/depth ratios,
+  using catalog support surfaces. Default minima are 1 × 0.5 m, with a worktop
+  height of 0.6–0.9 m and 0.6 × 0.8 m chair space. Blocked/out-of-room approach
+  space or an unsuitable height gives zero. One fitting chair facing the desk
+  (or a stool) is permitted, including up to 0.25 m of tucking. Per-desk findings
+  identify dimensions and blockers. Desktop clutter, ergonomics, and routes from
+  an entrance to the desk are not assessed by this local proxy.
+- **Aesthetics:** unassessed; geometry and free-text style do not establish
+  measurable taste criteria.
+
+Requested measurable criteria use equal weights. Any selected unassessed
+criterion keeps the overall score null, including general analysis, which selects
+all four. Invalid component geometry receives no scores. Clearance warnings stay
+separate and cannot be cancelled by a high soft score. These scores neither
+authorize deleting observed/locked furniture nor establish reconstruction fidelity.
+The agent can inspect `validate_scene` and `score_layout` once per accepted scene
+revision. Construction feedback includes clearance immediately. The viewer checks
+the current accepted scene (including base/working switches and reset), never a
+drag draft or color preview. It shows door/route warnings, selected goal proxies,
+unknowns and resolution; unavailable checks do not hide the room. Assessment is a
+deterministic local request, not an additional model call. Autonomous goal-driven
+redesign and optimization remain separate future work.
 
 Partial proposals retain validated objects and explicitly list unresolved
 observations outside the scene. An incomplete result must not invent successful

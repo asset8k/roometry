@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { Group } from 'three'
 import { loadExampleScene } from './test-support/scenes'
 import { editRestriction, parseEditPreview, previewTransform } from './scene-edits'
-import { acceptedMove, rejectedMove } from './test-support/edit-responses'
+import { acceptedMove, rejectedMove, geometryReport } from './test-support/edit-responses'
 import { gizmoEdit } from '../components/room-viewer/gizmo-edit'
 
 const move = { operation: 'move' as const, object_id: 'desk_1', position: { x: 0.85, z: 2.1 } }
@@ -74,6 +74,36 @@ describe('visual edit candidates', () => {
 })
 
 describe('generated edit response validation', () => {
+  it('accepts advisory walking findings without hiding a geometry-valid scene', () => {
+    const data = acceptedMove(loadExampleScene())
+    data.base_validation.walking_space = {
+      policy_version: 'walking-v1', status: 'blocked',
+      policy: { minimum_width_m: .6, preferred_width_m: .8, probe_height_m: 1.8, floor_gap_m: .02, cell_size_m: .1, significant_region_area_m2: .5 },
+      grid_step_x_m: .1, grid_step_z_m: .1, grid_cells: 1400,
+      walkable_center_area_m2: 4, main_region_area_m2: 3, disconnected_center_area_m2: 1, significant_region_count: 2,
+      entrances: [{ door_id: 'door_1', status: 'blocked', main_region_reachable: false, reachable_door_ids: [], unreachable_door_ids: [] }],
+      issues: [{ code: 'entrance_route_blocked', entity_ids: ['door_1'], message: 'No sampled entrance route was found.' }],
+    }
+    data.base_validation.warnings.push(...data.base_validation.walking_space.issues)
+    const result = parseEditPreview(data)
+    expect(result.accepted).toBe(true)
+    expect(result.base_validation.valid).toBe(true)
+    expect(result.base_validation.walking_space?.status).toBe('blocked')
+  })
+  it('accepts advisory door findings without treating them as component geometry errors', () => {
+    const data = acceptedMove(loadExampleScene())
+    data.base_validation.door_clearance = {
+      policy_version: 'door-clearance-v1', policy: { access_depth_m: .8, floor_gap_m: .02 },
+      doors: [{ door_id: 'door_1', access_status: 'blocked', swing_status: 'unknown', access_object_ids: ['desk_1'], swing_object_ids: [] }],
+      issues: [{ code: 'door_access_blocked', entity_ids: ['door_1', 'desk_1'], message: 'Door access zone is obstructed.' },
+        { code: 'door_swing_unknown', entity_ids: ['door_1'], message: 'The hinge is unknown.' }],
+    }
+    data.base_validation.warnings.push(...data.base_validation.door_clearance.issues)
+    const result = parseEditPreview(data)
+    expect(result.accepted).toBe(true)
+    expect(result.base_validation.valid).toBe(true)
+    expect(result.base_validation.door_clearance?.doors[0].swing_status).toBe('unknown')
+  })
   it('accepts the documented success and rejection contracts', () => {
     const scene = loadExampleScene()
     expect(parseEditPreview(acceptedMove(scene)).accepted).toBe(true)
@@ -100,4 +130,14 @@ describe('generated edit response validation', () => {
     accepted.changed_object_ids.push('desk_1')
     expect(() => parseEditPreview(accepted)).toThrow()
   })
+})
+
+it('parses a clearance rejection with valid component geometry as a rejected edit', () => {
+  const scene = loadExampleScene()
+  const response = {
+    accepted: false, scene, changed_object_ids: [],
+    base_validation: geometryReport(), candidate_validation: geometryReport(),
+    edit_errors: [{ code: 'clearance_regression', entity_ids: ['door_1', 'desk_1'], message: 'Door access blocked. Previous layout retained.' }],
+  }
+  expect(parseEditPreview(response).accepted).toBe(false)
 })

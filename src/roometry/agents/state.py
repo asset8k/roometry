@@ -81,6 +81,7 @@ ToolName = Literal[
     "move_object",
     "rotate_object",
     "validate_scene",
+    "score_layout",
     "request_clarification",
     "finish",
 ]

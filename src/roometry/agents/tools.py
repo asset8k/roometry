@@ -30,6 +30,7 @@ from roometry.scenes.edit_schemas import (
     RotateObject,
 )
 from roometry.scenes.schemas import FiniteNumber, Identifier
+from roometry.scenes.scoring import score_layout
 from roometry.scenes.service import preview_edit
 from roometry.scenes.validation import GeometryReport, validate_geometry
 from roometry.vision.errors import AnalysisFailure
@@ -72,6 +73,7 @@ ARGUMENT_MODELS: dict[ToolName, type[RunModel]] = {
     "move_object": MoveArguments,
     "rotate_object": RotateArguments,
     "validate_scene": NoArguments,
+    "score_layout": NoArguments,
     "finish": NoArguments,
     "request_clarification": ClarificationArguments,
 }
@@ -83,6 +85,7 @@ DESCRIPTIONS: dict[ToolName, str] = {
     "move_object": "Move an existing movable object to an absolute floor or support position. Server derives elevation, carries dependents, validates, and rolls back rejected edits.",
     "rotate_object": "Rotate an existing movable object about positive Y, in radians. Server validates and rolls back rejected edits.",
     "validate_scene": "Run deterministic component-aware geometry checks on the current scene.",
+    "score_layout": "Measure current soft goal proxies and clearance without changing the scene. Unknown style scores remain unassessed; scores cannot override evidence or clearance.",
     "finish": "Finish with the existing validated scene or an honest incomplete result. Cannot fabricate successful geometry or resolve omitted observations.",
     "request_clarification": "For room_wall_axis use object_id=null to identify which wall matches a measured side before construction. Ask one focused three-choice question about missing room measurements (object_id=null), an observed object identity or facing ambiguity before construction, or whether an existing movable object may move. At most three questions per run; answered facts cannot be asked again. The server constructs the choices and applies the answer as a real constraint.",
 }
@@ -101,6 +104,7 @@ def available_tools(
             "read_scene",
             "search_catalog",
             "validate_scene",
+            "score_layout",
         )
         for name in inspection_tools:
             if not already_inspected(state, name):
@@ -145,14 +149,47 @@ def tool_definitions(state: AgentState) -> list[dict]:
 
 
 def report_summary(report: GeometryReport) -> dict:
+    # Keep actionable identities and aggregate status without multiplying large
+    # per-door connectivity lists across the agent's feedback history.
+    doors = None
+    if report.door_clearance is not None:
+        source = report.door_clearance
+        doors = source.model_dump(mode="json", exclude={"doors", "issues"})
+        doors.update(door_count=len(source.doors), issue_count=len(source.issues))
+        doors["doors"] = [
+            {**door.model_dump(mode="json"),
+             "access_object_ids": list(door.access_object_ids[:16]),
+             "access_object_count": len(door.access_object_ids),
+             "swing_object_ids": list(door.swing_object_ids[:16]),
+             "swing_object_count": len(door.swing_object_ids)}
+            for door in source.doors[:16]
+        ]
+        doors["issues"] = [issue.model_dump(mode="json") for issue in source.issues[:16]]
+    walking = None
+    if report.walking_space is not None:
+        routes = report.walking_space
+        walking = routes.model_dump(mode="json", exclude={"entrances", "issues"})
+        walking.update(entrance_count=len(routes.entrances), issue_count=len(routes.issues))
+        walking["entrances"] = [
+            {**entry.model_dump(mode="json"),
+             "reachable_door_ids": list(entry.reachable_door_ids[:16]),
+             "reachable_door_count": len(entry.reachable_door_ids),
+             "unreachable_door_ids": list(entry.unreachable_door_ids[:16]),
+             "unreachable_door_count": len(entry.unreachable_door_ids)}
+            for entry in routes.entrances[:16]
+        ]
+        walking["issues"] = [issue.model_dump(mode="json") for issue in routes.issues[:16]]
     return {
         "valid": report.valid,
         "policy_version": report.policy_version,
         "error_count": len(report.errors),
         "errors": [error.model_dump(mode="json") for error in report.errors[:32]],
+        "warning_count": len(report.warnings),
         "warnings": [
-            warning.model_dump(mode="json") for warning in report.warnings[:4]
+            warning.model_dump(mode="json") for warning in report.warnings[:16]
         ],
+        "door_clearance": doors,
+        "walking_space": walking,
     }
 
 
@@ -264,6 +301,7 @@ class SceneTools:
                     "Scene construction returned " + proposal.status + ".",
                     {
                         "status": proposal.status,
+                        "geometry": report_summary(proposal.validation) if proposal.validation else None,
                         "dimensions_to_confirm": proposal.dimensions_to_confirm,
                         "issues": [
                             item.model_dump(mode="json") for item in proposal.issues
@@ -372,6 +410,12 @@ class SceneTools:
                     },
                 ),
             )
+        if name == "score_layout":
+            report = await anyio.to_thread.run_sync(score_layout, scene, list(state.input_options.goals))
+            return RunStep(action="continue", feedback=feedback(
+                "Soft goal proxies measured; this does not authorize redesign or override clearance.",
+                {**report.model_dump(mode="json", exclude={"geometry"}), "geometry": report_summary(report.geometry)},
+            ))
         if name == "validate_scene":
             report = await anyio.to_thread.run_sync(validate_geometry, scene)
             fidelity = (

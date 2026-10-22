@@ -135,6 +135,162 @@
       "title": "ClarificationQuestion",
       "type": "object"
     },
+    "DoorCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "door_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Door Id",
+          "type": "string"
+        },
+        "access_status": {
+          "enum": [
+            "clear",
+            "blocked",
+            "unassessed"
+          ],
+          "title": "Access Status",
+          "type": "string"
+        },
+        "swing_status": {
+          "enum": [
+            "clear",
+            "blocked",
+            "unknown",
+            "not_applicable",
+            "outside_room",
+            "unassessed"
+          ],
+          "title": "Swing Status",
+          "type": "string"
+        },
+        "access_object_ids": {
+          "default": [],
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "type": "string"
+          },
+          "title": "Access Object Ids",
+          "type": "array"
+        },
+        "swing_object_ids": {
+          "default": [],
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "type": "string"
+          },
+          "title": "Swing Object Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "door_id",
+        "access_status",
+        "swing_status"
+      ],
+      "title": "DoorCheck",
+      "type": "object"
+    },
+    "DoorClearanceIssue": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "enum": [
+            "door_access_blocked",
+            "door_swing_blocked",
+            "door_swing_unknown",
+            "door_swing_outside_room",
+            "door_clearance_unassessed"
+          ],
+          "title": "Code",
+          "type": "string"
+        },
+        "entity_ids": {
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "type": "string"
+          },
+          "title": "Entity Ids",
+          "type": "array"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "entity_ids",
+        "message"
+      ],
+      "title": "DoorClearanceIssue",
+      "type": "object"
+    },
+    "DoorClearancePolicy": {
+      "additionalProperties": false,
+      "description": "MVP heuristics in meters; callers can supply a different bounded policy.",
+      "properties": {
+        "access_depth_m": {
+          "default": 0.8,
+          "exclusiveMinimum": 0,
+          "maximum": 5,
+          "title": "Access Depth M",
+          "type": "number"
+        },
+        "floor_gap_m": {
+          "default": 0.02,
+          "maximum": 0.1,
+          "minimum": 0,
+          "title": "Floor Gap M",
+          "type": "number"
+        }
+      },
+      "title": "DoorClearancePolicy",
+      "type": "object"
+    },
+    "DoorClearanceReport": {
+      "additionalProperties": false,
+      "properties": {
+        "policy_version": {
+          "const": "door-clearance-v1",
+          "default": "door-clearance-v1",
+          "title": "Policy Version",
+          "type": "string"
+        },
+        "policy": {
+          "$ref": "#/$defs/DoorClearancePolicy"
+        },
+        "doors": {
+          "items": {
+            "$ref": "#/$defs/DoorCheck"
+          },
+          "title": "Doors",
+          "type": "array"
+        },
+        "issues": {
+          "items": {
+            "$ref": "#/$defs/DoorClearanceIssue"
+          },
+          "title": "Issues",
+          "type": "array"
+        }
+      },
+      "required": [
+        "policy",
+        "doors",
+        "issues"
+      ],
+      "title": "DoorClearanceReport",
+      "type": "object"
+    },
     "EnteredDimensions": {
       "additionalProperties": false,
       "properties": {
@@ -187,6 +343,68 @@
         "height_m"
       ],
       "title": "EnteredDimensions",
+      "type": "object"
+    },
+    "EntranceRoute": {
+      "additionalProperties": false,
+      "properties": {
+        "door_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Door Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "clear",
+            "narrow",
+            "blocked",
+            "unassessed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "main_region_reachable": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Main Region Reachable"
+        },
+        "reachable_door_ids": {
+          "default": [],
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "type": "string"
+          },
+          "title": "Reachable Door Ids",
+          "type": "array"
+        },
+        "unreachable_door_ids": {
+          "default": [],
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "type": "string"
+          },
+          "title": "Unreachable Door Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "door_id",
+        "status",
+        "main_region_reachable"
+      ],
+      "title": "EntranceRoute",
       "type": "object"
     },
     "EstimateCorrection": {
@@ -543,19 +761,43 @@
       "additionalProperties": false,
       "properties": {
         "code": {
-          "enum": [
-            "object_outside_room",
-            "object_overlap",
-            "rug_overlap",
-            "surface_support",
-            "wall_attachment",
-            "ceiling_attachment",
-            "opening_outside_wall",
-            "wall_opening_overlap",
-            "baseline_scope"
+          "anyOf": [
+            {
+              "enum": [
+                "object_outside_room",
+                "object_overlap",
+                "rug_overlap",
+                "surface_support",
+                "wall_attachment",
+                "ceiling_attachment",
+                "opening_outside_wall",
+                "wall_opening_overlap",
+                "baseline_scope"
+              ],
+              "type": "string"
+            },
+            {
+              "enum": [
+                "door_access_blocked",
+                "door_swing_blocked",
+                "door_swing_unknown",
+                "door_swing_outside_room",
+                "door_clearance_unassessed"
+              ],
+              "type": "string"
+            },
+            {
+              "enum": [
+                "entrance_route_blocked",
+                "entrances_disconnected",
+                "walking_space_disconnected",
+                "narrow_passage",
+                "walking_space_unassessed"
+              ],
+              "type": "string"
+            }
           ],
-          "title": "Code",
-          "type": "string"
+          "title": "Code"
         },
         "entity_ids": {
           "items": {
@@ -579,7 +821,7 @@
     },
     "GeometryReport": {
       "additionalProperties": false,
-      "description": "`valid` means catalog component checks passed, not full scene acceptance.",
+      "description": "`valid` covers component errors; door and walking findings stay advisory.",
       "properties": {
         "policy_version": {
           "const": "components-v1",
@@ -610,6 +852,28 @@
           },
           "title": "Warnings",
           "type": "array"
+        },
+        "door_clearance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DoorClearanceReport"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "walking_space": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WalkingReport"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "valid": {
           "readOnly": true,
@@ -3060,6 +3324,7 @@
             "move_object",
             "rotate_object",
             "validate_scene",
+            "score_layout",
             "request_clarification",
             "finish"
           ],
@@ -3096,6 +3361,7 @@
                 "move_object",
                 "rotate_object",
                 "validate_scene",
+                "score_layout",
                 "request_clarification",
                 "finish"
               ],
@@ -3168,6 +3434,209 @@
         "reason"
       ],
       "title": "UnresolvedEntity",
+      "type": "object"
+    },
+    "WalkingIssue": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "enum": [
+            "entrance_route_blocked",
+            "entrances_disconnected",
+            "walking_space_disconnected",
+            "narrow_passage",
+            "walking_space_unassessed"
+          ],
+          "title": "Code",
+          "type": "string"
+        },
+        "entity_ids": {
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "type": "string"
+          },
+          "title": "Entity Ids",
+          "type": "array"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "entity_ids",
+        "message"
+      ],
+      "title": "WalkingIssue",
+      "type": "object"
+    },
+    "WalkingPolicy": {
+      "additionalProperties": false,
+      "description": "Configurable MVP heuristics, not accessibility or evacuation standards.",
+      "properties": {
+        "minimum_width_m": {
+          "default": 0.6,
+          "maximum": 2.0,
+          "minimum": 0.3,
+          "title": "Minimum Width M",
+          "type": "number"
+        },
+        "preferred_width_m": {
+          "default": 0.8,
+          "maximum": 3.0,
+          "minimum": 0.3,
+          "title": "Preferred Width M",
+          "type": "number"
+        },
+        "probe_height_m": {
+          "default": 1.8,
+          "maximum": 2.5,
+          "minimum": 0.5,
+          "title": "Probe Height M",
+          "type": "number"
+        },
+        "floor_gap_m": {
+          "default": 0.02,
+          "maximum": 0.1,
+          "minimum": 0.0,
+          "title": "Floor Gap M",
+          "type": "number"
+        },
+        "cell_size_m": {
+          "default": 0.1,
+          "maximum": 0.5,
+          "minimum": 0.05,
+          "title": "Cell Size M",
+          "type": "number"
+        },
+        "significant_region_area_m2": {
+          "default": 0.5,
+          "maximum": 10.0,
+          "minimum": 0.1,
+          "title": "Significant Region Area M2",
+          "type": "number"
+        }
+      },
+      "title": "WalkingPolicy",
+      "type": "object"
+    },
+    "WalkingReport": {
+      "additionalProperties": false,
+      "properties": {
+        "policy_version": {
+          "const": "walking-v1",
+          "default": "walking-v1",
+          "title": "Policy Version",
+          "type": "string"
+        },
+        "policy": {
+          "$ref": "#/$defs/WalkingPolicy"
+        },
+        "status": {
+          "enum": [
+            "clear",
+            "narrow",
+            "blocked",
+            "unassessed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "grid_step_x_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Grid Step X M"
+        },
+        "grid_step_z_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Grid Step Z M"
+        },
+        "grid_cells": {
+          "title": "Grid Cells",
+          "type": "integer"
+        },
+        "walkable_center_area_m2": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Walkable Center Area M2"
+        },
+        "main_region_area_m2": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Main Region Area M2"
+        },
+        "disconnected_center_area_m2": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Disconnected Center Area M2"
+        },
+        "significant_region_count": {
+          "title": "Significant Region Count",
+          "type": "integer"
+        },
+        "entrances": {
+          "items": {
+            "$ref": "#/$defs/EntranceRoute"
+          },
+          "title": "Entrances",
+          "type": "array"
+        },
+        "issues": {
+          "items": {
+            "$ref": "#/$defs/WalkingIssue"
+          },
+          "title": "Issues",
+          "type": "array"
+        }
+      },
+      "required": [
+        "policy",
+        "status",
+        "grid_step_x_m",
+        "grid_step_z_m",
+        "grid_cells",
+        "walkable_center_area_m2",
+        "main_region_area_m2",
+        "disconnected_center_area_m2",
+        "significant_region_count",
+        "entrances",
+        "issues"
+      ],
+      "title": "WalkingReport",
       "type": "object"
     },
     "WallAxisAnswer": {

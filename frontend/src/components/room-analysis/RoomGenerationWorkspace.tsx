@@ -85,7 +85,7 @@ export default function RoomGenerationWorkspace({ state, controller, onConnectio
       </>}
     </div>
     {scene && run?.base_scene && <section className="reconstructed-room" aria-label="Your reconstructed room">
-      <SceneWorkspace initialScene={scene} beforeScene={run.base_scene} onConnectionChange={onConnectionChange} />
+      <SceneWorkspace goals={run.input_options.goals} initialScene={scene} beforeScene={run.base_scene} onConnectionChange={onConnectionChange} />
     </section>}
   </section>
 }

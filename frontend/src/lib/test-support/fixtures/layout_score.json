@@ -1,0 +1,184 @@
+{
+  "policy_version": "layout-score-v1",
+  "policy": {
+    "cell_size_m": 0.1,
+    "floor_gap_m": 0.02,
+    "clearance_height_m": 1.8,
+    "storage_reference_m3": 1.0,
+    "minimum_worktop_width_m": 1.0,
+    "minimum_worktop_depth_m": 0.5,
+    "minimum_worktop_height_m": 0.6,
+    "maximum_worktop_height_m": 0.9,
+    "chair_zone_width_m": 0.6,
+    "chair_zone_depth_m": 0.8,
+    "chair_tuck_allowance_m": 0.25
+  },
+  "requested_goals": [
+    "general_analysis"
+  ],
+  "selected_criteria": [
+    "openness",
+    "storage",
+    "workspace",
+    "aesthetics"
+  ],
+  "geometry": {
+    "policy_version": "components-v1",
+    "tolerance_m": 1e-06,
+    "rotation_tolerance_rad": 1e-06,
+    "errors": [],
+    "warnings": [
+      {
+        "code": "baseline_scope",
+        "entity_ids": [],
+        "message": "Checks use conservative boxes for catalog solid parts and declared support areas. Curved/hollow parts are approximated. Room-side door access and known inward swings and sampled walking routes are advisory checks; unknown/outward swings are explicitly unassessed. Walking checks use configured probe dimensions and a bounded grid; stability, full headroom clearance, overlapping openings, room-specific rules, budgets, and preservation of authorized previous state are not checked. A passing baseline is not full acceptance."
+      }
+    ],
+    "door_clearance": {
+      "policy_version": "door-clearance-v1",
+      "policy": {
+        "access_depth_m": 0.8,
+        "floor_gap_m": 0.02
+      },
+      "doors": [
+        {
+          "door_id": "door_1",
+          "access_status": "clear",
+          "swing_status": "clear",
+          "access_object_ids": [],
+          "swing_object_ids": []
+        }
+      ],
+      "issues": []
+    },
+    "walking_space": {
+      "policy_version": "walking-v1",
+      "policy": {
+        "minimum_width_m": 0.6,
+        "preferred_width_m": 0.8,
+        "probe_height_m": 1.8,
+        "floor_gap_m": 0.02,
+        "cell_size_m": 0.1,
+        "significant_region_area_m2": 0.5
+      },
+      "status": "clear",
+      "grid_step_x_m": 0.1,
+      "grid_step_z_m": 0.1,
+      "grid_cells": 1400,
+      "walkable_center_area_m2": 2.6800000000000006,
+      "main_region_area_m2": 2.6800000000000006,
+      "disconnected_center_area_m2": 0.0,
+      "significant_region_count": 1,
+      "entrances": [
+        {
+          "door_id": "door_1",
+          "status": "clear",
+          "main_region_reachable": true,
+          "reachable_door_ids": [],
+          "unreachable_door_ids": []
+        }
+      ],
+      "issues": []
+    },
+    "valid": true
+  },
+  "openness": {
+    "status": "scored",
+    "score": 67.07142857142857,
+    "explanation": "100 \u00d7 sampled unoccupied floor fraction. Uses the union of standing-height solid projections; this is independent of entrance reachability.",
+    "metrics": [
+      {
+        "key": "floor_area",
+        "value": 14.0,
+        "unit": "m2"
+      },
+      {
+        "key": "unoccupied_floor_area",
+        "value": 9.39,
+        "unit": "m2"
+      },
+      {
+        "key": "unoccupied_fraction",
+        "value": 0.6707142857142857,
+        "unit": "fraction"
+      },
+      {
+        "key": "grid_step_x",
+        "value": 0.1,
+        "unit": "m"
+      },
+      {
+        "key": "grid_step_z",
+        "value": 0.1,
+        "unit": "m"
+      },
+      {
+        "key": "grid_cells",
+        "value": 1400.0,
+        "unit": "count"
+      }
+    ],
+    "entity_ids": []
+  },
+  "storage": {
+    "status": "scored",
+    "score": 58.08885163453479,
+    "explanation": "100 \u00d7 V / (V + storage_reference_m3), where V sums nominal outer volumes of standalone storage types. Surface-mounted containers are excluded to avoid rewarding stacked storage twice. This does not establish contents, internal capacity, or accessibility.",
+    "metrics": [
+      {
+        "key": "nominal_storage_volume",
+        "value": 1.3860000000000003,
+        "unit": "m3"
+      },
+      {
+        "key": "storage_objects",
+        "value": 1.0,
+        "unit": "count"
+      }
+    ],
+    "entity_ids": [
+      "wardrobe_1"
+    ]
+  },
+  "workspace": {
+    "status": "scored",
+    "score": 96.39999999999999,
+    "explanation": "Best declared desk: 100 \u00d7 capped worktop width/depth ratios, or zero when height or chair clearance fails the policy. One fitting chair facing the desk is allowed. Does not assess desktop clutter, ergonomics, or entrance-to-desk reachability.",
+    "metrics": [
+      {
+        "key": "assessed_workstations",
+        "value": 1.0,
+        "unit": "count"
+      }
+    ],
+    "entity_ids": [
+      "desk_1"
+    ]
+  },
+  "aesthetics": {
+    "status": "unassessed",
+    "score": null,
+    "explanation": "Room geometry and free-text style do not determine personal taste. No measurable aesthetic preference has been supplied to this scorer.",
+    "metrics": [],
+    "entity_ids": []
+  },
+  "workstations": [
+    {
+      "object_id": "desk_1",
+      "worktop_width_m": 0.964,
+      "worktop_depth_m": 0.5783999999999999,
+      "worktop_height_m": 0.75,
+      "approach_inside_room": true,
+      "approach_clear": true,
+      "permitted_chair_id": null,
+      "blocking_object_ids": [],
+      "score": 96.39999999999999
+    }
+  ],
+  "overall_score": null,
+  "warnings": [
+    "Scores are soft planning proxies, not photo fidelity, safety, or permission to remove observed/locked furniture. Geometry and clearance checks remain separate constraints.",
+    "Compare scores only under the same policy. Averages use equal weights and are unset if any selected criterion is unassessed.",
+    "Storage uses nominal outside volumes, not verified usable capacity. Openness is sampled; aesthetics requires explicit user criteria."
+  ]
+}

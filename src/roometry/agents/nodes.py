@@ -14,6 +14,7 @@ from roometry.agents.budget import RunBudget
 from roometry.agents.clarification import answer_updates, question_for
 from roometry.agents.state import AgentState, ClarificationAnswer, RunStep, RunUsage
 from roometry.model_calls import observe_model_calls
+from roometry.scenes.clearance_acceptance import clearance_regressions
 from roometry.scenes.validation import validate_geometry
 from roometry.vision.evidence import apply_constraints
 from roometry.vision.fidelity import evaluate_fidelity
@@ -125,8 +126,11 @@ def check_step(state: AgentState, step: RunStep) -> None:
             )
     if step.working_scene is not None:
         original, candidate = state.working_scene, step.working_scene
-        if original is None or not validate_geometry(candidate).valid:
+        candidate_validation = validate_geometry(candidate)
+        if original is None or not candidate_validation.valid:
             raise ValueError("Edits require an existing valid scene.")
+        if clearance_regressions(validate_geometry(original), candidate_validation):
+            raise ValueError("Agent pose edits cannot worsen clearance.")
         if original.model_dump(exclude={"objects"}) != candidate.model_dump(
             exclude={"objects"}
         ):

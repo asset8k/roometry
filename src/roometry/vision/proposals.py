@@ -288,7 +288,7 @@ def assemble(
             "A rectangular room is assumed; the photos do not establish its shape."
         )
     warnings = [
-        "Baseline geometry does not check door swings, walking clearance, headroom, overlapping openings, or room-specific safety."
+        "Door clearance and sampled walking routes are advisory planning checks. Full headroom, overlapping openings, and room-specific safety are not checked."
     ]
     if obs.possible_duplicates:
         warnings.append(

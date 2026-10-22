@@ -297,7 +297,8 @@ export type Code =
   | "unsupported_placement"
   | "protected_children"
   | "candidate_schema"
-  | "invalid_base_geometry";
+  | "invalid_base_geometry"
+  | "clearance_regression";
 export type EntityIds = string[];
 export type Message = string;
 export type EditErrors = EditIssue[];
@@ -305,19 +306,83 @@ export type PolicyVersion = "components-v1";
 export type ToleranceM = number;
 export type RotationToleranceRad = number;
 export type Code1 =
-  | "object_outside_room"
-  | "object_overlap"
-  | "rug_overlap"
-  | "surface_support"
-  | "wall_attachment"
-  | "ceiling_attachment"
-  | "opening_outside_wall"
-  | "wall_opening_overlap"
-  | "baseline_scope";
+  | (
+      | "object_outside_room"
+      | "object_overlap"
+      | "rug_overlap"
+      | "surface_support"
+      | "wall_attachment"
+      | "ceiling_attachment"
+      | "opening_outside_wall"
+      | "wall_opening_overlap"
+      | "baseline_scope"
+    )
+  | (
+      | "door_access_blocked"
+      | "door_swing_blocked"
+      | "door_swing_unknown"
+      | "door_swing_outside_room"
+      | "door_clearance_unassessed"
+    )
+  | (
+      | "entrance_route_blocked"
+      | "entrances_disconnected"
+      | "walking_space_disconnected"
+      | "narrow_passage"
+      | "walking_space_unassessed"
+    );
 export type EntityIds1 = string[];
 export type Message1 = string;
 export type Errors = GeometryIssue[];
 export type Warnings1 = GeometryIssue[];
+export type PolicyVersion1 = "door-clearance-v1";
+export type AccessDepthM = number;
+export type FloorGapM = number;
+export type DoorId = string;
+export type AccessStatus = "clear" | "blocked" | "unassessed";
+export type SwingStatus = "clear" | "blocked" | "unknown" | "not_applicable" | "outside_room" | "unassessed";
+export type AccessObjectIds = string[];
+export type SwingObjectIds = string[];
+export type Doors = DoorCheck[];
+export type Code2 =
+  | "door_access_blocked"
+  | "door_swing_blocked"
+  | "door_swing_unknown"
+  | "door_swing_outside_room"
+  | "door_clearance_unassessed";
+export type EntityIds2 = string[];
+export type Message2 = string;
+export type Issues = DoorClearanceIssue[];
+export type PolicyVersion2 = "walking-v1";
+export type MinimumWidthM = number;
+export type PreferredWidthM = number;
+export type ProbeHeightM = number;
+export type FloorGapM1 = number;
+export type CellSizeM = number;
+export type SignificantRegionAreaM2 = number;
+export type Status = "clear" | "narrow" | "blocked" | "unassessed";
+export type GridStepXM = number | null;
+export type GridStepZM = number | null;
+export type GridCells = number;
+export type WalkableCenterAreaM2 = number | null;
+export type MainRegionAreaM2 = number | null;
+export type DisconnectedCenterAreaM2 = number | null;
+export type SignificantRegionCount = number;
+export type DoorId1 = string;
+export type Status1 = "clear" | "narrow" | "blocked" | "unassessed";
+export type MainRegionReachable = boolean | null;
+export type ReachableDoorIds = string[];
+export type UnreachableDoorIds = string[];
+export type Entrances = EntranceRoute[];
+export type Code3 =
+  | "entrance_route_blocked"
+  | "entrances_disconnected"
+  | "walking_space_disconnected"
+  | "narrow_passage"
+  | "walking_space_unassessed";
+export type EntityIds3 = string[];
+export type Message3 = string;
+export type Issues1 = WalkingIssue[];
 export type Valid = boolean;
 
 /**
@@ -440,7 +505,7 @@ export interface EditIssue {
   message: Message;
 }
 /**
- * `valid` means catalog component checks passed, not full scene acceptance.
+ * `valid` covers component errors; door and walking findings stay advisory.
  */
 export interface GeometryReport {
   policy_version?: PolicyVersion;
@@ -448,10 +513,74 @@ export interface GeometryReport {
   rotation_tolerance_rad?: RotationToleranceRad;
   errors: Errors;
   warnings: Warnings1;
+  door_clearance?: DoorClearanceReport | null;
+  walking_space?: WalkingReport | null;
   valid: Valid;
 }
 export interface GeometryIssue {
   code: Code1;
   entity_ids: EntityIds1;
   message: Message1;
+}
+export interface DoorClearanceReport {
+  policy_version?: PolicyVersion1;
+  policy: DoorClearancePolicy;
+  doors: Doors;
+  issues: Issues;
+}
+/**
+ * MVP heuristics in meters; callers can supply a different bounded policy.
+ */
+export interface DoorClearancePolicy {
+  access_depth_m?: AccessDepthM;
+  floor_gap_m?: FloorGapM;
+}
+export interface DoorCheck {
+  door_id: DoorId;
+  access_status: AccessStatus;
+  swing_status: SwingStatus;
+  access_object_ids?: AccessObjectIds;
+  swing_object_ids?: SwingObjectIds;
+}
+export interface DoorClearanceIssue {
+  code: Code2;
+  entity_ids: EntityIds2;
+  message: Message2;
+}
+export interface WalkingReport {
+  policy_version?: PolicyVersion2;
+  policy: WalkingPolicy;
+  status: Status;
+  grid_step_x_m: GridStepXM;
+  grid_step_z_m: GridStepZM;
+  grid_cells: GridCells;
+  walkable_center_area_m2: WalkableCenterAreaM2;
+  main_region_area_m2: MainRegionAreaM2;
+  disconnected_center_area_m2: DisconnectedCenterAreaM2;
+  significant_region_count: SignificantRegionCount;
+  entrances: Entrances;
+  issues: Issues1;
+}
+/**
+ * Configurable MVP heuristics, not accessibility or evacuation standards.
+ */
+export interface WalkingPolicy {
+  minimum_width_m?: MinimumWidthM;
+  preferred_width_m?: PreferredWidthM;
+  probe_height_m?: ProbeHeightM;
+  floor_gap_m?: FloorGapM1;
+  cell_size_m?: CellSizeM;
+  significant_region_area_m2?: SignificantRegionAreaM2;
+}
+export interface EntranceRoute {
+  door_id: DoorId1;
+  status: Status1;
+  main_region_reachable: MainRegionReachable;
+  reachable_door_ids?: ReachableDoorIds;
+  unreachable_door_ids?: UnreachableDoorIds;
+}
+export interface WalkingIssue {
+  code: Code3;
+  entity_ids: EntityIds3;
+  message: Message3;
 }

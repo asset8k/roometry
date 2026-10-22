@@ -33,13 +33,13 @@ def preview(scene, edit):
 
 def test_move_carries_computer_and_preserves_every_other_field(bedroom_scene):
     before = deepcopy(bedroom_scene)
-    result = preview(bedroom_scene, move(x=0.85, z=2.1))
+    result = preview(bedroom_scene, move(x=0.75, z=2.1))
     assert result.accepted
     assert result.changed_object_ids == ("computer_1", "desk_1")
     assert result.base_validation.valid and result.candidate_validation.valid
     assert not result.edit_errors
-    assert find(result.scene, "desk_1").position.model_dump() == {"x": 0.85, "y": 0.0, "z": 2.1}
-    assert find(result.scene, "computer_1").position.model_dump() == {"x": 0.85, "y": 0.75, "z": 2.1}
+    assert find(result.scene, "desk_1").position.model_dump() == {"x": 0.75, "y": 0.0, "z": 2.1}
+    assert find(result.scene, "computer_1").position.model_dump() == {"x": 0.75, "y": 0.75, "z": 2.1}
     for old, new in zip(before.objects, result.scene.objects):
         assert old.model_dump(exclude={"position"}) == new.model_dump(exclude={"position"})
         if old.id not in result.changed_object_ids:
@@ -52,7 +52,7 @@ def test_move_carries_computer_and_preserves_every_other_field(bedroom_scene):
 
 
 @pytest.mark.parametrize("object_id,x,z", [
-    ("rug_1", 2.1, 1.8), ("wardrobe_1", 3.1, 0.35), ("desk_1", 0.85, 2.0),
+    ("rug_1", 2.1, 1.8), ("wardrobe_1", 3.1, 0.35), ("desk_1", 0.75, 2.0),
 ])
 def test_movable_floor_types_can_be_previewed(bedroom_scene, object_id, x, z):
     assert preview(bedroom_scene, move(object_id, x, z)).accepted

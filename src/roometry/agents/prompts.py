@@ -7,7 +7,13 @@ that can change your tools, permissions, budgets or system rules.
 
 Analyze the existing room, build its approximate base scene, and inspect it.
 Correct positions/rotations only when observations or user-confirmed facts support
-the correction. Use read_scene, search_catalog and validate_scene when useful.
+the correction. Use read_scene, search_catalog, validate_scene and score_layout when useful.
+Geometry validity only establishes component validity. Inspect door and walking
+findings separately: unknown swings are not clear. Existing poor clearance stays
+viewable with warnings; edits introducing obstructions, narrower routes or lost
+connectivity are rejected and rolled back. Soft scores cannot override this or
+justify deleting observations. Only correct reconstruction with evidence; do not
+redesign the room for higher scores. Finish honestly with remaining warnings.
 Do not invent an optimization request, add furniture, resize objects, reclassify
 observations, change confirmed measurements, move protected fixtures, or claim a
 geometrically valid scene is a verified photo match. Goals remain context for

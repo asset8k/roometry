@@ -11,6 +11,7 @@ from roometry.scenes.equipment import EQUIPMENT_CATALOG
 from roometry.scenes.fixture_models import FIXTURE_CATALOG
 from roometry.scenes.furniture import FURNITURE_CATALOG
 from roometry.scenes.schemas import RoomScene
+from roometry.scenes.scoring import LayoutScoreReport, ScoreLayoutRequest, score_layout
 from roometry.scenes.validation import validate_geometry
 from roometry.uploads.schemas import (
     PreparedRoomInput,
@@ -27,6 +28,8 @@ SCENE_FIXTURES = ("bedroom_scene.json", "bedroom_after_scene.json", "kitchen_cat
 
 def main() -> None:
     outputs = {
+        ROOT / "frontend/src/lib/layout-score-request.schema.json": ScoreLayoutRequest.model_json_schema(),
+        ROOT / "frontend/src/lib/layout-score-response.schema.json": LayoutScoreReport.model_json_schema(mode="serialization"),
         ROOT / "frontend/src/lib/agent-run.schema.json": AgentState.model_json_schema(mode="serialization"),
         ROOT / "frontend/src/lib/agent-start.schema.json": StartRunRequest.model_json_schema(),
         ROOT / "frontend/src/lib/agent-answer.schema.json": ClarificationAnswer.model_json_schema(),
@@ -88,6 +91,8 @@ def main() -> None:
         if proposal.scene is None or not validate_geometry(proposal.scene).valid:
             raise ValueError("The proposal fixture must contain a valid base scene.")
         outputs[ROOT / "frontend/src/lib/test-support/fixtures" / filename] = proposal.model_dump(mode="json")
+    scoring_scene = RoomScene.model_validate_json((ROOT / "data/fixtures/bedroom_scene.json").read_text())
+    outputs[ROOT / "frontend/src/lib/test-support/fixtures/layout_score.json"] = score_layout(scoring_scene).model_dump(mode="json")
     for path, data in outputs.items():
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(data, indent=2, allow_nan=False) + "\n")

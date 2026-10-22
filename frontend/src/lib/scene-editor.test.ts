@@ -252,3 +252,16 @@ describe('before/after comparison', () => {
     expect(applyColorPreviews(editor.getSnapshot().scene, {})).toEqual(after)
   })
 })
+
+it('keeps accepted geometry and supported children when clearance rejects a component-valid edit', async () => {
+  const scene = loadExampleScene()
+  const response = rejectedMove(scene)
+  response.candidate_validation = response.base_validation
+  response.edit_errors = [{ code: 'clearance_regression', entity_ids: ['door_1', 'desk_1'], message: 'This edit adds an obstruction to door access. Previous layout retained.' }]
+  const editor = new SceneEditor(scene, async () => response)
+  editor.select('desk_1')
+  expect(await editor.submit(move)).toBe(false)
+  expect(editor.getSnapshot().scene).toEqual(scene)
+  expect(editor.getSnapshot().notice?.details?.join(' ')).toContain('door access')
+  expect(editor.getSnapshot().draft).toBeNull()
+})

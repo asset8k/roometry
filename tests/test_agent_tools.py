@@ -358,7 +358,7 @@ async def test_support_edits_carry_dependents_and_fixed_objects_are_rejected(har
     actions[1] = fixed_bed
     actions.extend([
         decision("move_object", {"object_id": "bed_observed", "position": {"x": .8, "z": 2.4}}),
-        decision("move_object", {"object_id": "desk_observed", "position": {"x": 3., "z": .9}}),
+        decision("move_object", {"object_id": "desk_observed", "position": {"x": 3., "z": .7}}),
         decision("finish"),
     ])
     initial = await runs.create(uploaded["input_id"], owner)
@@ -369,8 +369,8 @@ async def test_support_edits_carry_dependents_and_fixed_objects_are_rejected(har
     base = {obj.id: obj for obj in result.base_scene.objects}
     current = {obj.id: obj for obj in result.working_scene.objects}
     assert base["bed_observed"] == current["bed_observed"]
-    assert current["computer_observed"].position.z - base["computer_observed"].position.z == pytest.approx(.3)
-    assert current["desk_observed"].position.z == .9
+    assert current["computer_observed"].position.z - base["computer_observed"].position.z == pytest.approx(.1)
+    assert current["desk_observed"].position.z == .7
     assert validate_geometry(result.working_scene).valid
 
 
@@ -395,3 +395,37 @@ async def test_tool_schemas_are_strict_and_derived_from_current_state(harness):
 
     for arguments in ARGUMENT_MODELS.values():
         check(arguments.model_json_schema())
+
+
+async def test_clearance_and_goal_feedback_in_real_graph_rolls_back_then_finishes_without_reanalysis(harness):
+    app, _, calls, actions = harness
+    runs, owner, uploaded = await prepared(harness)
+    stages(actions)
+    actions.extend([
+        decision("validate_scene"), decision("score_layout"),
+        # The east door spans z=2.5..3.3. This fits component geometry,
+        # but a chair immediately inside it obstructs access.
+        decision("move_object", {"object_id":"chair_a", "position":{"x":3.7,"z":2.9}}),
+        decision("move_object", {"object_id":"chair_a", "position":{"x":2.4,"z":2.4}}),
+        decision("finish"),
+    ])
+    initial = await runs.create(uploaded["input_id"], owner)
+    result = await runs.execute(initial.run_id,owner)
+    assert result.status == "completed", result.model_dump_json()
+    validation = next(f for f in result.tool_feedback if f.name == "validate_scene").details
+    assert validation["valid"] and validation["door_clearance"] and validation["walking_space"]
+    assert validation["door_clearance"]["doors"][0]["swing_status"] == "unknown"
+    score = next(f for f in result.tool_feedback if f.name == "score_layout").details
+    assert score["requested_goals"] == ["better_aesthetics"]
+    assert score["aesthetics"]["score"] is None and score["overall_score"] is None
+    edits = [f for f in result.tool_feedback if f.name == "move_object"]
+    assert edits[0].outcome == "rejected" and edits[0].details["geometry"]["valid"]
+    assert any(e["code"] == "clearance_regression" for e in edits[0].details["edit_errors"])
+    assert edits[1].outcome == "success"
+    assert next(o for o in result.base_scene.objects if o.id == "chair_a").position.z == 2.
+    assert next(o for o in result.working_scene.objects if o.id == "chair_a").position.z == 2.4
+    assert [r.stage for r in app.state.analysis_service.usage_records] == ["analysis","scene_proposal"]
+    assert result.usage.tool_calls == 7 and result.usage.model_calls == len(calls) == 9
+    assert (await runs.execute(initial.run_id,owner)) == result and len(calls) == 9
+    construction = next(f for f in result.tool_feedback if f.name == "propose_scene").details
+    assert construction["geometry"]["door_clearance"]

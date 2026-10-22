@@ -2,12 +2,14 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useState, useSyncExter
 import type { RoomScene } from '../../lib/scene.generated'
 import { applyColorPreviews } from '../../lib/color-previews'
 import { SceneEditor } from '../../lib/scene-editor'
+import LayoutAssessment from './LayoutAssessment'
+import type { ScoreLayoutRequest } from '../../lib/layout-scoring'
 import ObjectList from './ObjectList'
 import ObjectInspector from './ObjectInspector'
 
 const RoomViewer = lazy(() => import('./RoomViewer'))
 
-export default function SceneWorkspace({ initialScene, beforeScene, onConnectionChange }: { initialScene: RoomScene; beforeScene: RoomScene; onConnectionChange: (online: boolean) => void }) {
+export default function SceneWorkspace({ initialScene, beforeScene, onConnectionChange, goals }: { goals?: ScoreLayoutRequest['goals']; initialScene: RoomScene; beforeScene: RoomScene; onConnectionChange: (online: boolean) => void }) {
   const editor = useMemo(() => new SceneEditor(initialScene, undefined, beforeScene), [initialScene, beforeScene])
   const state = useSyncExternalStore(editor.subscribe, editor.getSnapshot, editor.getSnapshot)
   const [detailsView, setDetailsView] = useState<'room' | 'objects'>('room')
@@ -109,6 +111,7 @@ export default function SceneWorkspace({ initialScene, beforeScene, onConnection
             <RoomViewer scene={scene} editor={editor} state={state} onSelect={select} />
           </Suspense>
         </div>
+        <LayoutAssessment key={JSON.stringify(state.scene)} scene={state.scene} goals={goals} />
         <div className="viewer-footer">
           <p>{readOnly ? 'Base scene is read-only. Switch to Your layout to edit.' : 'Layout changes are checked before applying. Reset layout keeps your colors.'} Edits reset on refresh.</p>
           <span>Openings shown as markers</span>

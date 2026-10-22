@@ -188,6 +188,8 @@
         "message": "Checks use conservative boxes for catalog solid parts and declared support areas. Curved/hollow parts are approximated; stability and access are not simulated. Door swings, walking/headroom clearance, overlapping openings, room-specific rules, budgets, and preservation of authorized previous state are not checked. A passing baseline is not full acceptance."
       }
     ],
+    "door_clearance": null,
+    "walking_space": null,
     "valid": true
   },
   "fidelity": null,

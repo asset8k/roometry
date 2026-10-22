@@ -61,7 +61,7 @@ async def test_geometry_failure_is_a_report_not_a_request_schema_error(client, b
 
 
 async def test_move_endpoint_returns_valid_transformed_scene_and_child(client, bedroom_scene):
-    body = move_body(bedroom_scene)
+    body = move_body(bedroom_scene, x=0.75)
     original = deepcopy(body)
     response = await client.post("/api/scenes/preview-edit", json=body)
     assert response.status_code == 200
@@ -73,7 +73,7 @@ async def test_move_endpoint_returns_valid_transformed_scene_and_child(client, b
     assert data["candidate_validation"]["valid"] is True
     transformed = RoomScene.model_validate(data["scene"])
     assert validate_geometry(transformed).valid
-    assert next(obj for obj in transformed.objects if obj.id == "computer_1").position.x == 0.85
+    assert next(obj for obj in transformed.objects if obj.id == "computer_1").position.x == 0.75
     assert body == original
 
 

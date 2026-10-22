@@ -863,37 +863,101 @@ export type PolicyVersion = "components-v1";
 export type ToleranceM = number;
 export type RotationToleranceRad = number;
 export type Code =
-  | "object_outside_room"
-  | "object_overlap"
-  | "rug_overlap"
-  | "surface_support"
-  | "wall_attachment"
-  | "ceiling_attachment"
-  | "opening_outside_wall"
-  | "wall_opening_overlap"
-  | "baseline_scope";
+  | (
+      | "object_outside_room"
+      | "object_overlap"
+      | "rug_overlap"
+      | "surface_support"
+      | "wall_attachment"
+      | "ceiling_attachment"
+      | "opening_outside_wall"
+      | "wall_opening_overlap"
+      | "baseline_scope"
+    )
+  | (
+      | "door_access_blocked"
+      | "door_swing_blocked"
+      | "door_swing_unknown"
+      | "door_swing_outside_room"
+      | "door_clearance_unassessed"
+    )
+  | (
+      | "entrance_route_blocked"
+      | "entrances_disconnected"
+      | "walking_space_disconnected"
+      | "narrow_passage"
+      | "walking_space_unassessed"
+    );
 export type EntityIds1 = string[];
 export type Message = string;
 export type Errors = GeometryIssue[];
 export type Warnings3 = GeometryIssue[];
+export type PolicyVersion1 = "door-clearance-v1";
+export type AccessDepthM = number;
+export type FloorGapM = number;
+export type DoorId = string;
+export type AccessStatus = "clear" | "blocked" | "unassessed";
+export type SwingStatus = "clear" | "blocked" | "unknown" | "not_applicable" | "outside_room" | "unassessed";
+export type AccessObjectIds = string[];
+export type SwingObjectIds = string[];
+export type Doors = DoorCheck[];
+export type Code1 =
+  | "door_access_blocked"
+  | "door_swing_blocked"
+  | "door_swing_unknown"
+  | "door_swing_outside_room"
+  | "door_clearance_unassessed";
+export type EntityIds2 = string[];
+export type Message1 = string;
+export type Issues = DoorClearanceIssue[];
+export type PolicyVersion2 = "walking-v1";
+export type MinimumWidthM = number;
+export type PreferredWidthM = number;
+export type ProbeHeightM = number;
+export type FloorGapM1 = number;
+export type CellSizeM = number;
+export type SignificantRegionAreaM2 = number;
+export type Status4 = "clear" | "narrow" | "blocked" | "unassessed";
+export type GridStepXM = number | null;
+export type GridStepZM = number | null;
+export type GridCells = number;
+export type WalkableCenterAreaM2 = number | null;
+export type MainRegionAreaM2 = number | null;
+export type DisconnectedCenterAreaM2 = number | null;
+export type SignificantRegionCount = number;
+export type DoorId1 = string;
+export type Status5 = "clear" | "narrow" | "blocked" | "unassessed";
+export type MainRegionReachable = boolean | null;
+export type ReachableDoorIds = string[];
+export type UnreachableDoorIds = string[];
+export type Entrances = EntranceRoute[];
+export type Code2 =
+  | "entrance_route_blocked"
+  | "entrances_disconnected"
+  | "walking_space_disconnected"
+  | "narrow_passage"
+  | "walking_space_unassessed";
+export type EntityIds3 = string[];
+export type Message2 = string;
+export type Issues1 = WalkingIssue[];
 export type Valid = boolean;
-export type PolicyVersion1 = "reconstruction_v1";
+export type PolicyVersion3 = "reconstruction_v1";
 export type MajorObjectCoverage = number;
 export type RelationshipScore = number | null;
 export type ProportionScore = number | null;
 export type ColorScore = number | null;
 export type Recognizable = boolean | null;
 export type Kind1 = "coverage" | "facing" | "wall" | "adjacency" | "support" | "proportion" | "color";
-export type EntityIds2 = string[];
+export type EntityIds4 = string[];
 export type Passed = boolean;
 export type Required = boolean;
-export type Message1 = string;
+export type Message3 = string;
 /**
  * @maxItems 4000
  */
 export type Checks = FidelityCheck[];
 export type Unassessed = string[];
-export type Code1 =
+export type Code3 =
   | "unsupported_room_shape"
   | "unknown_object"
   | "unsupported_placement"
@@ -914,12 +978,12 @@ export type Code1 =
 /**
  * @maxItems 200
  */
-export type EntityIds3 = string[];
-export type Message2 = string;
+export type EntityIds5 = string[];
+export type Message4 = string;
 /**
  * @maxItems 50
  */
-export type Issues = ProposalIssue[];
+export type Issues2 = ProposalIssue[];
 export type EntityId1 = string;
 export type Kind2 = "object" | "opening";
 /**
@@ -943,7 +1007,7 @@ export type Label2 = string;
 /**
  * @maxItems 200
  */
-export type EntityIds4 = string[];
+export type EntityIds6 = string[];
 export type Kind3 = "room_dimensions" | "room_wall_axis" | "object_mobility" | "object_identity" | "layout_orientation";
 /**
  * @maxItems 3
@@ -977,6 +1041,7 @@ export type Name =
   | "move_object"
   | "rotate_object"
   | "validate_scene"
+  | "score_layout"
   | "request_clarification"
   | "finish";
 export type JsonValue = unknown;
@@ -1127,14 +1192,15 @@ export type Name1 =
       | "move_object"
       | "rotate_object"
       | "validate_scene"
+      | "score_layout"
       | "request_clarification"
       | "finish"
     )
   | null;
 export type Outcome = "success" | "rejected" | "error";
-export type Message3 = string;
+export type Message5 = string;
 export type Step = number;
-export type Status4 =
+export type Status6 =
   | "queued"
   | "running"
   | "awaiting_answer"
@@ -1393,7 +1459,7 @@ export interface SceneProposalResponse {
   validation: GeometryReport | null;
   fidelity?: FidelityReport | null;
   wall_axes?: WallAxisResolution | null;
-  issues: Issues;
+  issues: Issues2;
   unresolved_entities?: UnresolvedEntities;
   warnings: Warnings4;
   expires_at: ExpiresAt2;
@@ -1478,7 +1544,7 @@ export interface ObjectDimensions {
   height: Height1;
 }
 /**
- * `valid` means catalog component checks passed, not full scene acceptance.
+ * `valid` covers component errors; door and walking findings stay advisory.
  */
 export interface GeometryReport {
   policy_version?: PolicyVersion;
@@ -1486,6 +1552,8 @@ export interface GeometryReport {
   rotation_tolerance_rad?: RotationToleranceRad;
   errors: Errors;
   warnings: Warnings3;
+  door_clearance?: DoorClearanceReport | null;
+  walking_space?: WalkingReport | null;
   valid: Valid;
 }
 export interface GeometryIssue {
@@ -1493,8 +1561,70 @@ export interface GeometryIssue {
   entity_ids: EntityIds1;
   message: Message;
 }
-export interface FidelityReport {
+export interface DoorClearanceReport {
   policy_version?: PolicyVersion1;
+  policy: DoorClearancePolicy;
+  doors: Doors;
+  issues: Issues;
+}
+/**
+ * MVP heuristics in meters; callers can supply a different bounded policy.
+ */
+export interface DoorClearancePolicy {
+  access_depth_m?: AccessDepthM;
+  floor_gap_m?: FloorGapM;
+}
+export interface DoorCheck {
+  door_id: DoorId;
+  access_status: AccessStatus;
+  swing_status: SwingStatus;
+  access_object_ids?: AccessObjectIds;
+  swing_object_ids?: SwingObjectIds;
+}
+export interface DoorClearanceIssue {
+  code: Code1;
+  entity_ids: EntityIds2;
+  message: Message1;
+}
+export interface WalkingReport {
+  policy_version?: PolicyVersion2;
+  policy: WalkingPolicy;
+  status: Status4;
+  grid_step_x_m: GridStepXM;
+  grid_step_z_m: GridStepZM;
+  grid_cells: GridCells;
+  walkable_center_area_m2: WalkableCenterAreaM2;
+  main_region_area_m2: MainRegionAreaM2;
+  disconnected_center_area_m2: DisconnectedCenterAreaM2;
+  significant_region_count: SignificantRegionCount;
+  entrances: Entrances;
+  issues: Issues1;
+}
+/**
+ * Configurable MVP heuristics, not accessibility or evacuation standards.
+ */
+export interface WalkingPolicy {
+  minimum_width_m?: MinimumWidthM;
+  preferred_width_m?: PreferredWidthM;
+  probe_height_m?: ProbeHeightM;
+  floor_gap_m?: FloorGapM1;
+  cell_size_m?: CellSizeM;
+  significant_region_area_m2?: SignificantRegionAreaM2;
+}
+export interface EntranceRoute {
+  door_id: DoorId1;
+  status: Status5;
+  main_region_reachable: MainRegionReachable;
+  reachable_door_ids?: ReachableDoorIds;
+  unreachable_door_ids?: UnreachableDoorIds;
+}
+export interface WalkingIssue {
+  code: Code2;
+  entity_ids: EntityIds3;
+  message: Message2;
+}
+export interface FidelityReport {
+  policy_version?: PolicyVersion3;
   major_object_coverage: MajorObjectCoverage;
   relationship_score: RelationshipScore;
   proportion_score: ProportionScore;
@@ -1505,15 +1635,15 @@ export interface FidelityReport {
 }
 export interface FidelityCheck {
   kind: Kind1;
-  entity_ids: EntityIds2;
+  entity_ids: EntityIds4;
   passed: Passed;
   required: Required;
-  message: Message1;
+  message: Message3;
 }
 export interface ProposalIssue {
-  code: Code1;
-  entity_ids: EntityIds3;
-  message: Message2;
+  code: Code3;
+  entity_ids: EntityIds5;
+  message: Message4;
 }
 /**
  * An original observation omitted from the validated scene, never deleted.
@@ -1537,7 +1667,7 @@ export interface ClarificationQuestion {
   id: Id6;
   question: Question;
   choices: Choices;
-  entity_ids: EntityIds4;
+  entity_ids: EntityIds6;
   kind: Kind3;
   dimension_axes: DimensionAxes;
 }
@@ -1678,7 +1808,7 @@ export interface Arguments {
 export interface ToolFeedback1 {
   name: Name1;
   outcome: Outcome;
-  message: Message3;
+  message: Message5;
   details: Details;
 }
 export interface Details {
@@ -1686,5 +1816,5 @@ export interface Details {
 }
 export interface RunEvent {
   step: Step;
-  status: Status4;
+  status: Status6;
 }

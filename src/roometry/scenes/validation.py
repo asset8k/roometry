@@ -6,6 +6,9 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, computed_field
 
 from roometry.scenes.assets import ASSET_REGISTRY
+from roometry.scenes.door_clearance import (
+    DoorClearancePolicy, DoorClearanceReport, DoorClearanceRule, check_door_clearance,
+)
 from roometry.scenes.collision import (
     catalog_supports,
     component_bounds,
@@ -23,6 +26,9 @@ from roometry.scenes.geometry import (
     wall_object_overlaps_opening,
 )
 from roometry.scenes.schemas import RoomScene
+from roometry.scenes.walking_space import (
+    WalkingPolicy, WalkingReport, WalkingRule, check_walking_space,
+)
 
 GeometryRule = Literal[
     "object_outside_room",
@@ -34,7 +40,7 @@ GeometryRule = Literal[
     "opening_outside_wall",
     "wall_opening_overlap",
     "baseline_scope",
-]
+] | DoorClearanceRule | WalkingRule
 
 
 class GeometryIssue(BaseModel):
@@ -46,7 +52,7 @@ class GeometryIssue(BaseModel):
 
 
 class GeometryReport(BaseModel):
-    """`valid` means catalog component checks passed, not full scene acceptance."""
+    """`valid` covers component errors; door and walking findings stay advisory."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -55,6 +61,8 @@ class GeometryReport(BaseModel):
     rotation_tolerance_rad: float = ROTATION_TOLERANCE_RAD
     errors: tuple[GeometryIssue, ...]
     warnings: tuple[GeometryIssue, ...]
+    door_clearance: DoorClearanceReport | None = None
+    walking_space: WalkingReport | None = None
 
     @computed_field
     @property
@@ -62,7 +70,8 @@ class GeometryReport(BaseModel):
         return not self.errors
 
 
-def validate_geometry(scene: RoomScene) -> GeometryReport:
+def validate_geometry(scene: RoomScene, *, door_policy: DoorClearancePolicy | None = None,
+                      walking_policy: WalkingPolicy | None = None) -> GeometryReport:
     """Revalidate structure, then report geometry failures without mutating input.
 
     Invalid structure raises Pydantic ValidationError, rather than masquerading
@@ -167,18 +176,26 @@ def validate_geometry(scene: RoomScene) -> GeometryReport:
                     f"Solid components overlap ({parts}).",
                 )
 
+    clearance = check_door_clearance(scene, door_policy)
+    walking = check_walking_space(scene, walking_policy)
     return GeometryReport(
         errors=tuple(errors),
+        door_clearance=clearance,
+        walking_space=walking,
         warnings=(
             GeometryIssue(
                 code="baseline_scope",
                 entity_ids=(),
                 message=(
                     "Checks use conservative boxes for catalog solid parts and declared support areas. "
-                    "Curved/hollow parts are approximated; stability and access are not simulated. Door swings, walking/headroom "
+                    "Curved/hollow parts are approximated. Room-side door access and known inward swings "
+                    "and sampled walking routes are advisory checks; unknown/outward swings are explicitly unassessed. "
+                    "Walking checks use configured probe dimensions and a bounded grid; stability, full headroom "
                     "clearance, overlapping openings, room-specific rules, budgets, and preservation "
                     "of authorized previous state are not checked. A passing baseline is not full acceptance."
                 ),
             ),
+            *(GeometryIssue(code=item.code, entity_ids=item.entity_ids, message=item.message) for item in clearance.issues),
+            *(GeometryIssue(code=item.code, entity_ids=item.entity_ids, message=item.message) for item in walking.issues),
         ),
     )

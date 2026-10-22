@@ -4,6 +4,9 @@ from typing import Annotated, Literal
 
 from pydantic import Field
 
+from roometry.scenes.door_clearance import DoorClearancePolicy
+from roometry.scenes.walking_space import WalkingPolicy
+
 from roometry.scenes.schemas import (
     MAX_POSITION_M,
     FiniteNumber,
@@ -47,6 +50,7 @@ EditRule = Literal[
     "protected_children",
     "candidate_schema",
     "invalid_base_geometry",
+    "clearance_regression",
 ]
 
 
@@ -58,6 +62,8 @@ class EditIssue(SceneModel):
 
 class ValidateSceneRequest(SceneModel):
     scene: RoomScene
+    door_policy: DoorClearancePolicy | None = None
+    walking_policy: WalkingPolicy | None = None
 
 
 class PreviewEditRequest(SceneModel):
