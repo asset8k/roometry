@@ -1037,7 +1037,9 @@ export type Name =
   | "analyze_photos"
   | "propose_scene"
   | "read_scene"
-  | "search_catalog"
+  | "search_furniture"
+  | "get_furniture_details"
+  | "list_furniture_categories"
   | "move_object"
   | "rotate_object"
   | "validate_scene"
@@ -1045,6 +1047,137 @@ export type Name =
   | "request_clarification"
   | "finish";
 export type JsonValue = unknown;
+/**
+ * @maxItems 16
+ */
+export type CatalogReads =
+  | []
+  | [CatalogRead]
+  | [CatalogRead, CatalogRead]
+  | [CatalogRead, CatalogRead, CatalogRead]
+  | [CatalogRead, CatalogRead, CatalogRead, CatalogRead]
+  | [CatalogRead, CatalogRead, CatalogRead, CatalogRead, CatalogRead]
+  | [CatalogRead, CatalogRead, CatalogRead, CatalogRead, CatalogRead, CatalogRead]
+  | [CatalogRead, CatalogRead, CatalogRead, CatalogRead, CatalogRead, CatalogRead, CatalogRead]
+  | [CatalogRead, CatalogRead, CatalogRead, CatalogRead, CatalogRead, CatalogRead, CatalogRead, CatalogRead]
+  | [
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead
+    ]
+  | [
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead
+    ]
+  | [
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead
+    ]
+  | [
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead
+    ]
+  | [
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead
+    ]
+  | [
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead
+    ]
+  | [
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead
+    ]
+  | [
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead,
+      CatalogRead
+    ];
+export type Name1 = "search_furniture" | "get_furniture_details" | "list_furniture_categories";
+export type Outcome = "success" | "rejected" | "error";
 /**
  * @maxItems 16
  */
@@ -1183,12 +1316,14 @@ export type ToolFeedback =
       ToolFeedback1,
       ToolFeedback1
     ];
-export type Name1 =
+export type Name2 =
   | (
       | "analyze_photos"
       | "propose_scene"
       | "read_scene"
-      | "search_catalog"
+      | "search_furniture"
+      | "get_furniture_details"
+      | "list_furniture_categories"
       | "move_object"
       | "rotate_object"
       | "validate_scene"
@@ -1197,7 +1332,7 @@ export type Name1 =
       | "finish"
     )
   | null;
-export type Outcome = "success" | "rejected" | "error";
+export type Outcome1 = "success" | "rejected" | "error";
 export type Message5 = string;
 export type Step = number;
 export type Status6 =
@@ -1240,6 +1375,7 @@ export interface AgentState {
   base_scene: RoomScene | null;
   working_scene: RoomScene | null;
   pending_tool: ToolCall | null;
+  catalog_reads: CatalogReads;
   tool_feedback: ToolFeedback;
   events: Events;
   stop_reason: StopReason;
@@ -1805,9 +1941,17 @@ export interface ToolCall {
 export interface Arguments {
   [k: string]: JsonValue;
 }
-export interface ToolFeedback1 {
+export interface CatalogRead {
   name: Name1;
+  arguments: Arguments1;
   outcome: Outcome;
+}
+export interface Arguments1 {
+  [k: string]: JsonValue;
+}
+export interface ToolFeedback1 {
+  name: Name2;
+  outcome: Outcome1;
   message: Message5;
   details: Details;
 }

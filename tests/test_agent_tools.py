@@ -44,6 +44,12 @@ def decision(name, arguments=None, *, raw=None, extra_call=False, status="comple
     return action
 
 
+def catalog_arguments(**changes):
+    return {"query":None,"category":None,"object_type":None,"placement":None,
+            "max_width_m":None,"max_height_m":None,"max_depth_m":None,
+            "limit":8,"offset":0,**changes}
+
+
 async def photo(request, payload):
     return httpx.Response(200, json=test_vision_api.provider_response(payload))
 
@@ -105,7 +111,7 @@ async def test_catalog_read_rotate_and_validate_tools_use_the_existing_catalog_a
     runs, owner, uploaded = await prepared(harness)
     stages(actions)
     actions.extend([
-        decision("search_catalog", {"object_type": "picture", "placement": "surface", "limit": 8}),
+        decision("search_furniture", catalog_arguments(object_type="picture", placement="surface")),
         decision("read_scene"), decision("rotate_object", {"object_id": "chair_a", "rotation_y_rad": pi / 2}),
         decision("validate_scene"), decision("finish"),
     ])
@@ -113,9 +119,11 @@ async def test_catalog_read_rotate_and_validate_tools_use_the_existing_catalog_a
     assert initial.limits.max_steps == 16 and initial.limits.max_model_calls == 20
     result = await runs.execute(initial.run_id, owner)
     assert result.status == "completed" and result.usage.tool_calls == 7
-    catalog = next(item for item in result.tool_feedback if item.name == "search_catalog").details
-    assert catalog["models"] and all("surface" in model["configurations"] for model in catalog["models"])
-    assert "picture_triptych_01" not in {model["asset_id"] for model in catalog["models"]}
+    catalog = next(item for item in result.tool_feedback if item.name == "search_furniture").details
+    assert catalog["transport"] == "stdio"
+    models = catalog["result"]["items"]
+    assert models and all("surface" in model["configurations"] for model in models)
+    assert "picture_triptych_01" not in {model["asset_id"] for model in models}
     assert next(obj for obj in result.working_scene.objects if obj.id == "chair_a").rotation_y_rad == pi / 2
     assert result.tool_feedback[-2].details["valid"] is True
     assert result.usage.model_calls == len(calls) == 9

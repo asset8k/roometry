@@ -12,7 +12,7 @@ export function agentRun(input: PreparedRoomInput, patch: Partial<AgentState> = 
     status: 'running', steps_used: 1, usage: { model_calls: 1, tool_calls: 0, input_tokens: 100, output_tokens: 30, unknown_usage_calls: 0 },
     continue_run: true, analysis: null, proposal: null, confirmed_dimensions: input.options.dimensions ?? null,
     reconstruction_constraints: { wall_axis: null, object_types: {}, facing_targets: {} }, clarification_answers: {}, submitted_answers: {}, questions: [], pending_question: null, object_mobility: {},
-    pending_tool: { call_id: 'call_1', name: 'analyze_photos', arguments: {} }, tool_feedback: [],
+    pending_tool: { call_id: 'call_1', name: 'analyze_photos', arguments: {} }, tool_feedback: [], catalog_reads: [],
     base_scene: null, working_scene: null, events: [], stop_reason: null, last_error: null, ...patch,
   })
 }

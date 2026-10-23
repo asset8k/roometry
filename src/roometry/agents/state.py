@@ -77,7 +77,9 @@ ToolName = Literal[
     "analyze_photos",
     "propose_scene",
     "read_scene",
-    "search_catalog",
+    "search_furniture",
+    "get_furniture_details",
+    "list_furniture_categories",
     "move_object",
     "rotate_object",
     "validate_scene",
@@ -98,6 +100,12 @@ class ToolFeedback(RunModel):
     outcome: Literal["success", "rejected", "error"]
     message: str = Field(min_length=1, max_length=1000)
     details: dict[str, JsonValue] = Field(default_factory=dict)
+
+
+class CatalogRead(RunModel):
+    name: Literal["search_furniture", "get_furniture_details", "list_furniture_categories"]
+    arguments: dict[str, JsonValue]
+    outcome: Literal["success", "rejected", "error"]
 
 
 class ClarificationChoice(RunModel):
@@ -187,6 +195,7 @@ class AgentState(RunModel):
     base_scene: RoomScene | None = None
     working_scene: RoomScene | None = None
     pending_tool: ToolCall | None = None
+    catalog_reads: Annotated[list[CatalogRead], Field(max_length=16)] = Field(default_factory=list)
     tool_feedback: Annotated[list[ToolFeedback], Field(max_length=16)] = Field(
         default_factory=list
     )

@@ -12,7 +12,13 @@ from pydantic import ValidationError
 
 from roometry.agents.budget import RunBudget
 from roometry.agents.clarification import answer_updates, question_for
-from roometry.agents.state import AgentState, ClarificationAnswer, RunStep, RunUsage
+from roometry.agents.state import (
+    AgentState,
+    CatalogRead,
+    ClarificationAnswer,
+    RunStep,
+    RunUsage,
+)
 from roometry.model_calls import observe_model_calls
 from roometry.scenes.clearance_acceptance import clearance_regressions
 from roometry.scenes.validation import validate_geometry
@@ -118,7 +124,11 @@ def check_step(state: AgentState, step: RunStep) -> None:
         expected = question_for(
             effective,
             question.kind,
-            None if question.kind in {"room_dimensions", "room_wall_axis"} else question.entity_ids[0] if question.entity_ids else None,
+            None
+            if question.kind in {"room_dimensions", "room_wall_axis"}
+            else question.entity_ids[0]
+            if question.entity_ids
+            else None,
         )
         if question != expected or step.action != "continue":
             raise ValueError(
@@ -137,7 +147,8 @@ def check_step(state: AgentState, step: RunStep) -> None:
             raise ValueError("Scene edits cannot change room geometry or provenance.")
         if state.analysis is not None:
             effective = apply_constraints(
-                state.analysis, state.reconstruction_constraints,
+                state.analysis,
+                state.reconstruction_constraints,
                 wall_axes=state.proposal.wall_axes if state.proposal else None,
             )
             before = evaluate_fidelity(effective, original)
@@ -212,6 +223,28 @@ async def _perform(
             result["tool_feedback"] = [
                 item.model_dump()
                 for item in [*state.tool_feedback, step.feedback][-16:]
+            ]
+        if (
+            step.feedback is not None
+            and step.feedback.details.get("mcp_attempted") is True
+            and state.pending_tool is not None
+            and step.feedback.name == state.pending_tool.name
+            and step.feedback.name
+            in {
+                "search_furniture",
+                "get_furniture_details",
+                "list_furniture_categories",
+            }
+        ):
+            read = CatalogRead.model_validate(
+                {
+                    "name": step.feedback.name,
+                    "arguments": state.pending_tool.arguments,
+                    "outcome": step.feedback.outcome,
+                }
+            )
+            result["catalog_reads"] = [
+                r.model_dump() for r in [*state.catalog_reads, read][-16:]
             ]
         if step.failure is not None:
             result.update(status="failed", last_error=step.failure)

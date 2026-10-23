@@ -19,6 +19,7 @@ from roometry.agents.runs import AgentRuns
 from roometry.agents.state import RunLimits
 from roometry.agents.tools import SceneTools
 from roometry.config import Settings, get_settings
+from roometry.mcp.furniture_client import FurnitureCatalogClient
 from roometry.scenes.router import router as scenes_router
 from roometry.uploads.errors import UploadFailure
 from roometry.uploads.middleware import UploadBodyLimitMiddleware
@@ -49,7 +50,10 @@ def create_app(
     agent_runs = AgentRuns(
         service.storage.resolve,
         RoomAgent(settings, analyzer),
-        execute_tool=SceneTools(analysis_service),
+        execute_tool=SceneTools(analysis_service, FurnitureCatalogClient(
+            timeout_seconds=settings.mcp_furniture_timeout_seconds,
+            max_response_bytes=settings.mcp_furniture_max_response_bytes,
+        )),
         # A scene tool may make an initial request and one repair. Its outer
         # deadline must allow both configured per-request deadlines to run.
         default_limits=RunLimits(

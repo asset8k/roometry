@@ -26,6 +26,7 @@ export function generationProgress(state: GenerationState): string {
     case 'propose_scene': return 'Building your room and checking its geometry…'
     case 'request_clarification': return 'Preparing a question about your room…'
     case 'move_object': case 'rotate_object': return 'Checking a placement adjustment…'
+    case 'search_furniture': case 'get_furniture_details': case 'list_furniture_categories': return 'Checking furniture models and dimensions…'
     case 'validate_scene': return 'Checking the reconstructed room…'
     default: return 'Working on your room reconstruction…'
   }

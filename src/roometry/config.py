@@ -57,6 +57,10 @@ class Settings(BaseSettings):
     agent_max_tool_calls: int = Field(default=24, ge=1, le=64)
     agent_max_output_tokens: int = Field(default=2048, ge=128, le=8192)
     agent_max_request_bytes: int = Field(default=524288, ge=4096, le=2097152)
+    mcp_furniture_transport: Literal["stdio"] = "stdio"
+    mcp_furniture_timeout_seconds: float = Field(default=8., ge=.1, le=30., allow_inf_nan=False)
+    mcp_furniture_max_response_bytes: int = Field(default=65_536, ge=4096, le=262_144)
+
     agent_reasoning_effort: Literal[
         "default", "none", "low", "medium", "high", "xhigh", "max"
     ] = "low"

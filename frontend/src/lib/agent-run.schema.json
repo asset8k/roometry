@@ -1,5 +1,42 @@
 {
   "$defs": {
+    "CatalogRead": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "enum": [
+            "search_furniture",
+            "get_furniture_details",
+            "list_furniture_categories"
+          ],
+          "title": "Name",
+          "type": "string"
+        },
+        "arguments": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Arguments",
+          "type": "object"
+        },
+        "outcome": {
+          "enum": [
+            "success",
+            "rejected",
+            "error"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "arguments",
+        "outcome"
+      ],
+      "title": "CatalogRead",
+      "type": "object"
+    },
     "ClarificationAnswer": {
       "additionalProperties": false,
       "properties": {
@@ -3320,7 +3357,9 @@
             "analyze_photos",
             "propose_scene",
             "read_scene",
-            "search_catalog",
+            "search_furniture",
+            "get_furniture_details",
+            "list_furniture_categories",
             "move_object",
             "rotate_object",
             "validate_scene",
@@ -3357,7 +3396,9 @@
                 "analyze_photos",
                 "propose_scene",
                 "read_scene",
-                "search_catalog",
+                "search_furniture",
+                "get_furniture_details",
+                "list_furniture_categories",
                 "move_object",
                 "rotate_object",
                 "validate_scene",
@@ -4151,6 +4192,14 @@
       ],
       "default": null
     },
+    "catalog_reads": {
+      "items": {
+        "$ref": "#/$defs/CatalogRead"
+      },
+      "maxItems": 16,
+      "title": "Catalog Reads",
+      "type": "array"
+    },
     "tool_feedback": {
       "items": {
         "$ref": "#/$defs/ToolFeedback"
@@ -4227,6 +4276,7 @@
     "base_scene",
     "working_scene",
     "pending_tool",
+    "catalog_reads",
     "tool_feedback",
     "events",
     "stop_reason",

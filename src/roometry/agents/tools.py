@@ -1,10 +1,10 @@
 """Narrow local tool catalog; ownership and current scenes come from run state.
 
 No model-supplied photos, input IDs, scene payloads, dimensions or arbitrary code
-are accepted. MCP transport and furniture additions belong to later milestones.
+are accepted. Catalog reads cross a bounded stdio MCP boundary; scene writes
+remain local and must pass geometry and reconstruction evidence checks.
 """
 
-from dataclasses import asdict
 from typing import Annotated
 
 import anyio
@@ -20,16 +20,28 @@ from roometry.agents.state import (
     ToolFeedback,
     ToolName,
 )
-from roometry.agents.tool_policy import already_inspected, clarification_candidates, clarification_target
-from roometry.scenes.assets import ASSET_REGISTRY, ObjectType, Placement
-from roometry.scenes.catalog import ASSET_CATALOG, dimensions_for, object_surfaces
+from roometry.agents.tool_policy import (
+    already_inspected,
+    catalog_already_read,
+    catalog_available,
+    clarification_candidates,
+    clarification_target,
+)
+from roometry.mcp.catalog import CatalogSearch, ItemId, Offset, Query
+from roometry.mcp.furniture_client import (
+    CATALOG_TOOLS,
+    CatalogFailure,
+    FurnitureCatalogClient,
+)
+from roometry.scenes.assets import ObjectType, Placement
 from roometry.scenes.edit_schemas import (
     FloorPosition,
     MoveObject,
     PreviewEditRequest,
     RotateObject,
 )
-from roometry.scenes.schemas import FiniteNumber, Identifier
+from roometry.scenes.furniture import Category
+from roometry.scenes.schemas import FiniteNumber, Identifier, PositiveDistance
 from roometry.scenes.scoring import score_layout
 from roometry.scenes.service import preview_edit
 from roometry.scenes.validation import GeometryReport, validate_geometry
@@ -45,9 +57,19 @@ class NoArguments(RunModel):
 
 
 class CatalogArguments(RunModel):
+    query: Query | None
+    category: Category | None
     object_type: ObjectType | None
     placement: Placement | None
+    max_width_m: PositiveDistance | None
+    max_height_m: PositiveDistance | None
+    max_depth_m: PositiveDistance | None
     limit: Annotated[int, Field(ge=1, le=8)]
+    offset: Offset
+
+
+class CatalogDetailsArguments(RunModel):
+    asset_id: ItemId
 
 
 class MoveArguments(RunModel):
@@ -69,7 +91,9 @@ ARGUMENT_MODELS: dict[ToolName, type[RunModel]] = {
     "analyze_photos": NoArguments,
     "propose_scene": NoArguments,
     "read_scene": NoArguments,
-    "search_catalog": CatalogArguments,
+    "search_furniture": CatalogArguments,
+    "get_furniture_details": CatalogDetailsArguments,
+    "list_furniture_categories": NoArguments,
     "move_object": MoveArguments,
     "rotate_object": RotateArguments,
     "validate_scene": NoArguments,
@@ -81,7 +105,9 @@ DESCRIPTIONS: dict[ToolName, str] = {
     "analyze_photos": "Analyze the current owned room photos together. Successful analysis is cached.",
     "propose_scene": "Build an approximate base scene from the existing analysis and confirmed dimensions. Keeps estimates labeled; may return partial results or missing dimensions.",
     "read_scene": "Inspect the current server-held scene. Its full current geometry is also provided in each decision context.",
-    "search_catalog": "Read approved local models, dimensions, placements and support areas. This tool does not add or replace objects.",
+    "search_furniture": "Search the read-only MCP catalog by text, category, type, mount and nominal size limits. At most 8 results; use next_offset for another page. Dimensions apply together to one unrotated mount. No prices or inventory. Does not change scenes.",
+    "get_furniture_details": "Read one approved model's MCP details: nominal dimensions, variants, material roles, mounting anchors and support rectangles in model-local meters. Preserve measured user dimensions; these are catalog examples, not room measurements.",
+    "list_furniture_categories": "Read available categories, semantic object types and model counts from the MCP catalog.",
     "move_object": "Move an existing movable object to an absolute floor or support position. Server derives elevation, carries dependents, validates, and rolls back rejected edits.",
     "rotate_object": "Rotate an existing movable object about positive Y, in radians. Server validates and rolls back rejected edits.",
     "validate_scene": "Run deterministic component-aware geometry checks on the current scene.",
@@ -102,12 +128,14 @@ def available_tools(
     if state.working_scene is not None:
         inspection_tools: tuple[ToolName, ...] = (
             "read_scene",
-            "search_catalog",
             "validate_scene",
             "score_layout",
         )
         for name in inspection_tools:
             if not already_inspected(state, name):
+                tools.append(name)
+        for name in CATALOG_TOOLS:
+            if catalog_available(state, name):
                 tools.append(name)
         if any(
             not obj.fixed and not obj.locked and obj.placement in {"floor", "surface"}
@@ -129,11 +157,7 @@ def tool_definitions(state: AgentState) -> list[dict]:
                 dict.fromkeys(q.kind for q in questions)
             )
             schema["properties"]["object_id"] = {
-                "enum": [
-                    *dict.fromkeys(
-                        clarification_target(q) for q in questions
-                    )
-                ],
+                "enum": [*dict.fromkeys(clarification_target(q) for q in questions)],
                 "type": ["string", "null"],
             }
         definitions.append(
@@ -157,28 +181,38 @@ def report_summary(report: GeometryReport) -> dict:
         doors = source.model_dump(mode="json", exclude={"doors", "issues"})
         doors.update(door_count=len(source.doors), issue_count=len(source.issues))
         doors["doors"] = [
-            {**door.model_dump(mode="json"),
-             "access_object_ids": list(door.access_object_ids[:16]),
-             "access_object_count": len(door.access_object_ids),
-             "swing_object_ids": list(door.swing_object_ids[:16]),
-             "swing_object_count": len(door.swing_object_ids)}
+            {
+                **door.model_dump(mode="json"),
+                "access_object_ids": list(door.access_object_ids[:16]),
+                "access_object_count": len(door.access_object_ids),
+                "swing_object_ids": list(door.swing_object_ids[:16]),
+                "swing_object_count": len(door.swing_object_ids),
+            }
             for door in source.doors[:16]
         ]
-        doors["issues"] = [issue.model_dump(mode="json") for issue in source.issues[:16]]
+        doors["issues"] = [
+            issue.model_dump(mode="json") for issue in source.issues[:16]
+        ]
     walking = None
     if report.walking_space is not None:
         routes = report.walking_space
         walking = routes.model_dump(mode="json", exclude={"entrances", "issues"})
-        walking.update(entrance_count=len(routes.entrances), issue_count=len(routes.issues))
+        walking.update(
+            entrance_count=len(routes.entrances), issue_count=len(routes.issues)
+        )
         walking["entrances"] = [
-            {**entry.model_dump(mode="json"),
-             "reachable_door_ids": list(entry.reachable_door_ids[:16]),
-             "reachable_door_count": len(entry.reachable_door_ids),
-             "unreachable_door_ids": list(entry.unreachable_door_ids[:16]),
-             "unreachable_door_count": len(entry.unreachable_door_ids)}
+            {
+                **entry.model_dump(mode="json"),
+                "reachable_door_ids": list(entry.reachable_door_ids[:16]),
+                "reachable_door_count": len(entry.reachable_door_ids),
+                "unreachable_door_ids": list(entry.unreachable_door_ids[:16]),
+                "unreachable_door_count": len(entry.unreachable_door_ids),
+            }
             for entry in routes.entrances[:16]
         ]
-        walking["issues"] = [issue.model_dump(mode="json") for issue in routes.issues[:16]]
+        walking["issues"] = [
+            issue.model_dump(mode="json") for issue in routes.issues[:16]
+        ]
     return {
         "valid": report.valid,
         "policy_version": report.policy_version,
@@ -194,8 +228,11 @@ def report_summary(report: GeometryReport) -> dict:
 
 
 class SceneTools:
-    def __init__(self, analysis: AnalysisService):
+    def __init__(
+        self, analysis: AnalysisService, catalog: FurnitureCatalogClient | None = None
+    ):
         self.analysis = analysis
+        self.catalog = catalog if catalog is not None else FurnitureCatalogClient()
 
     async def __call__(self, state: AgentState, context: RunContext) -> RunStep:
         call = state.pending_tool
@@ -272,7 +309,13 @@ class SceneTools:
             except ValueError:
                 axis_question = None
             if axis_question is not None:
-                return RunStep(action="continue", pending_question=axis_question, feedback=feedback("Waiting to identify which observed wall matches the entered room dimension."))
+                return RunStep(
+                    action="continue",
+                    pending_question=axis_question,
+                    feedback=feedback(
+                        "Waiting to identify which observed wall matches the entered room dimension."
+                    ),
+                )
             proposal = await self.analysis.propose(
                 SceneProposalRequest(
                     analysis_id=state.analysis.analysis_id,
@@ -285,14 +328,23 @@ class SceneTools:
                 allow_ambiguous_axes=True,
             )
             question = None
-            if proposal.status in {"needs_dimensions", "needs_wall_assignment"} and len(state.questions) < 3:
+            if (
+                proposal.status in {"needs_dimensions", "needs_wall_assignment"}
+                and len(state.questions) < 3
+            ):
                 try:
-                    question = question_for(state, "room_dimensions" if proposal.status == "needs_dimensions" else "room_wall_axis")
+                    question = question_for(
+                        state,
+                        "room_dimensions"
+                        if proposal.status == "needs_dimensions"
+                        else "room_wall_axis",
+                    )
                 except ValueError:
                     pass
             return RunStep(
                 action="finish"
-                if proposal.status in {"needs_dimensions", "needs_wall_assignment", "incomplete"}
+                if proposal.status
+                in {"needs_dimensions", "needs_wall_assignment", "incomplete"}
                 and question is None
                 else "continue",
                 proposal=proposal,
@@ -301,7 +353,9 @@ class SceneTools:
                     "Scene construction returned " + proposal.status + ".",
                     {
                         "status": proposal.status,
-                        "geometry": report_summary(proposal.validation) if proposal.validation else None,
+                        "geometry": report_summary(proposal.validation)
+                        if proposal.validation
+                        else None,
                         "dimensions_to_confirm": proposal.dimensions_to_confirm,
                         "issues": [
                             item.model_dump(mode="json") for item in proposal.issues
@@ -330,54 +384,55 @@ class SceneTools:
                 pending_question=question,
                 feedback=feedback("Waiting for a focused human clarification."),
             )
-        if name == "search_catalog":
-            assert isinstance(arguments, CatalogArguments)
-            models = [
-                asset
-                for asset in ASSET_CATALOG.values()
-                if (
-                    arguments.object_type is None
-                    or asset.object_type == arguments.object_type
+        if name in CATALOG_TOOLS:
+            request = arguments.model_dump(mode="json")
+            if catalog_already_read(state, name, request):
+                return RunStep(
+                    action="continue",
+                    feedback=feedback(
+                        "This catalog request was already read; reuse its feedback or choose a different query/item.",
+                        {"code": "catalog_duplicate_request"},
+                        rejected=True,
+                    ),
                 )
-                and (
-                    arguments.placement is None
-                    or arguments.placement in ASSET_REGISTRY[asset.asset_id].placements
-                )
-            ]
-            result = []
-            for asset in models[: arguments.limit]:
-                placements = sorted(ASSET_REGISTRY[asset.asset_id].placements)
-                result.append(
-                    {
-                        "asset_id": asset.asset_id,
-                        "type": asset.object_type,
-                        "label": asset.label,
-                        "configurations": {
-                            placement: {
-                                "dimensions_m": dict(
-                                    zip(
-                                        ("width", "height", "depth"),
-                                        dimensions_for(asset.asset_id, placement),
-                                    )
-                                ),
-                                "support_surfaces": [
-                                    asdict(area)
-                                    for area in object_surfaces(
-                                        asset.asset_id, placement
-                                    )
-                                ],
-                            }
-                            for placement in placements
-                            if arguments.placement is None
-                            or placement == arguments.placement
+            payload = (
+                {
+                    "filters": CatalogSearch.model_validate(request).model_dump(
+                        mode="json"
+                    )
+                }
+                if name == "search_furniture"
+                else request
+            )
+            try:
+                catalog_name = next(tool for tool in CATALOG_TOOLS if tool == name)
+                response = await self.catalog.call(catalog_name, payload)
+            except CatalogFailure as error:
+                missing = error.code == "catalog_item_not_found"
+                return RunStep(
+                    action="continue",
+                    feedback=ToolFeedback(
+                        name=name,
+                        outcome="rejected" if missing else "error",
+                        message="That catalog item is unavailable. Choose another approved asset_id."
+                        if missing
+                        else "The furniture catalog could not be read. Continue using the current reconstruction; catalog access is disabled for this run.",
+                        details={
+                            "code": error.code,
+                            "transport": "stdio",
+                            "mcp_attempted": True,
                         },
-                    }
+                    ),
                 )
             return RunStep(
                 action="continue",
                 feedback=feedback(
-                    "Approved catalog models.",
-                    {"total_matches": len(models), "models": result},
+                    "Read the approved furniture catalog through MCP. Catalog sizes are nominal, not user measurements.",
+                    {
+                        "transport": "stdio",
+                        "mcp_attempted": True,
+                        "result": response.model_dump(mode="json"),
+                    },
                 ),
             )
         scene = state.working_scene
@@ -411,16 +466,28 @@ class SceneTools:
                 ),
             )
         if name == "score_layout":
-            report = await anyio.to_thread.run_sync(score_layout, scene, list(state.input_options.goals))
-            return RunStep(action="continue", feedback=feedback(
-                "Soft goal proxies measured; this does not authorize redesign or override clearance.",
-                {**report.model_dump(mode="json", exclude={"geometry"}), "geometry": report_summary(report.geometry)},
-            ))
+            report = await anyio.to_thread.run_sync(
+                score_layout, scene, list(state.input_options.goals)
+            )
+            return RunStep(
+                action="continue",
+                feedback=feedback(
+                    "Soft goal proxies measured; this does not authorize redesign or override clearance.",
+                    {
+                        **report.model_dump(mode="json", exclude={"geometry"}),
+                        "geometry": report_summary(report.geometry),
+                    },
+                ),
+            )
         if name == "validate_scene":
             report = await anyio.to_thread.run_sync(validate_geometry, scene)
             fidelity = (
                 evaluate_fidelity(
-                    apply_constraints(state.analysis, state.reconstruction_constraints, wall_axes=state.proposal.wall_axes if state.proposal else None),
+                    apply_constraints(
+                        state.analysis,
+                        state.reconstruction_constraints,
+                        wall_axes=state.proposal.wall_axes if state.proposal else None,
+                    ),
                     scene,
                 )
                 if state.analysis
@@ -457,7 +524,8 @@ class SceneTools:
         )
         if result.accepted and state.analysis is not None:
             effective = apply_constraints(
-                state.analysis, state.reconstruction_constraints,
+                state.analysis,
+                state.reconstruction_constraints,
                 wall_axes=state.proposal.wall_axes if state.proposal else None,
             )
             before = evaluate_fidelity(effective, scene)

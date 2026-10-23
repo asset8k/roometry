@@ -3,7 +3,7 @@
 import pytest
 
 from roometry.agents.nodes import RunContext, finalize
-from roometry.agents.state import RunLimits, RunUsage, ToolFeedback
+from roometry.agents.state import CatalogRead, RunLimits, RunUsage, ToolFeedback
 from roometry.agents.tools import available_tools, tool_definitions
 from roometry.config import Settings
 from pydantic import ValidationError
@@ -35,9 +35,9 @@ async def populated():
 async def test_inspection_tools_are_once_per_accepted_revision_and_rejected_edits_do_not_reset_them():
     state = await populated()
     inspected = [ToolFeedback(name=name, outcome='success', message='Checked')
-                 for name in ('read_scene', 'search_catalog', 'validate_scene', 'score_layout')]
+                 for name in ('read_scene', 'validate_scene', 'score_layout')]
     state = state.model_copy(update={'tool_feedback': inspected})
-    assert not {'read_scene', 'search_catalog', 'validate_scene', 'score_layout'} & set(available_tools(state))
+    assert not {'read_scene', 'validate_scene', 'score_layout'} & set(available_tools(state))
     for outcome, changed, expected in [('rejected', [], False), ('success', [], False), ('success', ['chair_a'], True)]:
         updated = state.model_copy(update={'tool_feedback': [*inspected, ToolFeedback(name='move_object', outcome=outcome, message='Result', details={'changed_object_ids': changed})]})
         assert ('validate_scene' in available_tools(updated)) == expected
@@ -64,8 +64,10 @@ async def test_no_useful_action_finalizes_without_a_paid_decision(harness):
         obj.fixed = True
     state = state.model_copy(update={
         'working_scene': scene,
+        'catalog_reads': [CatalogRead(name=name,arguments={},outcome='success')
+                          for name, count in [('search_furniture',4),('get_furniture_details',8),('list_furniture_categories',1)] for _ in range(count)],
         'tool_feedback': [ToolFeedback(name=name, outcome='success', message='Checked')
-                          for name in ('read_scene', 'search_catalog', 'validate_scene', 'score_layout')],
+                          for name in ('read_scene', 'validate_scene', 'score_layout')],
     })
     assert available_tools(state) == ['finish']
     context = RunContext(app.state.agent_runs.advance, noop, lambda: False, app.state.agent_runs.now)

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { RoomInputController } from './room-input-controller'
-import { RoomGenerationController } from './room-generation-controller'
+import { RoomGenerationController, generationProgress } from './room-generation-controller'
 import { AgentRunError } from './agent-run'
 import type { AgentState } from './agent-run'
 import type { AgentClient } from './agent-api'
@@ -193,4 +193,11 @@ describe('guided room generation', () => {
     pending.resolve(cancelled()); await answering
     expect(s.generation.getSnapshot().phase).toBe('cancelled')
   })
+})
+
+it.each(['search_furniture', 'get_furniture_details', 'list_furniture_categories'] as const)('describes %s as furniture inspection', name => {
+  const input = prepared([photo()])
+  const run = agentRun(input, { pending_tool: { call_id: 'mcp_1', name, arguments: {} } })
+  expect(generationProgress({ phase: 'running', run, cancelling: false, answering: false, recovery: false, notice: null }))
+    .toBe('Checking furniture models and dimensions…')
 })

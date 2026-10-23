@@ -112,6 +112,7 @@ class RoomAgent:
                 if state.working_scene
                 else None
             ),
+            "catalog_reads": [read.model_dump(mode="json") for read in state.catalog_reads],
             "tool_feedback": [
                 item.model_dump(mode="json") for item in state.tool_feedback[-8:]
             ],

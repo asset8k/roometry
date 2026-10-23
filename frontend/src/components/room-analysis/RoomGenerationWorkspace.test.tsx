@@ -123,3 +123,12 @@ describe('guided generation workspace', () => {
     expect(html).toContain('fieldset disabled')
   })
 })
+
+it('keeps the reconstructed viewer open and discloses unavailable catalog checks', () => {
+  const run = finishedRun(input)
+  run.catalog_reads = [{ name: 'search_furniture', arguments: {}, outcome: 'error' }]
+  const html = render({ phase: 'completed', run })
+  expect(html).toContain('Furniture catalog checks were unavailable')
+  expect(html).toContain('3D room viewer')
+  expect(html).toContain('Your reconstructed room')
+})

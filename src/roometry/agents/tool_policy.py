@@ -54,3 +54,18 @@ def already_inspected(state: AgentState, tool: str) -> bool:
 
 def clarification_target(question: ClarificationQuestion) -> str | None:
     return None if question.kind in {"room_dimensions", "room_wall_axis"} else question.entity_ids[0] if question.entity_ids else None
+
+
+CATALOG_READ_LIMITS = {"search_furniture": 4, "get_furniture_details": 8, "list_furniture_categories": 1}
+
+
+def catalog_available(state: AgentState, name: str) -> bool:
+    # An unavailable/malformed MCP endpoint is not retried inside a run. A
+    # not-found rejection still permits a different valid item lookup.
+    return not any(read.outcome == "error" for read in state.catalog_reads) and sum(
+        read.name == name for read in state.catalog_reads
+    ) < CATALOG_READ_LIMITS[name]
+
+
+def catalog_already_read(state: AgentState, name: str, arguments: dict) -> bool:
+    return any(read.name == name and read.arguments == arguments for read in state.catalog_reads)
