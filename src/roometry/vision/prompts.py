@@ -40,8 +40,10 @@ doors can occur on either short or long walls; do not use their presence as proo
 Use null when no relative-span evidence exists. Explicitly record adjacent_wall
 and opposite_wall relationships when visible; descriptive identities must remain
 consistent across viewpoints, independent of compass labels.
-Name walls descriptively (such as window_wall), not geographic north/south inferred
-from the camera. Relative locations must identify their reference or be null.
+Use descriptive machine IDs such as window_wall, but human-readable labels such
+as "Window wall" or "Marble wall beside the desk". Labels are shown directly to
+the user: never use snake_case identifiers as labels. Do not infer geographic
+north/south from the camera. Relative locations must identify their reference or be null.
 Represent a visible architectural ledge that supports objects (for example a
 window sill carrying plants) as a separate wall_shelf observation, labeled with
 its actual purpose. Link the supported objects to that observation. Do not invent
@@ -63,6 +65,14 @@ is genuinely uncertain (for example bed versus sofa). Distinguish office/gaming
 chairs, open metal shelves, radiators, and track lights in labels.
 
 Record relationships with stable endpoint IDs and specific visible evidence.
+Relationship IDs must be unique, with distinct existing subject/target IDs.
+Each relationship's source_image_ids must come from its endpoints' recorded
+views; a wall span's source_image_ids must come from that wall's recorded views.
+Record every supported view on the entity itself, rather than inventing a source
+to satisfy a relationship. Object relationships require an object subject; wall
+topology requires two wall endpoints. A supported_by target must agree with the
+subject's support_object_id and surface placement. If support is uncertain, keep
+it unknown consistently in both fields rather than contradicting them.
 Use faces for functional front directions (sofa toward TV, chair toward desk),
 against_wall for items whose back is at a wall, near/beside for local groups,
 supported_by for an established support, and opposite_wall/adjacent_wall only when

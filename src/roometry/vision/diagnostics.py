@@ -40,7 +40,25 @@ _CONSISTENCY_RULES = {
     "Possible duplicate pairs must be distinct and unique.": "duplicate_pair",
     "Possible duplicates must reference observed entities.": "duplicate_reference",
     "Possible duplicates must refer to the same entity kind.": "duplicate_kind",
+    "Wall-span evidence must reference distinct views of that wall.": "wall_span_evidence",
+    "Relationship IDs must be unique.": "duplicate_relationship_id",
+    "Relationships need distinct existing observation endpoints.": "relationship_endpoint",
+    "Relationship evidence must reference this upload.": "relationship_evidence",
+    "Relationship evidence must include an endpoint's view.": "relationship_endpoint_evidence",
+    "Wall topology requires two walls.": "wall_topology",
+    "Object relationships require an object subject.": "relationship_subject",
+    "against_wall requires a wall target.": "relationship_wall_target",
+    "Support relationships must agree with observed support.": "relationship_support",
+    "Only facing uncertainties may name a distinct existing alternative.": "relationship_alternative",
+    "Finish evidence must reference this upload.": "finish_evidence",
 }
+
+
+def consistency_message(rule: str) -> str | None:
+    """Only fixed application rules may be sent as correction feedback."""
+    return next(
+        (message for message, code in _CONSISTENCY_RULES.items() if code == rule), None
+    )
 
 
 def validation_diagnostics(

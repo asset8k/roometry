@@ -60,6 +60,31 @@ describe('guided generation workspace', () => {
     expect(html).toContain('wall-to-measurement assignment is unconfirmed')
     expect(html).toContain('3D room viewer')
   })
+  it('formats identifiers in checkpointed question text without altering choice values', () => {
+    const run = waitingRun(input)
+    run.pending_question = { id: 'q1', kind: 'room_wall_axis', question: 'Which wall measures 3 m?', dimension_axes: ['width_m'], entity_ids: ['window_wall', 'desk_side_marble_wall'],
+      choices: [{ id: 'wall_first', label: 'window_wall' }, { id: 'wall_second', label: 'desk_side_marble_wall' }, { id: 'not_sure', label: 'Not sure — use an approximate orientation' }] }
+    run.questions = [run.pending_question]
+    const html = render({ phase: 'awaiting_answer', run })
+    expect(html).toContain('Window wall')
+    expect(html).toContain('Desk side marble wall')
+    expect(html).not.toContain('window_wall')
+    expect(html).not.toContain('desk_side_marble_wall')
+    expect(html).toContain('value="wall_first"')
+    expect(html).toContain('value="wall_second"')
+    run.pending_question.question = 'Which length belongs to window_wall?'
+    expect(render({ phase: 'awaiting_answer', run })).toContain('Which length belongs to window wall?')
+  })
+  it('explains a failed analysis without exposing raw provider diagnostics', () => {
+    const run = agentRun(input, { status: 'failed', last_error: 'tool_failed',
+      tool_feedback: [{ name: 'analyze_photos', outcome: 'error', message: 'PRIVATE_PROVIDER_DETAIL', details: { code: 'invalid_analysis' } }] })
+    const html = render({ phase: 'failed', run })
+    expect(html).toContain('Photo analysis returned inconsistent observations')
+    expect(html).toContain('Please try generating again')
+    expect(html).toContain('selected photos and entered details are kept')
+    expect(html).not.toContain('PRIVATE_PROVIDER_DETAIL')
+    expect(html).not.toContain('3D room viewer')
+  })
   it('shows a usable partial scene and an honest limit notice after free finalization', () => {
     const run = { ...finishedRun(input, true), stop_reason: 'budget_limit' as const }
     const html = render({ phase: 'partial', run })

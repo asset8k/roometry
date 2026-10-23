@@ -178,35 +178,6 @@ Read-only status polling does not execute the graph. Duplicate start/answer
 requests use idempotent handling; cancellation during provider calls is cooperative.
 PostgreSQL-backed persistence, durable checkpoints, and SSE remain future work.
 
-## Catalog MCP boundary
-
-The agent's `search_furniture`, `get_furniture_details` and
-`list_furniture_categories` tools use the co-located stdio MCP process. They
-replace the former direct `search_catalog` lookup. Assembly and rendering retain
-the same shared catalog; reads do not add/replace objects or authorize edits.
-Only catalog filters/asset IDs cross this boundary, with no photos, room inputs,
-provider credentials or model-chosen subprocess commands. The client discovers
-and checks the three read-only tools, validates their input/output schemas and
-local result contracts, and rejects wrong identities or unapproved assets.
-
-A process is started lazily per interaction and closed in the same async task,
-including cancellation. At most two interactions per app run concurrently. The
-configurable `MCP_FURNITURE_TIMEOUT_SECONDS` (default 8) covers waiting, startup,
-discovery and invocation; response payloads are limited by
-`MCP_FURNITURE_MAX_RESPONSE_BYTES` (default 65536). Transport remains `stdio`.
-App health/startup does not require a running catalog process. No service needs
-starting separately. Host subprocess support must still be verified at deployment.
-
-Every attempted catalog read consumes the existing tool budget, never a provider
-call. Checkpointed `catalog_reads` preserves duplicate/limit handling across
-clarification, edits and truncated feedback history: up to four searches, eight
-item lookups and one category listing per run. Duplicate arguments reuse feedback
-without repeating MCP. A not-found item allows a corrected lookup. A transport,
-timeout or invalid-result failure disables catalog reads for that run, produces
-safe feedback and a viewer notice, and preserves any validated reconstruction.
-There is no silent local-query fallback or automatic model retry. Only data—not
-MCP handles or child processes—is checkpointed.
-
 ## Generated files and verification
 
 Run `npm run contracts:generate` from `frontend/` after changing shared Python

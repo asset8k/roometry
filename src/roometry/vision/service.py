@@ -22,6 +22,7 @@ from roometry.uploads.errors import UploadFailure
 from roometry.uploads.schemas import PreparedRoomInput
 from roometry.uploads.storage import InputStorage
 from roometry.vision.analyzer import PhotoAnalyzer, parse_observations, response_json
+from roometry.vision.analysis_repair import repair_request, validate_repair_inventory
 from roometry.vision.diagnostics import (
     provider_id,
     response_diagnostics,
@@ -206,7 +207,12 @@ class AnalysisService:
                 "Another analysis is running. Please try again shortly.",
             ) from None
         try:
-            with anyio.fail_after(self.settings.analysis_timeout_seconds):
+            # A completed inconsistent result may need one correction. Each
+            # provider request still has its own timeout; total work is bounded.
+            deadline = self.settings.analysis_timeout_seconds * min(
+                2, self.settings.analysis_max_provider_attempts
+            )
+            with anyio.fail_after(deadline):
                 return await self._analyze(input_id, owner)
         except TimeoutError:
             raise AnalysisFailure(
@@ -253,6 +259,8 @@ class AnalysisService:
             )
             self._states[input_id] = state
 
+        repair_used = False
+        original_response: Response | None = None
         while state.attempts < self.settings.analysis_max_provider_attempts:
             # A discarded/replaced/expired batch must not trigger another attempt.
             await anyio.to_thread.run_sync(self._resolve, input_id, owner)
@@ -269,6 +277,11 @@ class AnalysisService:
                     [image.image_id for image in prepared.images],
                     self.settings.analysis_max_output_bytes,
                 )
+                if original_response is not None:
+                    validate_repair_inventory(
+                        original_response, observations,
+                        self.settings.analysis_max_output_bytes,
+                    )
                 outcome = "success"
             except APITimeoutError:
                 outcome = "analysis_timeout"
@@ -316,7 +329,23 @@ class AnalysisService:
             except AnalysisFailure as error:
                 details = error.diagnostics
                 outcome = error.code
-                raise
+                corrected = (
+                    repair_request(
+                        payload, response, error,
+                        max_output_bytes=self.settings.analysis_max_output_bytes,
+                        max_request_bytes=self.settings.analysis_max_request_bytes,
+                    )
+                    if response is not None
+                    and not repair_used
+                    and state.attempts < self.settings.analysis_max_provider_attempts
+                    else None
+                )
+                if corrected is None:
+                    raise
+                payload = corrected
+                repair_used = True
+                original_response = response
+                retry, failure = True, error
             except ValueError:
                 outcome = "invalid_analysis"
                 raise AnalysisFailure(

@@ -1,5 +1,7 @@
 """Pure question construction and answer effects, with no provider calls."""
 
+import re
+
 from roometry.agents.state import (
     AgentState,
     ClarificationAnswer,
@@ -20,6 +22,13 @@ class InvalidAnswer(ValueError):
 
 class AnswerConflict(ValueError):
     pass
+
+
+def display_label(label: str) -> str:
+    """Format model identifiers without changing checkpointed entity IDs."""
+    text = re.sub(r"[_\s]+", " ", label).strip()
+    text = re.sub(r"\btv\b", "TV", text, flags=re.IGNORECASE)
+    return text[:1].upper() + text[1:]
 
 
 def question_for(
@@ -80,8 +89,8 @@ def question_for(
         first = resolution.candidate_wall_ids[0]
         if len(resolution.candidate_wall_ids) == 2:
             choices = [
-                {"id": "wall_first", "label": walls[first].label[:190]},
-                {"id": "wall_second", "label": walls[resolution.candidate_wall_ids[1]].label[:190]},
+                {"id": "wall_first", "label": display_label(walls[first].label)[:190]},
+                {"id": "wall_second", "label": display_label(walls[resolution.candidate_wall_ids[1]].label)[:190]},
             ]
             text = f"Which wall measures {resolution.reference_span_m:g} m?"
         else:
@@ -90,7 +99,7 @@ def question_for(
                 {"id": "wall_first", "label": f"{resolution.reference_span_m:g} m"},
                 {"id": "wall_second", "label": f"{getattr(measurements.dimensions, other_axis):g} m"},
             ]
-            text = f"Which length belongs to {walls[first].label}?"[:500]
+            text = f"Which length belongs to {display_label(walls[first].label)}?"[:500]
         choices.append({"id": "not_sure", "label": "Not sure — use an approximate orientation"})
         return ClarificationQuestion.model_validate({**common, "question": text, "choices": choices, "entity_ids": resolution.candidate_wall_ids, "dimension_axes": [resolution.reference_axis]})
     if kind in {"object_identity", "layout_orientation"}:
@@ -125,7 +134,7 @@ def question_for(
                     "label": "Neither / not sure — leave this item unresolved",
                 },
             ]
-            text = f"How should we represent {source.label}?"
+            text = f"How should we represent {display_label(source.label)}?"
         else:
             relations = [
                 r
@@ -146,7 +155,7 @@ def question_for(
 
             def label(key):
                 entity = entities[key]
-                return getattr(entity, "label", getattr(entity, "type", key))[:150]
+                return display_label(getattr(entity, "label", getattr(entity, "type", key)))[:150]
 
             choices = [
                 {"id": "face_primary", "label": "Toward " + label(relation.target_id)},
@@ -159,7 +168,7 @@ def question_for(
                     "label": "Not sure — keep the direction approximate",
                 },
             ]
-            text = f"Which direction does {source.label} face?"
+            text = f"Which direction does {display_label(source.label)} face?"
         return ClarificationQuestion.model_validate(
             {
                 **common,
@@ -196,7 +205,7 @@ def question_for(
     return ClarificationQuestion.model_validate(
         {
             **common,
-            "question": f"Can the {label} be moved?",
+            "question": f"Can the {display_label(label)} be moved?",
             "entity_ids": [obj.id],
             "choices": [
                 {"id": "allow_movement", "label": "Yes, it can move"},

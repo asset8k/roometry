@@ -13,6 +13,26 @@ const titles: Partial<Record<GenerationState['phase'], string>> = {
   budget_exhausted: 'Generation reached its limit',
 }
 
+// Also format older checkpointed questions; answer and entity IDs stay intact.
+function displayText(value: string): string {
+  const text = value.replaceAll('_', ' ').replace(/\btv\b/gi, 'TV')
+  return text.charAt(0).toUpperCase() + text.slice(1)
+}
+
+function failureMessage(run: AgentState | null): string {
+  const feedback = run ? [...run.tool_feedback].reverse().find(item => item.outcome === 'error') : undefined
+  switch (feedback?.details.code) {
+    case 'invalid_analysis': return feedback?.name === 'analyze_photos' ? 'Photo analysis returned inconsistent observations, so scene construction could not start. Please try generating again.' : 'The model returned inconsistent room data. Please try generating again.'
+    case 'analysis_incomplete': return 'The model did not finish its response within the output limit. Please try generating again.'
+    case 'analysis_timeout': return 'The model took too long to respond. Please try generating again.'
+    case 'provider_rate_limited': return 'The model service is busy. Please try again shortly.'
+    case 'provider_unavailable': return 'The model service is temporarily unavailable. Please try again shortly.'
+    case 'analysis_limit_reached': return feedback?.name === 'analyze_photos' ? 'This upload reached its analysis attempt limit. Generate again to upload a fresh copy of your selected photos.' : 'This generation reached its model request limit. Please try generating again.'
+    case 'analysis_refused': return 'The model could not process this room request. Review the selected photos and room details before trying again.'
+    default: return run?.last_error === 'step_timeout' ? 'This generation took too long to finish. Please try generating again.' : 'The service couldn’t finish this generation. Please try generating again.'
+  }
+}
+
 export default function RoomGenerationWorkspace({ state, controller, onConnectionChange }: {
   state: GenerationState; controller: RoomGenerationController; onConnectionChange: (online: boolean) => void
 }) {
@@ -33,7 +53,7 @@ export default function RoomGenerationWorkspace({ state, controller, onConnectio
   const needsWall = state.phase === 'incomplete' && run?.proposal?.status === 'needs_wall_assignment'
   const preview = partial && omittedCount === 0
   const objects = run?.analysis?.observations.objects ?? []
-  const entityName = (id: string) => objects.find(obj => obj.id === id)?.label ?? run?.analysis?.observations.walls.find(wall => wall.id === id)?.label ?? id.replaceAll('_', ' ')
+  const entityName = (id: string) => displayText(objects.find(obj => obj.id === id)?.label ?? run?.analysis?.observations.walls.find(wall => wall.id === id)?.label ?? id)
   const estimated = run?.proposal?.estimated_axes ?? []
   return <section className="analysis-workspace generation-workspace" aria-label="Room generation">
     <div className="analysis-card" aria-live="polite">
@@ -49,7 +69,7 @@ export default function RoomGenerationWorkspace({ state, controller, onConnectio
       {run?.stop_reason === 'budget_limit' && ['completed', 'partial'].includes(state.phase) && <p className="input-help">Your validated reconstruction is available. Additional checks stopped at the run limit.</p>}
       {state.phase === 'partial' && <p>{preview ? 'Your scene is available to explore and edit. Some photo relationships still need correction, so this is a provisional reconstruction.' : 'The included geometry passed validation. Some observations remain unresolved and are listed below.'}</p>}
       {state.phase === 'incomplete' && <p>{needsDimensions ? 'Some room measurements remain unknown. Your selected photos and entered details are kept.' : needsWall ? 'The measurements are available, but their physical wall assignment is still unknown. Your photos and entered dimensions are kept.' : 'We couldn’t build a usable arrangement from this attempt. Your selected photos, entered details, and available photo analysis are kept.'}</p>}
-      {state.phase === 'failed' && <p>The service couldn’t finish this generation. Your selected photos and entered details are kept.</p>}
+      {state.phase === 'failed' && <p role="alert">{failureMessage(run)} Your selected photos and entered details are kept.</p>}
       {state.phase === 'budget_exhausted' && <p>The run stopped at its work limit. Any validated geometry is available below.</p>}
       {state.phase === 'cancelled' && <p>No further generation work will be started. Your selected photos are kept.</p>}
       {state.phase === 'expired' && <p>The temporary run is unavailable. You can generate again from your selected photos.</p>}
@@ -60,7 +80,7 @@ export default function RoomGenerationWorkspace({ state, controller, onConnectio
       {terminal && run?.proposal?.status === 'incomplete' && <details className="analysis-notes"><summary>Construction details</summary><ul>{run.proposal.issues.map((issue, index) => <li key={index}>{issue.entity_ids.length > 0 && <strong>{issue.entity_ids.map(entityName).join(', ')}: </strong>}{issue.message}</li>)}</ul></details>}
       {terminal && estimated.length > 0 && <p className="analysis-caution">Estimated room dimensions: {estimated.map(axis => dimensionLabels[axis].toLowerCase()).join(', ')}. These have not been supplied by you.</p>}
       {run?.analysis && <details className="analysis-notes"><summary>Photo observations and uncertainties</summary>
-        <ul>{objects.map(obj => <li key={obj.id}><strong>{obj.label}</strong>{obj.relative_location ? ` · ${obj.relative_location}` : ''}</li>)}</ul>
+        <ul>{objects.map(obj => <li key={obj.id}><strong>{displayText(obj.label)}</strong>{obj.relative_location ? ` · ${obj.relative_location}` : ''}</li>)}</ul>
         <ul>{run.analysis.observations.unknowns.map((note, index) => <li key={index}>{note}</li>)}</ul>
       </details>}
       {scene && <>
@@ -117,9 +137,9 @@ export function ClarificationForm({ run, disabled, onAnswer }: {
   }
   return <form className="clarification-form" onSubmit={event => { event.preventDefault(); submit() }}>
     <fieldset disabled={disabled}>
-      <legend><span className="section-label">Question {run.questions.length} of up to 3</span><strong>{question.question}</strong></legend>
+      <legend><span className="section-label">Question {run.questions.length} of up to 3</span><strong>{displayText(question.question)}</strong></legend>
       <div className="clarification-choices">{question.choices.map(option => <label key={option.id}>
-        <input type="radio" name={`answer-${question.id}`} value={option.id} checked={choice === option.id} onChange={() => setChoice(option.id)} required /><span>{option.label}</span>
+        <input type="radio" name={`answer-${question.id}`} value={option.id} checked={choice === option.id} onChange={() => setChoice(option.id)} required /><span>{displayText(option.label)}</span>
       </label>)}</div>
       {choice === 'enter_measurements' && <div className="room-preferences"><div className="dimension-inputs">{question.dimension_axes.map(axis => <label key={axis}>
         {dimensionLabels[axis]} (m)<input type="number" inputMode="decimal" min="0" max={axis === 'height_m' ? 10 : 30} step="any" value={values[axis] ?? ''}

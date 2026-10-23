@@ -190,6 +190,23 @@ async def test_single_identifiable_wall_asks_numeric_choices_and_second_answer_s
 
 
 @pytest.mark.anyio
+async def test_machine_style_wall_labels_are_readable_without_changing_answer_bindings(harness):
+    runs, owner, upload = await upload_room(harness)
+    example, _ = axis_case()
+    example.observations.walls[0].label = 'window_wall'
+    example.observations.walls[1].label = 'desk_side_marble_wall'
+    initial = await runs.create(upload['input_id'], owner)
+    state = initial.model_copy(update={'analysis': example, 'status': 'running'})
+    question = question_for(state, 'room_wall_axis')
+    assert [c.label for c in question.choices][:2] == ['Window wall', 'Desk side marble wall']
+    assert question.entity_ids == ['window_wall', 'tv_wall']
+    state = state.model_copy(update={'pending_question': question, 'questions': [question]})
+    update = answer_updates(state, ClarificationAnswer(question_id=question.id, choice_id='wall_second'))
+    assert update['reconstruction_constraints']['wall_axis']['wall_id'] == 'tv_wall'
+    assert example.observations.walls[0].label == 'window_wall'  # Source evidence is immutable.
+
+
+@pytest.mark.anyio
 async def test_question_cap_does_not_create_a_fourth_question_or_claim_orientation_is_confirmed(harness):
     runs, owner, upload = await upload_room(harness)
     example, _ = axis_case()

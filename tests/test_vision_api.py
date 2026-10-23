@@ -388,6 +388,9 @@ async def test_bad_model_results_are_safe_and_usage_is_still_recorded(
     harness, kind, status, code, caplog
 ):
     app, client, calls, actions = harness
+    # Verify the public failure after its configured budget is exhausted.
+    # Semantic correction with a second attempt is covered separately.
+    app.state.settings.analysis_max_provider_attempts = 1
 
     async def model_result(_request, payload):
         data = provider_response(payload)

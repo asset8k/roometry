@@ -122,12 +122,18 @@ export class RoomGenerationController {
     if (this.locked() || this.inputs.getSnapshot().busy) return
     const before = this.inputs.getSnapshot()
     if (['completed', 'partial'].includes(this.state.phase) && !before.dirty && !before.uncertain && before.accepted) return
+    const lastFailure = this.state.run ? [...this.state.run.tool_feedback].reverse().find(item => item.outcome === 'error') : undefined
+    // A new user-requested generation needs a fresh upload after observation
+    // failure; the old input may have exhausted its bounded analysis attempts.
+    // Network recovery continues to use retry() and the original request ID.
+    const freshUpload = this.state.phase === 'failed' && lastFailure?.name === 'analyze_photos'
+      && ['invalid_analysis', 'analysis_limit_reached'].includes(String(lastFailure.details.code))
     const revision = ++this.revision
     this.stopTimer()
     this.update({ phase: 'uploading', run: null, recovery: false, notice: null, answering: false, cancelling: false })
     this.inputs.checkExpiry()
     const current = this.inputs.getSnapshot()
-    if (!current.accepted || current.dirty || current.uncertain) {
+    if (freshUpload || !current.accepted || current.dirty || current.uncertain) {
       if (!await this.inputs.submit()) { if (revision === this.revision) this.update({ phase: 'idle' }); return }
     }
     if (revision !== this.revision) return

@@ -59,6 +59,31 @@ describe('guided room generation', () => {
     expect(s.generation.getSnapshot().phase).toBe('partial')
     expect(s.generation.getSnapshot().run?.proposal?.unresolved_entities?.length).toBe(1)
   })
+  it.each(['invalid_analysis', 'analysis_limit_reached'])('uploads a fresh batch on an explicit retry after %s, keeping files and measurements', async code => {
+    const s = await setup()
+    vi.mocked(s.client.start).mockImplementationOnce(async () => agentRun(s.batch(), { status: 'failed', last_error: 'tool_failed', pending_tool: null,
+      tool_feedback: [{ name: 'analyze_photos', outcome: 'error', message: 'Photo analysis failed.', details: { code } }] }))
+    await s.generation.generate()
+    expect(s.generation.getSnapshot().phase).toBe('failed')
+    expect(s.upload).toHaveBeenCalledTimes(1)
+    const photos = s.inputs.getSnapshot().photos
+    const draft = s.inputs.getSnapshot().draft
+    await s.generation.generate()
+    expect(s.upload).toHaveBeenCalledTimes(2)
+    expect(s.inputs.getSnapshot().photos).toBe(photos)
+    expect(s.inputs.getSnapshot().draft).toBe(draft)
+    expect(s.generation.getSnapshot().phase).toBe('completed')
+    expect(vi.mocked(s.client.start).mock.calls[0][0].request_id).not.toBe(vi.mocked(s.client.start).mock.calls[1][0].request_id)
+  })
+  it('reuses uploaded photos and cached analysis when retrying a decision failure', async () => {
+    const s = await setup()
+    vi.mocked(s.client.start).mockImplementationOnce(async () => agentRun(s.batch(), { status: 'failed', last_error: 'decision_failed', pending_tool: null,
+      tool_feedback: [{ name: null, outcome: 'error', message: 'Model unavailable.', details: { code: 'provider_unavailable' } }] }))
+    await s.generation.generate()
+    await s.generation.generate()
+    expect(s.upload).toHaveBeenCalledTimes(1)
+    expect(s.generation.getSnapshot().phase).toBe('completed')
+  })
   it('prevents duplicate uploads and ignores cancelled late upload completion', async () => {
     const pending = deferred<ReturnType<typeof prepared>>()
     const s = await setup()
