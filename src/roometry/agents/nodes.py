@@ -41,6 +41,7 @@ class RunContext:
     owner: str = ""
     budget: RunBudget | None = None
     execute_tool: StepAdapter | None = None
+    review_scene: StepAdapter | None = None
 
 
 async def guard(state: AgentState, runtime: Runtime[RunContext]) -> dict[str, object]:
@@ -61,7 +62,7 @@ async def guard(state: AgentState, runtime: Runtime[RunContext]) -> dict[str, ob
     return {"status": "running", "steps_used": state.steps_used + 1}
 
 
-def check_step(state: AgentState, step: RunStep) -> None:
+def check_step(state: AgentState, step: RunStep, *, reconstruction_review: bool = False) -> None:
     """Only cache observations and scenes belonging to this exact room input."""
     analysis = step.analysis or state.analysis
     if step.analysis is not None:
@@ -75,6 +76,16 @@ def check_step(state: AgentState, step: RunStep) -> None:
             raise ValueError("Analysis does not match this run's original input.")
     proposal = step.proposal
     if proposal is not None:
+        if state.working_scene is not None and not reconstruction_review and proposal.scene != state.working_scene:
+            raise ValueError("A proposal cannot reset an existing edited scene.")
+        if state.working_scene is not None and proposal != state.proposal:
+            if (not reconstruction_review or state.proposal is None or state.proposal.visual_review is not None
+                or state.working_scene != state.base_scene or proposal.visual_review is None):
+                raise ValueError("Only the pre-edit visual review may replace a constructed base scene.")
+            from roometry.vision.review import candidate_allowed
+            effective = apply_constraints(analysis, state.reconstruction_constraints, wall_axes=state.proposal.wall_axes)
+            if proposal.scene is None or not candidate_allowed(effective, state.working_scene, proposal.scene):
+                raise ValueError("Visual correction changed protected measurements, locks or valid inventory.")
         if (
             analysis is None
             or proposal.analysis_id != analysis.analysis_id
@@ -183,7 +194,7 @@ def check_step(state: AgentState, step: RunStep) -> None:
 
 
 async def _perform(
-    state: AgentState, context: RunContext, adapter: StepAdapter
+    state: AgentState, context: RunContext, adapter: StepAdapter, *, reconstruction_review: bool = False
 ) -> dict[str, object]:
     result: dict[str, object]
     await context.authorize()
@@ -197,7 +208,7 @@ async def _perform(
             with observe_model_calls(context.budget):
                 step = await adapter(state.model_copy(deep=True), context)
         step = RunStep.model_validate(step)
-        check_step(state, step)
+        check_step(state, step, reconstruction_review=reconstruction_review)
     except TimeoutError:
         result = {"status": "failed", "last_error": "step_timeout"}
     except (ValidationError, ValueError):
@@ -255,7 +266,7 @@ async def _perform(
             if step.proposal.scene is not None:
                 scene = step.proposal.scene.model_dump()
                 result["working_scene"] = scene
-                if state.base_scene is None:
+                if state.base_scene is None or reconstruction_review:
                     result["base_scene"] = step.proposal.scene.model_dump()
         if step.working_scene is not None:
             result["working_scene"] = step.working_scene.model_dump()
@@ -318,6 +329,14 @@ async def execute_tool(
     if adapter is None or state.pending_tool is None:
         return {"status": "failed", "last_error": "invalid_step", "pending_tool": None}
     return await _perform(state, runtime.context, adapter)
+
+
+async def review_scene(state: AgentState, runtime: Runtime[RunContext]) -> dict[str, object]:
+    """Paid review is checkpointed separately, never replayed by clarification."""
+    adapter = runtime.context.review_scene
+    if adapter is None:
+        return {}  # Explicitly disabled or an injected deterministic test graph.
+    return await _perform(state, runtime.context, adapter, reconstruction_review=True)
 
 
 async def clarify(state: AgentState, runtime: Runtime[RunContext]) -> dict[str, object]:

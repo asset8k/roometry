@@ -91,6 +91,26 @@ class EstimateCorrection(SceneModel):
     source_image_ids: Annotated[list[str], Field(min_length=1, max_length=10)]
 
 
+class InterpretationCorrection(SceneModel):
+    """Photo-backed revision of a classification/attachment hypothesis."""
+
+    entity_id: Identifier
+    field: Literal["type", "placement", "support_object_id"]
+    previous_value: Identifier | None
+    revised_value: Identifier | None
+    reason: Note
+    source_image_ids: Annotated[list[str], Field(min_length=1, max_length=10)]
+
+
+class AppearanceCorrection(SceneModel):
+    entity_id: Identifier | None  # null names the room finish, never an object.
+    field: Literal["color", "wood", "metal", "linen", "inset", "rubber", "enamel", "floor_color", "wall_color", "floor_pattern"]
+    previous_value: Annotated[str, Field(max_length=16)] | None
+    revised_value: Annotated[str, Field(max_length=16)]
+    reason: Note
+    source_image_ids: Annotated[list[str], Field(min_length=1, max_length=10)]
+
+
 class Position(SceneModel):
     """World-space bottom center, in meters; room containment is checked later."""
 
@@ -232,6 +252,8 @@ class RoomScene(SceneModel):
     wall_axis_bindings: Annotated[list[WallAxisBinding], Field(max_length=4)] = Field(default_factory=list)
     wall_mapping: Annotated[list[WallReference], Field(max_length=4)] = Field(default_factory=list)
     estimate_corrections: Annotated[list[EstimateCorrection], Field(max_length=200)] = Field(default_factory=list)
+    interpretation_corrections: Annotated[list[InterpretationCorrection], Field(max_length=200)] = Field(default_factory=list)
+    appearance_corrections: Annotated[list[AppearanceCorrection], Field(max_length=200)] = Field(default_factory=list)
     openings: Annotated[list[Opening], Field(max_length=MAX_OPENINGS)]
     objects: Annotated[list[SceneObject], Field(max_length=MAX_OBJECTS)]
     assumptions: Annotated[list[Note], Field(max_length=MAX_NOTES)]

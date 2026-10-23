@@ -793,7 +793,7 @@ def low_futon(*, seated: bool) -> tuple[list[FurniturePart], list[SupportSurface
 def office_chair() -> tuple[list[FurniturePart], list[SupportSurface]]:
     seat = part("seat", (.8, .12, .65), (0, .46, .05), radius=.035)
     p = [seat, part("gas_lift", (.075, .3, .075), (0, .27, 0), "metal", shape="cylinder"),
-         part("high_back", (.65, .48, .12), (0, .76, -.28), "primary_dark", radius=.04),
+         part("high_back", (.65, .48, .12), (0, .76, -.28), "inset", radius=.04),
          part("headrest", (.42, .08, .12), (0, .96, -.28), radius=.025)]
     for side in (-1, 1):
         p += [part(f"back_color_{side}", (.09, .4, .025), (side * .25, .76, -.205), collision=False),

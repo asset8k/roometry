@@ -15,10 +15,12 @@ class RunBudget:
         usage: RunUsage,
         authorize: Callable[[], Awaitable[None]],
         cancelled: Callable[[], bool],
+        *, run_id: str | None = None,
     ):
         self.limits, self.usage = limits, usage
         self.authorize, self.cancelled = authorize, cancelled
         self.exhausted = False
+        self.run_id = run_id
 
     def sync(self, usage: RunUsage) -> None:
         self.usage = RunUsage(

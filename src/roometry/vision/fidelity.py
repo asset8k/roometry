@@ -11,6 +11,8 @@ from pydantic import Field
 
 from roometry.scenes.schemas import Identifier, RoomScene, SceneModel, Wall
 from roometry.vision.importance import importance
+from roometry.vision.interpretations import resolve_interpretations
+from roometry.vision.appearance import resolve_appearance
 from roometry.vision.spatial import planar_gap
 from roometry.vision.wall_axes import wall_axis
 from roometry.vision.schemas import RoomAnalysisResponse
@@ -36,6 +38,8 @@ class FidelityReport(SceneModel):
 
 
 def evaluate_fidelity(analysis: RoomAnalysisResponse, scene: RoomScene, wall_map: dict[str, Wall] | None = None) -> FidelityReport:
+    analysis, interpretation_errors = resolve_interpretations(analysis, scene.interpretation_corrections)
+    analysis, appearance_errors = resolve_appearance(analysis, scene.appearance_corrections)
     obs = analysis.observations
     wall_map = wall_map if wall_map is not None else {item.observation_id: item.wall for item in scene.wall_mapping}
     objects = {obj.id: obj for obj in scene.objects}
@@ -68,10 +72,15 @@ def evaluate_fidelity(analysis: RoomAnalysisResponse, scene: RoomScene, wall_map
     for binding in scene.wall_axis_bindings:
         assigned = wall_map.get(binding.observation_id)
         check("wall", [binding.observation_id], assigned is not None and wall_axis(assigned) == binding.axis, "Preserve this wall's assignment to the measured room dimension.", binding.source != "estimated")
-    major = [o for o in obs.objects if importance(o) == 0 and o.confidence != "low"]
+    for entity_id, message in interpretation_errors:
+        check("support", [entity_id], False, message)
+    for entity_id, message in appearance_errors:
+        check("color", [entity_id], False, message)
+    major = [o for o in [*obs.objects, *obs.openings] if importance(o) == 0 and o.confidence != "low"]
+    retained = objects.keys() | openings.keys()
     for source in major:
-        check("coverage", [source.id], source.id in objects, "Retain the observed major furniture.")
-    coverage = sum(o.id in objects for o in major) / len(major) if major else 1.0
+        check("coverage", [source.id], source.id in retained, "Retain the observed major furniture and openings.")
+    coverage = sum(o.id in retained for o in major) / len(major) if major else 1.0
     opposite = {"north": "south", "south": "north", "east": "west", "west": "east"}
     for relation in obs.relationships:
         ids = [relation.subject_id, relation.target_id]
@@ -103,6 +112,8 @@ def evaluate_fidelity(analysis: RoomAnalysisResponse, scene: RoomScene, wall_map
         obj = objects.get(source.id)
         if obj is None:
             continue
+        if source.support_object_id is not None:
+            check("support", [source.id, source.support_object_id], obj.support_object_id == source.support_object_id, "Preserve the observed or audited supporting object.")
         if source.wall_id is not None and source.wall_id in wall_map and source.placement == "floor":
             wall = wall_map[source.wall_id]
             # Association is weaker than an explicit against_wall relation.
@@ -145,7 +156,7 @@ def evaluate_fidelity(analysis: RoomAnalysisResponse, scene: RoomScene, wall_map
         unassessed.append("The physical wall corresponding to each entered room dimension is unconfirmed.")
         if recognizable:
             recognizable = None
-    if coverage < .8 or any(o.confidence == "high" and o.id not in objects for o in major):
+    if coverage < .8 or any(o.confidence == "high" and o.id not in retained for o in major):
         recognizable = False
     elif recognizable and unoriented:
         recognizable = None

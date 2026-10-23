@@ -1,6 +1,7 @@
 """Photo-grounded structured construction using the bounded Responses transport."""
 
 import json
+from typing import Literal
 from copy import deepcopy
 from openai.types.responses import ResponseInputContentParam
 from dataclasses import asdict
@@ -18,6 +19,8 @@ from roometry.vision.catalog import bind_catalog, dimension_defaults
 from roometry.vision.errors import AnalysisFailure
 from roometry.vision.evidence import photo_content, strict_schema
 from roometry.vision.importance import importance
+from roometry.vision.interpretations import resolve_interpretations
+from roometry.vision.recovery import repair_scope, wall_repair_allowed
 from roometry.vision.prompts import SCENE_PROPOSAL_INSTRUCTIONS
 from roometry.vision.proposal_schemas import ProposalIssue, SceneDraft
 from roometry.vision.proposals import Measurements
@@ -32,8 +35,10 @@ def build_proposal_request(
     draft: SceneDraft | None,
     issues: list[ProposalIssue],
     images: list[bytes] | None = None,
+    *, operation: Literal["scene_proposal", "scene_repair"] = "scene_proposal",
 ) -> ResponseCreateParamsNonStreaming:
     bindings = []
+    alternatives = []
     for obj in analysis.observations.objects:
         models = []
         options = candidates(obj.type, obj.placement) if obj.type is not None else ()
@@ -46,7 +51,12 @@ def build_proposal_request(
                     "default_dimensions_m": dimension_defaults(obj, asset.asset_id, placement).model_dump(),
                     "support_surfaces": [asdict(s) for s in object_surfaces(asset.asset_id, placement)],
                 }
-            models.append({"asset_id": asset.asset_id, "label": asset.label, "configurations": configurations})
+            roles = {part.material for part in asset.parts if not part.placements or obj.placement is None or obj.placement in part.placements}
+            fields = roles & {"wood", "metal", "linen", "inset", "rubber", "enamel"}
+            if roles & {"primary", "primary_dark", "primary_metal", "primary_ceramic"}:
+                fields.add("color")
+            models.append({"asset_id": asset.asset_id, "label": asset.label, "configurations": configurations,
+                           "appearance_fields": sorted(fields)})
         bindings.append(
             {
                 "id": obj.id,
@@ -64,11 +74,32 @@ def build_proposal_request(
                 ),
             }
         )
-    bound, _ = bind_catalog(analysis, draft) if draft is not None else (None, [])
+        # Keep ordinary bindings exact, and explicitly separate uncertain
+        # interpretations. Using an alternative requires an audited correction.
+        types = [obj.type] if obj.type is not None else []
+        if obj.confidence != "high" and obj.alternative_type is not None:
+            types.append(obj.alternative_type)
+        for object_type in dict.fromkeys(types):
+            placement = obj.placement if obj.placement_confidence == "high" else None
+            for asset in candidates(object_type, placement):
+                for configuration in sorted(ASSET_REGISTRY[asset.asset_id].placements):
+                    if placement is not None and placement != configuration:
+                        continue
+                    if object_type == obj.type and (obj.placement is None or configuration == obj.placement):
+                        continue
+                    alternatives.append({
+                        "id": obj.id, "type": object_type, "placement": configuration,
+                        "asset_id": asset.asset_id, "label": asset.label,
+                        "default_dimensions_m": dimension_defaults(obj, asset.asset_id, configuration).model_dump(),
+                        "support_surfaces": [asdict(s) for s in object_surfaces(asset.asset_id, configuration)],
+                        "requires_interpretation_correction": True,
+                    })
+    effective, _ = resolve_interpretations(analysis, draft.interpretation_corrections) if draft is not None else (analysis, [])
+    bound, _ = bind_catalog(effective, draft) if draft is not None else (None, [])
     normalized = None
     if bound is not None:
         normalized = bound.model_copy(update={
-            "objects": anchor_placements(analysis, measurements.dimensions, bound),
+            "objects": anchor_placements(effective, measurements.dimensions, bound),
         })
     by_id = {obj.id: obj for obj in normalized.objects} if normalized else {}
     attachment_constraints = []
@@ -109,6 +140,15 @@ def build_proposal_request(
         "estimated_axes": measurements.estimated,
         "wall_axes": analysis.wall_axes.model_dump(mode="json") if analysis.wall_axes else None,
         "asset_bindings": bindings,
+        "hypothesis_alternatives": alternatives,
+        "room_shell": {
+            "width_m": measurements.dimensions.width_m,
+            "length_m": measurements.dimensions.length_m,
+            "height_m": measurements.dimensions.height_m,
+            "walls": {wall: {"span_m": getattr(measurements.dimensions, axis), "offset_axis": offset_axis}
+                      for wall, axis, offset_axis in (("north", "width_m", "x"), ("south", "width_m", "x"), ("west", "length_m", "z"), ("east", "length_m", "z"))},
+            "opening_rules": "offset_m + width_m <= wall span; sill_height_m + height_m <= room height; doors have sill_height_m=0",
+        },
         "construction_order": {
             "anchors": [item.id for item in [*analysis.observations.openings, *analysis.observations.objects] if importance(item) == 0],
             "secondary": [item.id for item in analysis.observations.objects if importance(item) == 1],
@@ -117,10 +157,22 @@ def build_proposal_request(
         # Feedback describes the assembled poses, including server attachments,
         # so repair must see those same coordinates rather than the raw draft.
         "previous_draft": (normalized or draft).model_dump(mode="json") if draft is not None else None,
+        "raw_previous_draft": draft.model_dump(mode="json") if draft is not None else None,
+        "repair": {
+            "mode": "upsert", "deletions_allowed": False,
+            "editable_entity_ids": sorted(repair_scope(analysis, draft, issues)),
+            "instruction": "Return only changed or restored observed entries. Omitted entries remain unchanged. Keep unaffected entries byte-for-byte if repeated. raw_previous_draft is the merge base; previous_draft shows attachment-adjusted coordinates used by geometry checks.",
+        } if operation == "scene_repair" and draft is not None else None,
         "attachment_constraints": attachment_constraints,
         "validation_feedback": [item.model_dump(mode="json") for item in issues],
     }
     schema = strict_schema(SceneDraft)
+    # Strict Structured Outputs follows property order. Resolve shell first in
+    # the single construction response; this does not add another Sol request.
+    order = ("wall_assignments", "openings", "interpretation_corrections", "objects", "estimate_corrections", "appearance_corrections", "assumptions", "warnings")
+    schema["properties"] = {key: schema["properties"][key] for key in order}
+    schema["required"] = list(order)
+    editable = repair_scope(analysis, draft, issues) if operation == "scene_repair" and draft is not None else None
     # Constrain each observed wall's axis at decoding time. Uniqueness and
     # topology still receive deterministic checks after decoding.
     if analysis.observations.walls:
@@ -132,12 +184,47 @@ def build_proposal_request(
             if observed_wall.id in by_id:
                 variant["properties"]["wall"]["enum"] = list(AXIS_WALLS[by_id[observed_wall.id].axis])
             variants.append(variant)
-        schema["properties"]["wall_assignments"].update(items={"anyOf": variants}, minItems=len(variants), maxItems=len(variants))
+        schema["properties"]["wall_assignments"].update(items={"anyOf": variants}, minItems=0 if operation == "scene_repair" and draft is not None else len(variants), maxItems=len(variants))
+    else:
+        schema["properties"]["wall_assignments"]["maxItems"] = 0
+    if editable is not None and not wall_repair_allowed(analysis, issues):
+        schema["properties"]["wall_assignments"]["maxItems"] = 0
+    object_ids = [obj.id for obj in analysis.observations.objects if editable is None or obj.id in editable]
+    if object_ids:
+        schema["$defs"]["DraftObject"]["properties"]["id"]["enum"] = object_ids
+    else:
+        schema["properties"]["objects"]["maxItems"] = 0
+    if analysis.observations.openings:
+        axes = {binding.observation_id: binding.axis for binding in analysis.wall_axes.bindings} if analysis.wall_axes else {}
+        opening_variants = []
+        for opening in analysis.observations.openings:
+            if editable is not None and opening.id not in editable:
+                continue
+            variant = deepcopy(schema["$defs"]["DraftOpening"])
+            props = variant["properties"]
+            props["id"]["enum"] = [opening.id]
+            if opening.wall_id in axes:
+                axis = axes[opening.wall_id]
+                span = getattr(measurements.dimensions, axis)
+                props["wall"]["enum"] = list(AXIS_WALLS[axis])
+                props["width_m"]["maximum"] = span
+                props["offset_m"]["maximum"] = span
+            props["height_m"]["maximum"] = measurements.dimensions.height_m
+            props["sill_height_m"]["maximum"] = measurements.dimensions.height_m
+            if opening.type == "door":
+                props["sill_height_m"]["enum"] = [0]
+            opening_variants.append(variant)
+        if opening_variants:
+            schema["properties"]["openings"]["items"] = {"anyOf": opening_variants}
+        else:
+            schema["properties"]["openings"]["maxItems"] = 0
+    else:
+        schema["properties"]["openings"]["maxItems"] = 0
     content: list[ResponseInputContentParam] = [{"type": "input_text", "text": json.dumps(context, ensure_ascii=True)}]
     if images is not None:
         content.extend(photo_content(analysis.observations.image_ids, images, settings.analysis_max_request_bytes))
     payload: ResponseCreateParamsNonStreaming = {
-        "model": settings.model_name,
+        "model": settings.model_route(operation).model,
         "instructions": SCENE_PROPOSAL_INSTRUCTIONS,
         "input": [
             {
@@ -158,8 +245,9 @@ def build_proposal_request(
         "tools": [],
         "truncation": "disabled",
     }
-    if settings.scene_reasoning_effort != "default":
-        payload["reasoning"] = {"effort": settings.scene_reasoning_effort}
+    effort = settings.model_route(operation).reasoning_effort
+    if effort != "default":
+        payload["reasoning"] = {"effort": effort}
     if (
         len(json.dumps(payload, ensure_ascii=True).encode())
         > settings.analysis_max_request_bytes

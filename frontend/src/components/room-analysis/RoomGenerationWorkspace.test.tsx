@@ -103,8 +103,43 @@ describe('guided generation workspace', () => {
     }
     const html = render({ phase: 'partial', run })
     expect(html).toContain('The major arrangement is not yet established')
-    expect(html).toContain('Major furniture retained: 50%')
+    expect(html).toContain('Major furniture and openings retained: 50%')
     expect(html).toContain('Sizes remain approximate')
+    expect(html).toContain('3D room viewer')
+  })
+  it('shows a bounded visual correction without claiming a second photo review', () => {
+    const run = finishedRun(input, true)
+    run.proposal!.visual_review = { status: 'reviewed', repair: 'accepted', message: 'One correction passed deterministic checks.',
+      reviewed_scene_hash: 'a'.repeat(64), result_scene_hash: 'b'.repeat(64), revised_scene_visually_reviewed: false, applied_findings: [0],
+      judgment: { verdict: 'needs_correction', summary: 'The facing direction differed.', limitations: ['Exact sizes remain uncertain.'], findings: [{
+        kind: 'orientation', entity_ids: ['bed_observed'], confidence: 'high', severity: 'major',
+        source_image_ids: [run.analysis!.observations.image_ids[0]], view_ids: ['top'],
+        description: 'The functional front points away from its observed direction.', correction: 'Turn toward its observed target.',
+      }] } }
+    const html = render({ phase: 'partial', run })
+    expect(html).toContain('<summary>Photo comparison</summary>')
+    expect(html).toContain('has not received a second visual comparison')
+    expect(html).toContain('The functional front points away')
+    expect(html).toContain('Later edits are not visually rechecked')
+    expect(html).toContain('Adjusted toward the review target; photo likeness still needs checking.')
+    expect(html).toContain('3D room viewer')
+  })
+  it('keeps the viewer available when visual review is unavailable', () => {
+    const run = finishedRun(input)
+    run.proposal!.visual_review = { status: 'unavailable', repair: 'not_attempted', judgment: null,
+      message: 'The visual check could not finish. The previously validated scene is retained.',
+      reviewed_scene_hash: 'a'.repeat(64), result_scene_hash: 'a'.repeat(64), revised_scene_visually_reviewed: false }
+    const html = render({ phase: 'completed', run })
+    expect(html).toContain('The visual check could not finish')
+    expect(html).toContain('3D room viewer')
+  })
+  it('discloses evidence-backed interpretation corrections while keeping the viewer available', () => {
+    const run = finishedRun(input)
+    run.working_scene!.interpretation_corrections = [{ entity_id: 'bed_observed', field: 'placement', previous_value: 'wall', revised_value: 'floor',
+      source_image_ids: [run.analysis!.observations.image_ids[0]], reason: 'Visible feet meet the floor beneath this item.' }]
+    const html = render({ phase: 'completed', run })
+    expect(html).toContain('<summary>Revised photo interpretations</summary>')
+    expect(html).toContain('Visible feet meet the floor beneath this item.')
     expect(html).toContain('3D room viewer')
   })
   it('opens a provisional scene even when every object is retained but fidelity needs correction', () => {

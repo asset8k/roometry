@@ -4,6 +4,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import type { ModelProps } from './ObjectModels'
 import { getCatalogAsset } from './asset-catalog'
 import type { AssetPlacement, FurnitureMaterial, FurniturePart } from './furniture-catalog'
+import roleColors from '../../data/material-colors.generated.json'
 
 interface Finish {
   color: string; roughness: number; metalness: number
@@ -16,24 +17,24 @@ export function palette(color: string, overrides?: ModelProps['materialColors'])
     primary: { color, roughness: .78, metalness: 0 },
     primary_dark: { color: `#${new Color(color).multiplyScalar(.7).getHexString()}`, roughness: .88, metalness: 0 },
     primary_metal: { color, roughness: .35, metalness: .55 },
-    wood: { color: '#70543D', roughness: .68, metalness: 0 },
-    metal: { color: '#4F514D', roughness: .35, metalness: .65 },
-    linen: { color: '#E8E2D6', roughness: .95, metalness: 0 },
-    inset: { color: '#383D38', roughness: .85, metalness: 0 },
-    screen: { color: '#15272F', roughness: .2, metalness: .25 },
-    rubber: { color: '#252A28', roughness: .95, metalness: 0 },
-    light: { color: '#FFF0CB', roughness: .55, metalness: 0, emissive: '#FFD9A3', emissiveIntensity: .65 },
-    indicator: { color: '#7CBEBC', roughness: .3, metalness: 0, emissive: '#7CBEBC', emissiveIntensity: .6 },
-    glass: { color: '#E3D3B3', roughness: .2, metalness: 0, transparent: true, opacity: .27, depthWrite: false },
+    wood: { color: roleColors.wood, roughness: .68, metalness: 0 },
+    metal: { color: roleColors.metal, roughness: .35, metalness: .65 },
+    linen: { color: roleColors.linen, roughness: .95, metalness: 0 },
+    inset: { color: roleColors.inset, roughness: .85, metalness: 0 },
+    screen: { color: roleColors.screen, roughness: .2, metalness: .25 },
+    rubber: { color: roleColors.rubber, roughness: .95, metalness: 0 },
+    light: { color: roleColors.light, roughness: .55, metalness: 0, emissive: '#FFD9A3', emissiveIntensity: .65 },
+    indicator: { color: roleColors.indicator, roughness: .3, metalness: 0, emissive: roleColors.indicator, emissiveIntensity: .6 },
+    glass: { color: roleColors.glass, roughness: .2, metalness: 0, transparent: true, opacity: .27, depthWrite: false },
     primary_ceramic: { color, roughness: .22, metalness: 0 },
-    chrome: { color: '#AEB7B4', roughness: .22, metalness: .8 },
-    enamel: { color: '#E3E4DC', roughness: .25, metalness: 0 },
-    clear_glass: { color: '#CADDDC', roughness: .16, metalness: .05, transparent: true, opacity: .18, depthWrite: false },
-    foliage: { color: '#567344', roughness: .85, metalness: 0 },
-    foliage_dark: { color: '#354D32', roughness: .9, metalness: 0 },
-    soil: { color: '#44372A', roughness: 1, metalness: 0 },
-    paper: { color: '#F0ECDD', roughness: .9, metalness: 0 },
-    mirror: { color: '#B7CCCE', roughness: .08, metalness: .25 },
+    chrome: { color: roleColors.chrome, roughness: .22, metalness: .8 },
+    enamel: { color: roleColors.enamel, roughness: .25, metalness: 0 },
+    clear_glass: { color: roleColors.clear_glass, roughness: .16, metalness: .05, transparent: true, opacity: .18, depthWrite: false },
+    foliage: { color: roleColors.foliage, roughness: .85, metalness: 0 },
+    foliage_dark: { color: roleColors.foliage_dark, roughness: .9, metalness: 0 },
+    soil: { color: roleColors.soil, roughness: 1, metalness: 0 },
+    paper: { color: roleColors.paper, roughness: .9, metalness: 0 },
+    mirror: { color: roleColors.mirror, roughness: .08, metalness: .25 },
   }
   if (overrides) {
     for (const key of ['wood', 'metal', 'linen', 'inset', 'rubber', 'enamel'] as const) {

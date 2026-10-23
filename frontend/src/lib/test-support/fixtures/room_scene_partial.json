@@ -23,6 +23,8 @@
     "wall_axis_bindings": [],
     "wall_mapping": [],
     "estimate_corrections": [],
+    "interpretation_corrections": [],
+    "appearance_corrections": [],
     "openings": [
       {
         "id": "window_observed",
@@ -193,6 +195,7 @@
     "valid": true
   },
   "fidelity": null,
+  "visual_review": null,
   "wall_axes": null,
   "issues": [
     {

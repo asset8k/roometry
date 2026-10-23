@@ -109,6 +109,9 @@ async def harness(tmp_path):
                 app_environment="test",
                 upload_storage_dir=tmp_path / "photos",
                 analysis_enabled=True,
+                # Existing transport tests isolate their stage. Dedicated review
+                # tests explicitly enable the full pipeline with mock responses.
+                visual_review_enabled=False,
                 openai_api_key="test-provider-key",
             )
             app = create_app(settings, analysis_client=sdk)

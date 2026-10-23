@@ -264,10 +264,10 @@ async def test_repair_request_limit_preserves_partial_without_an_extra_paid_call
     actions.append(scene_action(bad))
     original = service_module.build_proposal_request
 
-    def limited(settings, analysis, measurements, draft, issues, images=None):
+    def limited(settings, analysis, measurements, draft, issues, images=None, *, operation="scene_proposal"):
         if draft is not None:
             raise AnalysisFailure(413, "request_too_large", "The repair request exceeds its input limit.")
-        return original(settings, analysis, measurements, draft, issues, images)
+        return original(settings, analysis, measurements, draft, issues, images, operation=operation)
 
     monkeypatch.setattr(service_module, "build_proposal_request", limited)
     req = body(analysis, dimensions=confirmed(length_m=4, height_m=2.6))
@@ -298,7 +298,7 @@ def test_conflict_keeps_a_high_confidence_sofa_over_a_side_table_regardless_of_i
 
 
 @pytest.mark.anyio
-async def test_best_partial_prefers_a_valid_sofa_to_more_minor_objects(harness):
+async def test_repair_cannot_trade_valid_unaffected_chairs_for_a_restored_sofa(harness):
     app, client, _, actions = harness
     response = await analyzed(harness)
     cached = app.state.analysis_service._states[response['input_id']].result
@@ -322,5 +322,6 @@ async def test_best_partial_prefers_a_valid_sofa_to_more_minor_objects(harness):
     assert proposal.status_code == 200, proposal.text
     result = proposal.json()
     assert result['status'] == 'partial' and result['validation']['valid']
-    assert [obj['id'] for obj in result['scene']['objects']] == ['sofa']
-    assert {item['entity_id'] for item in result['unresolved_entities']} == {'chair_0', 'chair_1'}
+    assert [obj['id'] for obj in result['scene']['objects']] == ['chair_0', 'chair_1']
+    assert any(item['code'] == 'repair_failed' for item in result['issues'])
+    assert {item['entity_id'] for item in result['unresolved_entities']} == {'sofa'}

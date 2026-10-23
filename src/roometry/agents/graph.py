@@ -11,6 +11,7 @@ from roometry.agents.nodes import (
     execute_tool,
     finalize,
     guard,
+    review_scene,
 )
 from roometry.agents.state import AgentState
 
@@ -30,6 +31,10 @@ def after_advance(state: AgentState) -> str:
 
 
 def after_tools(state: AgentState) -> str:
+    if (state.status == "running" and state.proposal is not None and state.proposal.scene is not None
+        and state.proposal.visual_review is None and state.working_scene == state.base_scene
+        and state.tool_feedback and state.tool_feedback[-1].name == "propose_scene"):
+        return "review_scene"
     return (
         "clarify"
         if state.status == "awaiting_answer" and state.pending_question
@@ -46,6 +51,7 @@ def build_graph(
     graph.add_node("advance", advance)
     graph.add_node("tools", execute_tool)
     graph.add_node("clarify", clarify)
+    graph.add_node("review_scene", review_scene)
     graph.add_node("finalize", finalize)
     graph.add_edge(START, "guard")
     graph.add_conditional_edges(
@@ -55,8 +61,9 @@ def build_graph(
         "advance", after_advance, {"tools": "tools", "guard": "guard", "clarify": "clarify"}
     )
     graph.add_conditional_edges(
-        "tools", after_tools, {"clarify": "clarify", "guard": "guard"}
+        "tools", after_tools, {"clarify": "clarify", "guard": "guard", "review_scene": "review_scene"}
     )
+    graph.add_edge("review_scene", "guard")
     graph.add_edge("clarify", "guard")
     graph.add_edge("finalize", END)
     return graph.compile(checkpointer=checkpointer, interrupt_after=interrupt_after)

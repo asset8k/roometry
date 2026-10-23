@@ -6,9 +6,13 @@ parse so usage is available even when a completed output fails semantic validati
 
 import base64
 import json
+import logging
+from collections import deque
 from copy import deepcopy
+from dataclasses import asdict
+from time import perf_counter
 
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, APIConnectionError, APIError, APIStatusError, APITimeoutError
 from openai.types.responses import (
     Response,
     ResponseInputContentParam,
@@ -23,9 +27,9 @@ from openai.types.responses.response_create_params import (
 from pydantic import ValidationError
 
 from roometry.config import Settings
-from roometry.model_calls import current_observer
+from roometry.model_calls import ModelAttempt, ModelOperation, current_observer
 from roometry.uploads.schemas import PreparedRoomInput
-from roometry.vision.diagnostics import validation_diagnostics
+from roometry.vision.diagnostics import provider_id, validation_diagnostics
 from roometry.vision.errors import AnalysisFailure
 from roometry.vision.prompts import OBSERVATION_INSTRUCTIONS, observation_context
 from roometry.vision.schemas import RoomObservations
@@ -37,6 +41,7 @@ class PhotoAnalyzer:
         self.settings = settings
         self._client = client
         self._owns_client = client is None
+        self.usage_records: deque[ModelAttempt] = deque(maxlen=256)
 
     def build_request(
         self, prepared: PreparedRoomInput, images: list[bytes]
@@ -86,7 +91,7 @@ class PhotoAnalyzer:
                     properties[name]["maxItems"] = len(image_ids)
         schema["properties"]["image_ids"]["minItems"] = len(image_ids)
         payload: ResponseCreateParamsNonStreaming = {
-            "model": self.settings.model_name,
+            "model": self.settings.model_route("analysis").model,
             "instructions": OBSERVATION_INSTRUCTIONS,
             "input": [{"role": "user", "content": content}],
             "text": {
@@ -102,6 +107,9 @@ class PhotoAnalyzer:
             "tools": [],
             "truncation": "disabled",
         }
+        effort = self.settings.model_route("analysis").reasoning_effort
+        if effort != "default":
+            payload["reasoning"] = {"effort": effort}
         # This conservative encoding includes schema/instructions/context and all
         # images. No photos are silently dropped to fit the provider request cap.
         if (
@@ -115,7 +123,16 @@ class PhotoAnalyzer:
             )
         return payload
 
-    async def request(self, payload: ResponseCreateParamsNonStreaming) -> Response:
+    async def request(
+        self, payload: ResponseCreateParamsNonStreaming, *, operation: ModelOperation
+    ) -> Response:
+        # Routing belongs to trusted application code, never model tool arguments.
+        route = self.settings.model_route(operation)
+        payload = {**payload, "model": route.model}
+        if route.reasoning_effort == "default":
+            payload.pop("reasoning", None)
+        else:
+            payload["reasoning"] = {"effort": route.reasoning_effort}
         if self._client is None:
             key = self.settings.openai_api_key
             if key is None or not key.get_secret_value().strip():
@@ -134,15 +151,58 @@ class PhotoAnalyzer:
         if observer is not None:
             await observer.before_call()
         response = None
+        started, outcome, request_id = perf_counter(), "interrupted", None
         try:
             response = await self._client.with_options(
                 max_retries=0, timeout=self.settings.analysis_timeout_seconds
             ).responses.create(**payload)
+            outcome = (
+                response.status if isinstance(response, Response) else "unexpected_response"
+            )
+        except APITimeoutError:
+            outcome = "timeout"
+            raise
+        except APIStatusError as error:
+            outcome = "rate_limited" if error.status_code == 429 else "provider_error"
+            request_id = provider_id(error.request_id)
+            raise
+        except APIConnectionError:
+            outcome = "connection_error"
+            raise
+        except APIError:
+            outcome = "provider_error"
+            raise
         finally:
+            usage = response.usage if isinstance(response, Response) else None
             if observer is not None:
-                observer.after_call(
-                    response.usage if isinstance(response, Response) else None
-                )
+                observer.after_call(usage)
+            record = ModelAttempt(
+                operation=operation,
+                run_id=getattr(observer, "run_id", None),
+                requested_model=route.model,
+                model=(response.model or route.model) if isinstance(response, Response) else route.model,
+                outcome=outcome or "unknown",
+                latency_ms=round((perf_counter() - started) * 1000),
+                input_tokens=usage.input_tokens if usage else None,
+                output_tokens=usage.output_tokens if usage else None,
+                total_tokens=usage.total_tokens if usage else None,
+                cached_input_tokens=getattr(
+                    getattr(usage, "input_tokens_details", None), "cached_tokens", None
+                ),
+                reasoning_tokens=getattr(
+                    getattr(usage, "output_tokens_details", None), "reasoning_tokens", None
+                ),
+                response_id=provider_id(getattr(response, "id", None)),
+                provider_request_id=(
+                    provider_id(getattr(response, "_request_id", None)) or request_id
+                ),
+            )
+            self.usage_records.append(record)
+            logging.getLogger(__name__).log(
+                logging.INFO if outcome == "completed" else logging.WARNING,
+                "Room provider request completed: %s", json.dumps(asdict(record)),
+                extra={"model_usage": asdict(record)},
+            )
         if not isinstance(response, Response):
             raise AnalysisFailure(
                 502,

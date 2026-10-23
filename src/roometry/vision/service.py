@@ -9,7 +9,9 @@ import logging
 from collections import deque
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
+from functools import partial
 from time import perf_counter
+from typing import Literal
 from uuid import uuid4
 
 import anyio
@@ -18,6 +20,7 @@ from openai.types.responses import Response, ResponseUsage
 from pydantic import ValidationError
 
 from roometry.config import Settings
+from roometry.model_calls import ModelOperation
 from roometry.uploads.errors import UploadFailure
 from roometry.uploads.schemas import PreparedRoomInput
 from roometry.uploads.storage import InputStorage
@@ -35,6 +38,7 @@ from roometry.vision.fidelity import evaluate_fidelity
 from roometry.vision.partial import assemble_partial
 from roometry.vision.importance import partial_quality
 from roometry.vision.proposal_request import build_proposal_request
+from roometry.vision.recovery import merge_repair
 from roometry.vision.proposal_schemas import (
     AXES,
     DimensionName,
@@ -57,12 +61,18 @@ class AnalysisState:
     scene_attempts: int = 0
     proposal_key: str | None = None
     proposal: SceneProposalResponse | None = None
+    review_key: str | None = None
+    review_attempted: bool = False
+    visual_repair_attempted: bool = False
+    reviewed_proposal: SceneProposalResponse | None = None
 
 
 @dataclass(frozen=True)
 class AttemptUsage:
     analysis_id: str
     model: str
+    requested_model: str
+    operation: ModelOperation
     attempt: int
     outcome: str
     stage: str
@@ -81,7 +91,8 @@ class AnalysisService:
         self.settings, self.storage, self.analyzer = settings, storage, analyzer
         self._capacity = anyio.Semaphore(1)
         self._states: dict[str, AnalysisState] = {}
-        # Bounded diagnostic history; structured log records also cover failures.
+        # Stage-validation diagnostics. The analyzer's shared provider ledger
+        # also includes decisions; these two histories must not be added together.
         # Unknown usage stays null, including cancelled/ambiguous network requests.
         self.usage_records: deque[AttemptUsage] = deque(maxlen=256)
 
@@ -146,6 +157,9 @@ class AnalysisService:
         response: Response | None,
         stage: str = "analysis",
         details: dict[str, object] | None = None,
+        *,
+        operation: ModelOperation = "analysis",
+        model: str | None = None,
     ) -> None:
         usage = getattr(response, "usage", None)
         usage = usage if isinstance(usage, ResponseUsage) else None
@@ -155,10 +169,17 @@ class AnalysisService:
 
         input_details = getattr(usage, "input_tokens_details", None)
         output_details = getattr(usage, "output_tokens_details", None)
+        requested_model = model or self.settings.model_route(operation).model
+        actual_model = (
+            response.model or requested_model
+            if isinstance(response, Response) else requested_model
+        )
 
         record = AttemptUsage(
             analysis_id=state.analysis_id,
-            model=self.settings.model_name,
+            model=actual_model,
+            requested_model=requested_model,
+            operation=operation,
             attempt=state.attempts if stage == "analysis" else state.scene_attempts,
             stage=stage,
             outcome=outcome,
@@ -271,7 +292,7 @@ class AnalysisService:
             retry = False
             failure: AnalysisFailure | None = None
             try:
-                response = await self.analyzer.request(payload)
+                response = await self.analyzer.request(payload, operation="analysis")
                 observations = parse_observations(
                     response,
                     [image.image_id for image in prepared.images],
@@ -354,7 +375,10 @@ class AnalysisService:
                     "The analysis provider returned an invalid response.",
                 ) from None
             finally:
-                self._record(state, started, outcome, response, details=details)
+                self._record(
+                    state, started, outcome, response,
+                    details=details, model=payload["model"],
+                )
 
             if failure is not None:
                 if (
@@ -576,9 +600,15 @@ class AnalysisService:
         problems = []
         repair_failure: AnalysisFailure | None = None
         while state.scene_attempts < 2:
+            # Reservation is shared by every run/retry using this analysis.
+            # An ambiguous first request still spends the sole Sol allowance.
+            operation: Literal["scene_proposal", "scene_repair"] = (
+                "scene_proposal" if state.scene_attempts == 0 else "scene_repair"
+            )
+            previous_draft = draft
             try:
                 payload = await anyio.to_thread.run_sync(
-                    build_proposal_request,
+                    partial(build_proposal_request, operation=operation),
                     self.settings,
                     analysis,
                     measurements,
@@ -600,7 +630,7 @@ class AnalysisService:
             repair_failure = None
             try:
                 with anyio.fail_after(self.settings.analysis_timeout_seconds):
-                    response = await self.analyzer.request(payload)
+                    response = await self.analyzer.request(payload, operation=operation)
                 try:
                     decoded = response_json(
                         response, self.settings.analysis_max_output_bytes
@@ -617,6 +647,8 @@ class AnalysisService:
                     decoded = None
                 try:
                     draft = SceneDraft.model_validate(decoded)
+                    if operation == "scene_repair" and previous_draft is not None:
+                        draft = merge_repair(analysis, previous_draft, draft, problems)
                 except (ValidationError, ValueError, RecursionError) as error:
                     details = details or (
                         validation_diagnostics(error, SceneDraft)
@@ -641,6 +673,11 @@ class AnalysisService:
                         candidate = await anyio.to_thread.run_sync(
                             assemble_partial, analysis, measurements, draft
                         )
+                        # Send omissions/dependent failures to the same bounded
+                        # repair. A global inventory mismatch alone used to hide
+                        # exactly which missing observations needed restoring.
+                        if candidate[0] is not None:
+                            problems = [*candidate[2], *[p for p in problems if p.entity_ids]][:50]
                         retained = candidate[0]
                         if retained is not None:
                             major_high, major, secondary, total = partial_quality(retained, observed)
@@ -728,9 +765,11 @@ class AnalysisService:
                     stage="scene_proposal",
                     details={
                         "output_token_limit": self.settings.scene_max_output_tokens,
-                        "reasoning_effort": self.settings.scene_reasoning_effort,
+                        "reasoning_effort": self.settings.model_route(operation).reasoning_effort,
                         **(details or {}),
                     },
+                    operation=operation,
+                    model=payload["model"],
                 )
             # Deletion/replacement/expiry while awaiting a paid call revokes results
             # and prevents repair from sending the observations again.

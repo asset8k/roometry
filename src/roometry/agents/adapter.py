@@ -99,6 +99,7 @@ class RoomAgent:
             ),
             "unresolved_repair_available": False,
             "proposal_status": state.proposal.status if state.proposal else None,
+            "visual_review": state.proposal.visual_review.model_dump(mode="json") if state.proposal and state.proposal.visual_review else None,
             "unresolved_entities": (
                 [
                     item.model_dump(mode="json")
@@ -124,7 +125,7 @@ class RoomAgent:
             },
         }
         payload = {
-            "model": self.settings.model_name,
+            "model": self.settings.model_route("agent_decision").model,
             "instructions": AGENT_INSTRUCTIONS,
             "input": [
                 {
@@ -153,7 +154,7 @@ class RoomAgent:
             return failed("request_too_large")
         try:
             response = await self.provider.request(
-                cast(ResponseCreateParamsNonStreaming, payload)
+                cast(ResponseCreateParamsNonStreaming, payload), operation="agent_decision"
             )
         except APITimeoutError:
             return failed("analysis_timeout")

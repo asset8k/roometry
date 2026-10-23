@@ -318,6 +318,7 @@ export type WallCoverage = number | null;
 export type RelativeLocation = string | null;
 export type WallId = string | null;
 export type Placement = ("floor" | "surface" | "wall" | "ceiling") | null;
+export type PlacementConfidence = ("low" | "medium" | "high") | null;
 export type SupportObjectId = string | null;
 export type AppearsFixed = boolean | null;
 export type Color = string | null;
@@ -631,6 +632,7 @@ export interface ObjectObservation {
   relative_location: RelativeLocation;
   wall_id: WallId;
   placement: Placement;
+  placement_confidence?: PlacementConfidence;
   support_object_id: SupportObjectId;
   appears_fixed: AppearsFixed;
   color: Color;

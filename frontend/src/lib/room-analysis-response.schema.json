@@ -582,6 +582,23 @@
           ],
           "title": "Placement"
         },
+        "placement_confidence": {
+          "anyOf": [
+            {
+              "enum": [
+                "low",
+                "medium",
+                "high"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Placement Confidence"
+        },
         "support_object_id": {
           "anyOf": [
             {

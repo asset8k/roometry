@@ -234,6 +234,22 @@ class SceneTools:
         self.analysis = analysis
         self.catalog = catalog if catalog is not None else FurnitureCatalogClient()
 
+    async def review(self, state: AgentState, context: RunContext) -> RunStep:
+        if not self.analysis.settings.visual_review_enabled:
+            return RunStep(action="continue")
+        from roometry.vision.review import VisualReviewer
+        assert state.proposal is not None and state.proposal.scene is not None
+        await context.authorize()
+        proposal = await VisualReviewer(self.analysis).review(
+            state.proposal, context.owner, state.reconstruction_constraints,
+            timeout_seconds=state.limits.step_timeout_seconds,
+        )
+        return RunStep(action="continue", proposal=proposal, feedback=ToolFeedback(
+            name=None, outcome="success" if proposal.visual_review.status == "reviewed" else "error",
+            message=proposal.visual_review.message,
+            details={"stage": "visual_review", "status": proposal.visual_review.status, "repair": proposal.visual_review.repair},
+        ))
+
     async def __call__(self, state: AgentState, context: RunContext) -> RunStep:
         call = state.pending_tool
         if call is None:

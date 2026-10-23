@@ -85,6 +85,55 @@ export type SourceImageIds =
  * @maxItems 200
  */
 export type EstimateCorrections = EstimateCorrection[];
+export type EntityId1 = string;
+export type Field1 = "type" | "placement" | "support_object_id";
+export type PreviousValue = string | null;
+export type RevisedValue = string | null;
+export type Reason1 = string;
+/**
+ * @minItems 1
+ * @maxItems 10
+ */
+export type SourceImageIds1 =
+  | [string]
+  | [string, string]
+  | [string, string, string]
+  | [string, string, string, string]
+  | [string, string, string, string, string]
+  | [string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string, string];
+/**
+ * @maxItems 200
+ */
+export type InterpretationCorrections = InterpretationCorrection[];
+export type EntityId2 = string | null;
+export type Field2 =
+  "color" | "wood" | "metal" | "linen" | "inset" | "rubber" | "enamel" | "floor_color" | "wall_color" | "floor_pattern";
+export type PreviousValue1 = string | null;
+export type RevisedValue1 = string;
+export type Reason2 = string;
+/**
+ * @minItems 1
+ * @maxItems 10
+ */
+export type SourceImageIds2 =
+  | [string]
+  | [string, string]
+  | [string, string, string]
+  | [string, string, string, string]
+  | [string, string, string, string, string]
+  | [string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string, string];
+/**
+ * @maxItems 200
+ */
+export type AppearanceCorrections = AppearanceCorrection[];
 export type Id = string;
 export type Type = "door" | "window";
 export type Wall1 = "north" | "south" | "west" | "east";
@@ -409,7 +458,190 @@ export type Message3 = string;
  */
 export type Checks = FidelityCheck[];
 export type Unassessed = string[];
-export type Status3 = "not_applicable" | "resolved" | "needs_clarification" | "estimated";
+export type Status3 = "reviewed" | "unavailable";
+export type Verdict = "consistent" | "needs_correction" | "uncertain";
+export type Summary = string;
+/**
+ * @maxItems 12
+ */
+export type Findings =
+  | []
+  | [ReviewFinding]
+  | [ReviewFinding, ReviewFinding]
+  | [ReviewFinding, ReviewFinding, ReviewFinding]
+  | [ReviewFinding, ReviewFinding, ReviewFinding, ReviewFinding]
+  | [ReviewFinding, ReviewFinding, ReviewFinding, ReviewFinding, ReviewFinding]
+  | [ReviewFinding, ReviewFinding, ReviewFinding, ReviewFinding, ReviewFinding, ReviewFinding]
+  | [ReviewFinding, ReviewFinding, ReviewFinding, ReviewFinding, ReviewFinding, ReviewFinding, ReviewFinding]
+  | [
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding
+    ]
+  | [
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding
+    ]
+  | [
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding
+    ]
+  | [
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding
+    ]
+  | [
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding,
+      ReviewFinding
+    ];
+export type Kind1 =
+  "missing" | "orientation" | "position" | "proportion" | "color" | "identity" | "support" | "opening";
+/**
+ * @maxItems 8
+ */
+export type EntityIds4 =
+  | []
+  | [string]
+  | [string, string]
+  | [string, string, string]
+  | [string, string, string, string]
+  | [string, string, string, string, string]
+  | [string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string];
+export type Confidence = "low" | "medium" | "high";
+export type Severity = "minor" | "major";
+/**
+ * @minItems 1
+ * @maxItems 10
+ */
+export type SourceImageIds3 =
+  | [string]
+  | [string, string]
+  | [string, string, string]
+  | [string, string, string, string]
+  | [string, string, string, string, string]
+  | [string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string, string];
+/**
+ * @minItems 1
+ * @maxItems 3
+ */
+export type ViewIds =
+  | ["cutaway_nw" | "cutaway_se" | "top"]
+  | ["cutaway_nw" | "cutaway_se" | "top", "cutaway_nw" | "cutaway_se" | "top"]
+  | ["cutaway_nw" | "cutaway_se" | "top", "cutaway_nw" | "cutaway_se" | "top", "cutaway_nw" | "cutaway_se" | "top"];
+export type Description = string;
+export type Correction = string;
+export type Relation = "near" | "against_wall" | "faces";
+export type TargetId = string;
+export type Field3 =
+  "color" | "wood" | "metal" | "linen" | "inset" | "rubber" | "enamel" | "floor_color" | "wall_color" | "floor_pattern";
+export type Value = string;
+export type Repairable = boolean;
+/**
+ * @maxItems 10
+ */
+export type Limitations =
+  | []
+  | [string]
+  | [string, string]
+  | [string, string, string]
+  | [string, string, string, string]
+  | [string, string, string, string, string]
+  | [string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string, string];
+export type EntityId3 = string | null;
+export type Placement1 = "consistent" | "difference" | "uncertain" | "not_applicable";
+export type Appearance = "consistent" | "difference" | "uncertain" | "not_applicable";
+export type Evidence = string;
+/**
+ * @minItems 1
+ * @maxItems 10
+ */
+export type SourceImageIds4 =
+  | [string]
+  | [string, string]
+  | [string, string, string]
+  | [string, string, string, string]
+  | [string, string, string, string, string]
+  | [string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string, string];
+/**
+ * @maxItems 25
+ */
+export type Checks1 = ReviewCheck[];
+export type Repair = "not_needed" | "not_attempted" | "accepted" | "rejected" | "failed";
+export type Message4 = string;
+export type ReviewedSceneHash = string;
+export type ResultSceneHash = string;
+export type RevisedSceneVisuallyReviewed = false;
+/**
+ * @maxItems 12
+ */
+export type AppliedFindings =
+  | []
+  | [number]
+  | [number, number]
+  | [number, number, number]
+  | [number, number, number, number]
+  | [number, number, number, number, number]
+  | [number, number, number, number, number, number]
+  | [number, number, number, number, number, number, number]
+  | [number, number, number, number, number, number, number, number]
+  | [number, number, number, number, number, number, number, number, number]
+  | [number, number, number, number, number, number, number, number, number, number]
+  | [number, number, number, number, number, number, number, number, number, number, number]
+  | [number, number, number, number, number, number, number, number, number, number, number, number];
+export type Status4 = "not_applicable" | "resolved" | "needs_clarification" | "estimated";
 export type ReferenceAxis = ("width_m" | "length_m") | null;
 export type ReferenceSpanM = number | null;
 /**
@@ -450,14 +682,14 @@ export type Code3 =
 /**
  * @maxItems 200
  */
-export type EntityIds4 = string[];
-export type Message4 = string;
+export type EntityIds5 = string[];
+export type Message5 = string;
 /**
  * @maxItems 50
  */
 export type Issues2 = ProposalIssue[];
-export type EntityId1 = string;
-export type Kind1 = "object" | "opening";
+export type EntityId4 = string;
+export type Kind2 = "object" | "opening";
 /**
  * @maxItems 232
  */
@@ -478,6 +710,7 @@ export interface SceneProposalResponse {
   scene: RoomScene | null;
   validation: GeometryReport | null;
   fidelity?: FidelityReport | null;
+  visual_review?: VisualReviewResult | null;
   wall_axes?: WallAxisResolution | null;
   issues: Issues2;
   unresolved_entities?: UnresolvedEntities;
@@ -500,6 +733,8 @@ export interface RoomScene {
   wall_axis_bindings?: WallAxisBindings;
   wall_mapping?: WallMapping;
   estimate_corrections?: EstimateCorrections;
+  interpretation_corrections?: InterpretationCorrections;
+  appearance_corrections?: AppearanceCorrections;
   openings: Openings;
   objects: Objects;
   assumptions: Assumptions;
@@ -536,6 +771,25 @@ export interface EstimateCorrection {
   revised_m: RevisedM;
   reason: Reason;
   source_image_ids: SourceImageIds;
+}
+/**
+ * Photo-backed revision of a classification/attachment hypothesis.
+ */
+export interface InterpretationCorrection {
+  entity_id: EntityId1;
+  field: Field1;
+  previous_value: PreviousValue;
+  revised_value: RevisedValue;
+  reason: Reason1;
+  source_image_ids: SourceImageIds1;
+}
+export interface AppearanceCorrection {
+  entity_id: EntityId2;
+  field: Field2;
+  previous_value: PreviousValue1;
+  revised_value: RevisedValue1;
+  reason: Reason2;
+  source_image_ids: SourceImageIds2;
 }
 export interface Opening {
   id: Id;
@@ -690,8 +944,53 @@ export interface FidelityCheck {
   required: Required;
   message: Message3;
 }
-export interface WallAxisResolution {
+export interface VisualReviewResult {
   status: Status3;
+  judgment: ReviewJudgment | null;
+  repair: Repair;
+  message: Message4;
+  reviewed_scene_hash: ReviewedSceneHash;
+  result_scene_hash: ResultSceneHash;
+  revised_scene_visually_reviewed?: RevisedSceneVisuallyReviewed;
+  applied_findings?: AppliedFindings;
+}
+export interface ReviewJudgment {
+  verdict: Verdict;
+  summary: Summary;
+  findings: Findings;
+  limitations: Limitations;
+  checks?: Checks1;
+}
+export interface ReviewFinding {
+  kind: Kind1;
+  entity_ids: EntityIds4;
+  confidence: Confidence;
+  severity: Severity;
+  source_image_ids: SourceImageIds3;
+  view_ids: ViewIds;
+  description: Description;
+  correction: Correction;
+  placement_target?: PlacementTarget | null;
+  appearance_target?: AppearanceTarget | null;
+  repairable?: Repairable;
+}
+export interface PlacementTarget {
+  relation: Relation;
+  target_id: TargetId;
+}
+export interface AppearanceTarget {
+  field: Field3;
+  value: Value;
+}
+export interface ReviewCheck {
+  entity_id: EntityId3;
+  placement: Placement1;
+  appearance: Appearance;
+  evidence: Evidence;
+  source_image_ids: SourceImageIds4;
+}
+export interface WallAxisResolution {
+  status: Status4;
   reference_axis: ReferenceAxis;
   reference_span_m: ReferenceSpanM;
   candidate_wall_ids: CandidateWallIds;
@@ -700,14 +999,14 @@ export interface WallAxisResolution {
 }
 export interface ProposalIssue {
   code: Code3;
-  entity_ids: EntityIds4;
-  message: Message4;
+  entity_ids: EntityIds5;
+  message: Message5;
 }
 /**
  * An original observation omitted from the validated scene, never deleted.
  */
 export interface UnresolvedEntity {
-  entity_id: EntityId1;
-  kind: Kind1;
+  entity_id: EntityId4;
+  kind: Kind2;
   reason: ProposalIssue;
 }

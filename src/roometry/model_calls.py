@@ -7,9 +7,40 @@ Observers receive usage only, never photo bytes, prompts or API keys.
 from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
-from typing import Protocol
+from dataclasses import dataclass
+from typing import Literal, Protocol
 
 from openai.types.responses import ResponseUsage
+
+ModelOperation = Literal[
+    "analysis", "scene_proposal", "scene_repair", "visual_review", "visual_repair", "agent_decision"
+]
+ReasoningEffort = Literal["default", "none", "low", "medium", "high", "xhigh", "max"]
+
+
+@dataclass(frozen=True)
+class ModelRoute:
+    model: str
+    reasoning_effort: ReasoningEffort
+
+
+@dataclass(frozen=True)
+class ModelAttempt:
+    """Provider-level facts only; semantic validation is logged by its service."""
+
+    operation: ModelOperation
+    run_id: str | None
+    requested_model: str
+    model: str
+    outcome: str
+    latency_ms: int
+    input_tokens: int | None
+    output_tokens: int | None
+    total_tokens: int | None
+    cached_input_tokens: int | None
+    reasoning_tokens: int | None
+    response_id: str | None
+    provider_request_id: str | None
 
 
 class ModelCallObserver(Protocol):

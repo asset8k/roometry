@@ -8,16 +8,19 @@ The annotations state approximate relationships, never invented metric truth.
 from math import cos, hypot, sin
 
 from roometry.evaluation.schemas import EvaluationReport, ReconstructionCase
+from roometry.evaluation.inventory import trace_inventory
 from roometry.scenes.schemas import Opening, RoomScene, SceneObject
 from roometry.vision.schemas import RoomAnalysisResponse
+from roometry.vision.proposal_schemas import SceneDraft, UnresolvedEntity
 from roometry.vision.spatial import planar_gap
 
 
 def evaluate_reconstruction(
-    case: ReconstructionCase, analysis: RoomAnalysisResponse, scene: RoomScene
+    case: ReconstructionCase, analysis: RoomAnalysisResponse | None, scene: RoomScene | None,
+    *, draft: SceneDraft | None = None, unresolved: list[UnresolvedEntity] | None = None,
 ) -> EvaluationReport:
-    labels = {o.id: o.label.lower() for o in analysis.observations.objects}
-    items = [*scene.objects, *scene.openings]
+    labels = {o.id: o.label.lower() for o in analysis.observations.objects} if analysis else {}
+    items = [*scene.objects, *scene.openings] if scene else []
     matched, used, failures = {}, set(), []
     metrics: dict[str, list[bool]] = {
         key: [] for key in ("wall", "orientation", "proportions", "color", "asset")
@@ -35,6 +38,7 @@ def evaluate_reconstruction(
         )
 
     def point(item: SceneObject | Opening):
+        assert scene is not None
         if isinstance(item, SceneObject):
             return item.position.x, item.position.z
         t = item.offset_m + item.width_m / 2
@@ -46,6 +50,7 @@ def evaluate_reconstruction(
         }[item.wall]
 
     def nearest_wall(item: SceneObject | Opening):
+        assert scene is not None
         if item.wall:
             return item.wall
         x, z = point(item)
@@ -123,6 +128,7 @@ def evaluate_reconstruction(
                 f"{expected.id}: width/depth proportion differs from the annotation.",
             )
         if expected.wall_span_fraction and isinstance(item, SceneObject):
+            assert scene is not None
             wall = nearest_wall(item)
             w, d = item.dimensions_m.width, item.dimensions_m.depth
             c, s = abs(cos(item.rotation_y_rad)), abs(sin(item.rotation_y_rad))
@@ -141,7 +147,7 @@ def evaluate_reconstruction(
     if case.room_finishes:
         for role in ("floor_color", "wall_color"):
             expected = getattr(case.room_finishes, role)
-            actual = getattr(scene.finishes, role, None) if scene.finishes else None
+            actual = getattr(scene.finishes, role, None) if scene and scene.finishes else None
             if expected:
                 record(
                     "color",
@@ -152,7 +158,7 @@ def evaluate_reconstruction(
         if case.room_finishes.floor_pattern:
             record(
                 "color",
-                scene.finishes is not None
+                scene is not None and scene.finishes is not None
                 and scene.finishes.floor_pattern == case.room_finishes.floor_pattern,
                 "Room floor pattern differs from the photo annotation.",
             )
@@ -180,6 +186,7 @@ def evaluate_reconstruction(
                 >= cos(0.7853981634)
             )
         elif relation.kind == "near":
+            assert scene is not None
             passed = planar_gap(subject.id, target.id, scene, {}) <= max(
                 0.8, 0.15 * min(scene.room.width_m, scene.room.length_m)
             )
@@ -212,4 +219,8 @@ def evaluate_reconstruction(
         asset_match=score("asset"),
         failures=failures,
         matched_ids={key: value.id for key, value in matched.items()},
+        inventory=trace_inventory(
+            case, analysis, scene, {key: value.id for key, value in matched.items()},
+            draft, unresolved or [],
+        ),
     )

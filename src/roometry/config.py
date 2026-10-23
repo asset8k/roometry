@@ -8,6 +8,7 @@ from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from roometry.uploads.schemas import MAX_IMAGES, MIB, UploadLimits
+from roometry.model_calls import ModelOperation, ModelRoute, ReasoningEffort
 
 
 class Settings(BaseSettings):
@@ -38,6 +39,17 @@ class Settings(BaseSettings):
     analysis_enabled: bool = False
     openai_api_key: SecretStr | None = None
     model_name: str = Field(default="gpt-6-luna", min_length=1, max_length=128)
+    # MODEL_NAME remains the legacy fallback for the economical stages only.
+    analysis_model_name: str | None = Field(default=None, min_length=1, max_length=128)
+    agent_model_name: str | None = Field(default=None, min_length=1, max_length=128)
+    review_model_name: str | None = Field(default=None, min_length=1, max_length=128)
+    scene_repair_model_name: str | None = Field(default=None, min_length=1, max_length=128)
+    scene_model_name: str = Field(default="gpt-6.1-sol", min_length=1, max_length=128)
+    analysis_reasoning_effort: ReasoningEffort = "medium"
+    review_reasoning_effort: ReasoningEffort = "medium"
+    visual_review_enabled: bool = True
+    review_max_output_tokens: int = Field(default=6144, ge=512, le=8192)
+    scene_repair_reasoning_effort: ReasoningEffort = "medium"
     analysis_timeout_seconds: float = Field(
         default=90, gt=0, le=300, allow_inf_nan=False
     )
@@ -46,9 +58,7 @@ class Settings(BaseSettings):
     analysis_max_output_tokens: int = Field(default=16384, ge=128, le=32768)
     # Scene drafts carry geometry for every object, unlike photo observations.
     scene_max_output_tokens: int = Field(default=16384, ge=128, le=32768)
-    scene_reasoning_effort: Literal[
-        "default", "none", "low", "medium", "high", "xhigh", "max"
-    ] = "low"
+    scene_reasoning_effort: ReasoningEffort = "medium"
     analysis_max_output_bytes: int = Field(default=262144, ge=1024, le=1048576)
     analysis_max_provider_attempts: int = Field(default=2, ge=1, le=3)
     analysis_max_cached_inputs: int = Field(default=128, ge=1, le=1024)
@@ -61,9 +71,7 @@ class Settings(BaseSettings):
     mcp_furniture_timeout_seconds: float = Field(default=8., ge=.1, le=30., allow_inf_nan=False)
     mcp_furniture_max_response_bytes: int = Field(default=65_536, ge=4096, le=262_144)
 
-    agent_reasoning_effort: Literal[
-        "default", "none", "low", "medium", "high", "xhigh", "max"
-    ] = "low"
+    agent_reasoning_effort: ReasoningEffort = "low"
 
     @field_validator("model_name", mode="before")
     @classmethod
@@ -72,6 +80,56 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return value.strip() or "gpt-6-luna"
         return value
+
+    @field_validator(
+        "analysis_model_name", "agent_model_name", "review_model_name",
+        "scene_repair_model_name", "scene_model_name", mode="before",
+    )
+    @classmethod
+    def trim_stage_model(cls, value: object) -> object:
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                raise ValueError("Stage model names must not be blank.")
+        return value
+
+    def model_route(self, operation: ModelOperation) -> ModelRoute:
+        return {
+            "analysis": ModelRoute(
+                self.analysis_model_name or self.model_name, self.analysis_reasoning_effort
+            ),
+            "agent_decision": ModelRoute(
+                self.agent_model_name or self.model_name, self.agent_reasoning_effort
+            ),
+            "visual_review": ModelRoute(
+                self.review_model_name or self.model_name, self.review_reasoning_effort
+            ),
+            "visual_repair": ModelRoute(
+                self.scene_repair_model_name or self.model_name, self.scene_repair_reasoning_effort
+            ),
+            "scene_proposal": ModelRoute(self.scene_model_name, self.scene_reasoning_effort),
+            "scene_repair": ModelRoute(
+                self.scene_repair_model_name or self.model_name,
+                self.scene_repair_reasoning_effort,
+            ),
+        }[operation]
+
+    @model_validator(mode="after")
+    def consistent_model_routes(self) -> "Settings":
+        operations: tuple[ModelOperation, ...] = (
+            "analysis", "agent_decision", "visual_review", "visual_repair", "scene_proposal", "scene_repair"
+        )
+        for operation in operations:
+            route = self.model_route(operation)
+            is_sol = route.model in {"gpt-6-sol", "gpt-6.1-sol"} or route.model.startswith(
+                ("gpt-6-sol-", "gpt-6.1-sol-")
+            )
+            if is_sol and operation != "scene_proposal":
+                raise ValueError("Sol is reserved for the single initial scene construction request.")
+            is_sol_61 = route.model == "gpt-6.1-sol" or route.model.startswith("gpt-6.1-sol-")
+            if is_sol_61 and route.reasoning_effort == "none":
+                raise ValueError("Sol requires low or greater reasoning effort, or default.")
+        return self
 
     @model_validator(mode="after")
     def consistent_upload_policy(self) -> "Settings":

@@ -11,6 +11,8 @@
   "wall_axis_bindings": [],
   "wall_mapping": [],
   "estimate_corrections": [],
+  "interpretation_corrections": [],
+  "appearance_corrections": [],
   "openings": [
     {
       "id": "window_1",

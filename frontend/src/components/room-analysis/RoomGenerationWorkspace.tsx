@@ -84,10 +84,25 @@ export default function RoomGenerationWorkspace({ state, controller, onConnectio
         <ul>{run.analysis.observations.unknowns.map((note, index) => <li key={index}>{note}</li>)}</ul>
       </details>}
       {scene && <>
+        {run?.proposal?.visual_review && <details className="analysis-notes" open={run.proposal.visual_review.status === 'unavailable' || run.proposal.visual_review.judgment?.verdict !== 'consistent'}>
+          <summary>Photo comparison</summary>
+          <p>This comparison describes the base reconstruction. Later edits are not visually rechecked.</p>
+          <p>{run.proposal.visual_review.message}</p>
+          {run.proposal.visual_review.repair === 'accepted' && <p>The correction passed geometry and evidence checks. The revised scene has not received a second visual comparison.</p>}
+          {run.proposal.visual_review.repair === 'rejected' && <p>The proposed correction was not applied. Your earlier scene is retained.</p>}
+          {run.proposal.visual_review.repair === 'failed' && <p>The correction could not finish. Your earlier scene is retained.</p>}
+          {run.proposal.visual_review.judgment && <>
+            <p>{run.proposal.visual_review.judgment.summary}</p>
+            {!!run.proposal.visual_review.judgment.checks?.length && <p>Placement and appearance reviewed for {run.proposal.visual_review.judgment.checks.length - 1} room elements and the room finishes.</p>}
+            <ul>{run.proposal.visual_review.judgment.findings.map((finding, i) => <li key={i}>{finding.entity_ids.length > 0 && <strong>{finding.entity_ids.map(entityName).join(', ')}: </strong>}{finding.description}{run.proposal?.visual_review?.applied_findings?.some(index => index === i) && <span> · Adjusted toward the review target; photo likeness still needs checking.</span>}</li>)}</ul>
+            <ul>{run.proposal.visual_review.judgment.checks?.filter(check => check.placement === 'uncertain' || check.appearance === 'uncertain').map((check, i) => <li key={i}><strong>{check.entity_id ? entityName(check.entity_id) : 'Room finishes'}: </strong>{check.placement === 'uncertain' && 'Placement uncertain. '}{check.appearance === 'uncertain' && 'Appearance uncertain. '}{check.evidence}</li>)}</ul>
+            <ul>{run.proposal.visual_review.judgment.limitations.map((note, i) => <li key={i}>{note}</li>)}</ul>
+          </>}
+        </details>}
         {run?.proposal?.fidelity && <details className="analysis-notes" open={run.proposal.fidelity.recognizable === false}>
           <summary>Reconstruction quality</summary>
           <p>{run.proposal.fidelity.recognizable === true ? 'The major arrangement is consistent with the recorded photo evidence.' : run.proposal.fidelity.recognizable === false ? 'The major arrangement is not yet established. Review the missing or uncertain items below.' : 'Layout fidelity could not be established from the available evidence.'} This is an approximate model.</p>
-          <p>Major furniture retained: {Math.round(run.proposal.fidelity.major_object_coverage * 100)}%.</p>
+          <p>Major furniture and openings retained: {Math.round(run.proposal.fidelity.major_object_coverage * 100)}%.</p>
           <ul>{run.proposal.fidelity.checks.filter(check => !check.passed).map((check, i) => <li key={i}>{check.entity_ids.map(entityName).join(', ')}: {check.message}</li>)}</ul>
           <ul>{run.proposal.fidelity.unassessed.map((note, i) => <li key={i}>{note}</li>)}</ul>
         </details>}
@@ -97,6 +112,8 @@ export default function RoomGenerationWorkspace({ state, controller, onConnectio
           <ul>{run.proposal.wall_axes.bindings.map(binding => <li key={binding.observation_id}>{entityName(binding.observation_id)} · {scene.room[binding.axis]} m · {binding.source === 'user' ? 'from your answer' : 'from photo evidence'}</li>)}</ul>
         </details>}
         {(scene.estimate_corrections?.length ?? 0) > 0 && <details className="analysis-notes"><summary>Revised photo estimates</summary><ul>{scene.estimate_corrections?.map((c, i) => <li key={i}>{entityName(c.entity_id)} · {c.field}: {c.previous_m} → {c.revised_m} m. {c.reason}</li>)}</ul></details>}
+        {(scene.interpretation_corrections?.length ?? 0) > 0 && <details className="analysis-notes"><summary>Revised photo interpretations</summary><ul>{scene.interpretation_corrections?.map((c, i) => <li key={i}><strong>{entityName(c.entity_id)}</strong>: {c.reason}</li>)}</ul></details>}
+        {(scene.appearance_corrections?.length ?? 0) > 0 && <details className="analysis-notes"><summary>Revised colors and finishes</summary><ul>{scene.appearance_corrections?.map((c, i) => <li key={i}><strong>{c.entity_id ? entityName(c.entity_id) : 'Room'}</strong>: {c.reason}</li>)}</ul></details>}
         {partial && omittedCount > 0 && <div className="analysis-caution" role="status"><h3>Some observations still need resolving</h3>
           <p>{run.proposal?.unresolved_entities?.length} observations are unresolved and absent from the 3D scene.</p>
           <ul>{run.proposal?.unresolved_entities?.map(item => <li key={item.entity_id}><strong>{entityName(item.entity_id)}</strong>: {item.reason.message}</li>)}</ul>

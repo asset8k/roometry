@@ -62,6 +62,55 @@ export type SourceImageIds =
  * @maxItems 200
  */
 export type EstimateCorrections = EstimateCorrection[];
+export type EntityId1 = string;
+export type Field1 = "type" | "placement" | "support_object_id";
+export type PreviousValue = string | null;
+export type RevisedValue = string | null;
+export type Reason1 = string;
+/**
+ * @minItems 1
+ * @maxItems 10
+ */
+export type SourceImageIds1 =
+  | [string]
+  | [string, string]
+  | [string, string, string]
+  | [string, string, string, string]
+  | [string, string, string, string, string]
+  | [string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string, string];
+/**
+ * @maxItems 200
+ */
+export type InterpretationCorrections = InterpretationCorrection[];
+export type EntityId2 = string | null;
+export type Field2 =
+  "color" | "wood" | "metal" | "linen" | "inset" | "rubber" | "enamel" | "floor_color" | "wall_color" | "floor_pattern";
+export type PreviousValue1 = string | null;
+export type RevisedValue1 = string;
+export type Reason2 = string;
+/**
+ * @minItems 1
+ * @maxItems 10
+ */
+export type SourceImageIds2 =
+  | [string]
+  | [string, string]
+  | [string, string, string]
+  | [string, string, string, string]
+  | [string, string, string, string, string]
+  | [string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string, string];
+/**
+ * @maxItems 200
+ */
+export type AppearanceCorrections = AppearanceCorrection[];
 export type Id = string;
 export type Type = "door" | "window";
 export type Wall1 = "north" | "south" | "west" | "east";
@@ -308,6 +357,8 @@ export interface RoomScene {
   wall_axis_bindings?: WallAxisBindings;
   wall_mapping?: WallMapping;
   estimate_corrections?: EstimateCorrections;
+  interpretation_corrections?: InterpretationCorrections;
+  appearance_corrections?: AppearanceCorrections;
   openings: Openings;
   objects: Objects;
   assumptions: Assumptions;
@@ -344,6 +395,25 @@ export interface EstimateCorrection {
   revised_m: RevisedM;
   reason: Reason;
   source_image_ids: SourceImageIds;
+}
+/**
+ * Photo-backed revision of a classification/attachment hypothesis.
+ */
+export interface InterpretationCorrection {
+  entity_id: EntityId1;
+  field: Field1;
+  previous_value: PreviousValue;
+  revised_value: RevisedValue;
+  reason: Reason1;
+  source_image_ids: SourceImageIds1;
+}
+export interface AppearanceCorrection {
+  entity_id: EntityId2;
+  field: Field2;
+  previous_value: PreviousValue1;
+  revised_value: RevisedValue1;
+  reason: Reason2;
+  source_image_ids: SourceImageIds2;
 }
 export interface Opening {
   id: Id;

@@ -10,6 +10,7 @@ from roometry.scenes.decor import DECOR_CATALOG
 from roometry.scenes.equipment import EQUIPMENT_CATALOG
 from roometry.scenes.fixture_models import FIXTURE_CATALOG
 from roometry.scenes.furniture import FURNITURE_CATALOG
+from roometry.scenes.materials import DEFAULT_MATERIAL_COLORS
 from roometry.scenes.schemas import RoomScene
 from roometry.scenes.scoring import LayoutScoreReport, ScoreLayoutRequest, score_layout
 from roometry.scenes.validation import validate_geometry
@@ -28,6 +29,7 @@ SCENE_FIXTURES = ("bedroom_scene.json", "bedroom_after_scene.json", "kitchen_cat
 
 def main() -> None:
     outputs = {
+        ROOT / "frontend/src/data/material-colors.generated.json": DEFAULT_MATERIAL_COLORS,
         ROOT / "frontend/src/lib/layout-score-request.schema.json": ScoreLayoutRequest.model_json_schema(),
         ROOT / "frontend/src/lib/layout-score-response.schema.json": LayoutScoreReport.model_json_schema(mode="serialization"),
         ROOT / "frontend/src/lib/agent-run.schema.json": AgentState.model_json_schema(mode="serialization"),

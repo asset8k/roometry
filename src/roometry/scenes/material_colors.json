@@ -1,0 +1,6 @@
+{
+  "wood": "#70543D", "metal": "#4F514D", "linen": "#E8E2D6", "inset": "#383D38",
+  "screen": "#15272F", "rubber": "#252A28", "light": "#FFF0CB", "indicator": "#7CBEBC",
+  "glass": "#E3D3B3", "chrome": "#AEB7B4", "enamel": "#E3E4DC", "clear_glass": "#CADDDC",
+  "foliage": "#567344", "foliage_dark": "#354D32", "soil": "#44372A", "paper": "#F0ECDD", "mirror": "#B7CCCE"
+}

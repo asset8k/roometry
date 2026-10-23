@@ -7,9 +7,11 @@ from pydantic import AwareDatetime, Field, field_validator, model_validator
 from roometry.scenes.assets import Placement
 from roometry.scenes.schemas import (
     AssetId,
+    AppearanceCorrection,
     EstimateCorrection,
     FiniteNumber,
     Identifier,
+    InterpretationCorrection,
     NonnegativeDistance,
     ObjectDimensions,
     Position,
@@ -19,8 +21,10 @@ from roometry.scenes.schemas import (
     Wall,
 )
 from roometry.scenes.validation import GeometryReport
+from roometry.scenes.hashing import scene_hash
 from roometry.uploads.schemas import InputDimensions, OpaqueId
 from roometry.vision.fidelity import FidelityReport
+from roometry.vision.review_schemas import VisualReviewResult
 from roometry.vision.schemas import AnalysisModel, Notes, RoomHeight, SillHeight, ReconstructionConstraints, WallAxisResolution
 
 DimensionName = Literal["width_m", "length_m", "height_m"]
@@ -81,6 +85,8 @@ class DraftOpening(AnalysisModel):
 
 class DraftContent(AnalysisModel):
     estimate_corrections: Annotated[list[EstimateCorrection], Field(max_length=200)] = Field(default_factory=list)
+    interpretation_corrections: Annotated[list[InterpretationCorrection], Field(max_length=200)] = Field(default_factory=list)
+    appearance_corrections: Annotated[list[AppearanceCorrection], Field(max_length=200)] = Field(default_factory=list)
     wall_assignments: Annotated[list[WallAssignment], Field(max_length=4)]
     openings: Annotated[list[DraftOpening], Field(max_length=32)]
     assumptions: Notes
@@ -145,6 +151,7 @@ class SceneProposalResponse(AnalysisModel):
     scene: RoomScene | None
     validation: GeometryReport | None
     fidelity: FidelityReport | None = None
+    visual_review: VisualReviewResult | None = None
     wall_axes: WallAxisResolution | None = None
     issues: Annotated[list[ProposalIssue], Field(max_length=50)]
     unresolved_entities: Annotated[list[UnresolvedEntity], Field(max_length=232)] = Field(default_factory=list)
@@ -164,6 +171,8 @@ class SceneProposalResponse(AnalysisModel):
 
     @model_validator(mode="after")
     def consistent_status(self) -> Self:
+        if self.visual_review is not None and (self.scene is None or self.visual_review.result_scene_hash != scene_hash(self.scene)):
+            raise ValueError("Visual review must identify this exact reconstructed scene.")
         for axes in (self.dimensions_to_confirm, self.estimated_axes):
             if len(set(axes)) != len(axes):
                 raise ValueError("Dimension axes must be unique.")

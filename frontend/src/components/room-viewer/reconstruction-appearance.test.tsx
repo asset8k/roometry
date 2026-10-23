@@ -29,6 +29,16 @@ describe('photo appearance', () => {
     expect(colors.has('aa8254')).toBe(true)
   })
 
+  it('keeps blue gaming-chair panels distinct from a black back and frame', async () => {
+    const r = await ReactThreeTestRenderer.create(<FurnitureParts assetId="chair_office_01" color="#28558A" materialColors={{ inset: '#111111', metal: '#17191B' }} />)
+    mounted.push(r)
+    const root = r.scene.children[0].instance
+    const back = root.getObjectByName('high_back') as Mesh
+    const panel = root.getObjectByName('back_color_1') as Mesh
+    expect((back.material as MeshStandardMaterial).color.getHexString()).toBe('111111')
+    expect((panel.material as MeshStandardMaterial).color.getHexString()).toBe('28558a')
+  })
+
   it('uses observed floor and wall colors without wood seams on a plain floor', async () => {
     const scene = loadExampleScene()
     scene.openings = []

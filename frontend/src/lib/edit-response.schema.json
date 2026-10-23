@@ -1,5 +1,83 @@
 {
   "$defs": {
+    "AppearanceCorrection": {
+      "additionalProperties": false,
+      "properties": {
+        "entity_id": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Entity Id"
+        },
+        "field": {
+          "enum": [
+            "color",
+            "wood",
+            "metal",
+            "linen",
+            "inset",
+            "rubber",
+            "enamel",
+            "floor_color",
+            "wall_color",
+            "floor_pattern"
+          ],
+          "title": "Field",
+          "type": "string"
+        },
+        "previous_value": {
+          "anyOf": [
+            {
+              "maxLength": 16,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Previous Value"
+        },
+        "revised_value": {
+          "maxLength": 16,
+          "title": "Revised Value",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Reason",
+          "type": "string"
+        },
+        "source_image_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "title": "Source Image Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "entity_id",
+        "field",
+        "previous_value",
+        "revised_value",
+        "reason",
+        "source_image_ids"
+      ],
+      "title": "AppearanceCorrection",
+      "type": "object"
+    },
     "DoorCheck": {
       "additionalProperties": false,
       "properties": {
@@ -450,6 +528,82 @@
       "title": "GeometryReport",
       "type": "object"
     },
+    "InterpretationCorrection": {
+      "additionalProperties": false,
+      "description": "Photo-backed revision of a classification/attachment hypothesis.",
+      "properties": {
+        "entity_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "field": {
+          "enum": [
+            "type",
+            "placement",
+            "support_object_id"
+          ],
+          "title": "Field",
+          "type": "string"
+        },
+        "previous_value": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Previous Value"
+        },
+        "revised_value": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Revised Value"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Reason",
+          "type": "string"
+        },
+        "source_image_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "title": "Source Image Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "entity_id",
+        "field",
+        "previous_value",
+        "revised_value",
+        "reason",
+        "source_image_ids"
+      ],
+      "title": "InterpretationCorrection",
+      "type": "object"
+    },
     "MaterialColors": {
       "additionalProperties": false,
       "description": "Small, fixed palette of visible material roles; null keeps model defaults.",
@@ -857,6 +1011,22 @@
           },
           "maxItems": 200,
           "title": "Estimate Corrections",
+          "type": "array"
+        },
+        "interpretation_corrections": {
+          "items": {
+            "$ref": "#/$defs/InterpretationCorrection"
+          },
+          "maxItems": 200,
+          "title": "Interpretation Corrections",
+          "type": "array"
+        },
+        "appearance_corrections": {
+          "items": {
+            "$ref": "#/$defs/AppearanceCorrection"
+          },
+          "maxItems": 200,
+          "title": "Appearance Corrections",
           "type": "array"
         },
         "openings": {

@@ -18,6 +18,11 @@ Do not invent an optimization request, add furniture, resize objects, reclassify
 observations, change confirmed measurements, move protected fixtures, or claim a
 geometrically valid scene is a verified photo match. Goals remain context for
 later optimization; this milestone reconstructs the observed room.
+Construction is followed by one automatic photo-versus-render visual review and
+at most one bounded correction before your next decision. Do not repeat that
+review, re-run construction, or claim a corrected scene received a second visual
+review. Its findings and repair outcome are in visual_review. Remaining visual
+differences are uncertainty to disclose, not authority to redesign or unlock items.
 
 Each turn is a fresh decision grounded in the full current state and normalized
 tool feedback. Previous raw model text/reasoning is intentionally not replayed.

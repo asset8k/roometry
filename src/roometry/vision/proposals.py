@@ -13,6 +13,8 @@ from roometry.vision.attachments import anchor_placements
 from roometry.vision.catalog import bind_catalog
 from roometry.vision.corrections import correction_errors
 from roometry.vision.fidelity import evaluate_fidelity
+from roometry.vision.interpretations import resolve_interpretations
+from roometry.vision.appearance import resolve_appearance
 from roometry.vision.wall_axes import wall_axis, AXIS_WALLS
 from roometry.vision.proposal_schemas import (
     AXES,
@@ -123,6 +125,13 @@ def assemble(
     analysis: RoomAnalysisResponse, measurements: Measurements, draft: SceneDraft,
     *, require_fidelity: bool = True,
 ) -> tuple[RoomScene | None, GeometryReport | None, list[ProposalIssue]]:
+    original_analysis = analysis
+    analysis, interpretation_errors = resolve_interpretations(analysis, draft.interpretation_corrections)
+    if interpretation_errors:
+        return None, None, [issue("placement_mismatch", message, entity_id) for entity_id, message in interpretation_errors][:50]
+    analysis, appearance_errors = resolve_appearance(analysis, draft.appearance_corrections)
+    if appearance_errors:
+        return None, None, [issue("fidelity", message, entity_id) for entity_id, message in appearance_errors][:50]
     obs = analysis.observations
     issues: list[ProposalIssue] = []
     expected_walls = {wall.id for wall in obs.walls}
@@ -159,9 +168,16 @@ def assemble(
     if issues:
         return None, None, issues
 
+    # Resolve the measured shell before catalog binding or furniture anchoring.
+    # An impossible window must be repaired against its real wall span, rather
+    # than forcing furniture around a shell that cannot exist.
+    shell_report, shell_issues = validate_shell(analysis, measurements, draft)
+    if shell_issues and shell_report is None:
+        return None, None, shell_issues
+
     bound, issues = bind_catalog(analysis, draft)
     if bound is None:
-        return None, None, issues
+        return None, shell_report if shell_issues else None, (shell_issues + issues)[:50]
 
     for entity_id, message in correction_errors(analysis, draft):
         issues.append(issue("dimension_mismatch", message, entity_id))
@@ -383,6 +399,8 @@ def assemble(
             wall_axis_bindings=analysis.wall_axes.bindings if analysis.wall_axes else [],
             wall_mapping=[WallReference(observation_id=item.observation_id, wall=item.wall) for item in draft.wall_assignments],
             estimate_corrections=draft.estimate_corrections,
+            interpretation_corrections=draft.interpretation_corrections,
+            appearance_corrections=draft.appearance_corrections,
             objects=parsed_objects,
             openings=parsed_openings,
             assumptions=notes(assumptions, obs.assumptions, draft.assumptions),
@@ -401,7 +419,7 @@ def assemble(
             ],
         )
     report = validate_geometry(scene)
-    fidelity = evaluate_fidelity(analysis, scene, wall_map)
+    fidelity = evaluate_fidelity(original_analysis, scene, wall_map)
     fidelity_problems = [
         issue("fidelity", check.message, *check.entity_ids)
         for check in fidelity.checks
@@ -422,3 +440,37 @@ def assemble(
     # A provisional preview must still pass every schema and geometry check.
     # Fidelity failures stay explicit; they are not reasons to delete furniture.
     return scene, report, fidelity_problems[:50]
+
+
+def validate_shell(analysis: RoomAnalysisResponse, measurements: Measurements, draft: SceneDraft) -> tuple[GeometryReport | None, list[ProposalIssue]]:
+    """Check openings in an empty measured shell, before furniture is considered."""
+    sources = {opening.id: opening for opening in analysis.observations.openings}
+    mapping = {item.observation_id: item.wall for item in draft.wall_assignments}
+    parsed = []
+    problems = []
+    for opening in draft.openings:
+        source = sources.get(opening.id)
+        if source is None:
+            continue  # Inventory checks explain invented identities first.
+        if source.wall_id is not None and opening.wall != mapping.get(source.wall_id):
+            problems.append(issue("wall_mapping", f"Use wall {mapping.get(source.wall_id)} assigned to observation {source.wall_id}.", opening.id))
+        try:
+            parsed.append(Opening.model_validate({
+                **opening.model_dump(), "type": source.type,
+                "swing": "unknown" if source.type == "door" else "none",
+                "hinge": "unknown" if source.type == "door" else None,
+                "provenance": "photo_observed", "measurements_source": "estimated",
+            }))
+        except ValidationError:
+            problems.append(issue("scene_schema", "Check opening dimensions and sill height; doors require sill_height_m=0.", opening.id))
+    if problems:
+        return None, problems[:50]
+    shell = RoomScene(schema_version=1, room=RoomDimensions(
+        room_type=analysis.input_options.room_type or analysis.observations.room_type or "other",
+        **measurements.dimensions.model_dump(),
+    ), openings=parsed, objects=[], assumptions=[], warnings=[])
+    report = validate_geometry(shell)
+    # Geometry failures still receive furniture/fidelity diagnostics below, so
+    # the sole repair sees every known failure together rather than piecemeal.
+    return report, [issue("geometry", f"{error.code}: {error.message}", *error.entity_ids)
+                    for error in report.errors][:50]

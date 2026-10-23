@@ -1,5 +1,116 @@
 {
   "$defs": {
+    "AppearanceCorrection": {
+      "additionalProperties": false,
+      "properties": {
+        "entity_id": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Entity Id"
+        },
+        "field": {
+          "enum": [
+            "color",
+            "wood",
+            "metal",
+            "linen",
+            "inset",
+            "rubber",
+            "enamel",
+            "floor_color",
+            "wall_color",
+            "floor_pattern"
+          ],
+          "title": "Field",
+          "type": "string"
+        },
+        "previous_value": {
+          "anyOf": [
+            {
+              "maxLength": 16,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Previous Value"
+        },
+        "revised_value": {
+          "maxLength": 16,
+          "title": "Revised Value",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Reason",
+          "type": "string"
+        },
+        "source_image_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "title": "Source Image Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "entity_id",
+        "field",
+        "previous_value",
+        "revised_value",
+        "reason",
+        "source_image_ids"
+      ],
+      "title": "AppearanceCorrection",
+      "type": "object"
+    },
+    "AppearanceTarget": {
+      "additionalProperties": false,
+      "properties": {
+        "field": {
+          "enum": [
+            "color",
+            "wood",
+            "metal",
+            "linen",
+            "inset",
+            "rubber",
+            "enamel",
+            "floor_color",
+            "wall_color",
+            "floor_pattern"
+          ],
+          "title": "Field",
+          "type": "string"
+        },
+        "value": {
+          "maxLength": 16,
+          "minLength": 1,
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "field",
+        "value"
+      ],
+      "title": "AppearanceTarget",
+      "type": "object"
+    },
     "DoorCheck": {
       "additionalProperties": false,
       "properties": {
@@ -614,6 +725,82 @@
       "title": "InputDimensions",
       "type": "object"
     },
+    "InterpretationCorrection": {
+      "additionalProperties": false,
+      "description": "Photo-backed revision of a classification/attachment hypothesis.",
+      "properties": {
+        "entity_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "field": {
+          "enum": [
+            "type",
+            "placement",
+            "support_object_id"
+          ],
+          "title": "Field",
+          "type": "string"
+        },
+        "previous_value": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Previous Value"
+        },
+        "revised_value": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Revised Value"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Reason",
+          "type": "string"
+        },
+        "source_image_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "title": "Source Image Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "entity_id",
+        "field",
+        "previous_value",
+        "revised_value",
+        "reason",
+        "source_image_ids"
+      ],
+      "title": "InterpretationCorrection",
+      "type": "object"
+    },
     "MaterialColors": {
       "additionalProperties": false,
       "description": "Small, fixed palette of visible material roles; null keeps model defaults.",
@@ -841,6 +1028,33 @@
       "title": "Opening",
       "type": "object"
     },
+    "PlacementTarget": {
+      "additionalProperties": false,
+      "properties": {
+        "relation": {
+          "enum": [
+            "near",
+            "against_wall",
+            "faces"
+          ],
+          "title": "Relation",
+          "type": "string"
+        },
+        "target_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Target Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "relation",
+        "target_id"
+      ],
+      "title": "PlacementTarget",
+      "type": "object"
+    },
     "Position": {
       "additionalProperties": false,
       "description": "World-space bottom center, in meters; room containment is checked later.",
@@ -922,6 +1136,248 @@
         "message"
       ],
       "title": "ProposalIssue",
+      "type": "object"
+    },
+    "ReviewCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "entity_id": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Entity Id"
+        },
+        "placement": {
+          "enum": [
+            "consistent",
+            "difference",
+            "uncertain",
+            "not_applicable"
+          ],
+          "title": "Placement",
+          "type": "string"
+        },
+        "appearance": {
+          "enum": [
+            "consistent",
+            "difference",
+            "uncertain",
+            "not_applicable"
+          ],
+          "title": "Appearance",
+          "type": "string"
+        },
+        "evidence": {
+          "maxLength": 320,
+          "minLength": 1,
+          "title": "Evidence",
+          "type": "string"
+        },
+        "source_image_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "title": "Source Image Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "entity_id",
+        "placement",
+        "appearance",
+        "evidence",
+        "source_image_ids"
+      ],
+      "title": "ReviewCheck",
+      "type": "object"
+    },
+    "ReviewFinding": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "missing",
+            "orientation",
+            "position",
+            "proportion",
+            "color",
+            "identity",
+            "support",
+            "opening"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "entity_ids": {
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "type": "string"
+          },
+          "maxItems": 8,
+          "title": "Entity Ids",
+          "type": "array"
+        },
+        "confidence": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "minor",
+            "major"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "source_image_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "title": "Source Image Ids",
+          "type": "array"
+        },
+        "view_ids": {
+          "items": {
+            "enum": [
+              "cutaway_nw",
+              "cutaway_se",
+              "top"
+            ],
+            "type": "string"
+          },
+          "maxItems": 3,
+          "minItems": 1,
+          "title": "View Ids",
+          "type": "array"
+        },
+        "description": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Description",
+          "type": "string"
+        },
+        "correction": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Correction",
+          "type": "string"
+        },
+        "placement_target": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PlacementTarget"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "appearance_target": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AppearanceTarget"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "repairable": {
+          "default": true,
+          "title": "Repairable",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "kind",
+        "entity_ids",
+        "confidence",
+        "severity",
+        "source_image_ids",
+        "view_ids",
+        "description",
+        "correction"
+      ],
+      "title": "ReviewFinding",
+      "type": "object"
+    },
+    "ReviewJudgment": {
+      "additionalProperties": false,
+      "properties": {
+        "verdict": {
+          "enum": [
+            "consistent",
+            "needs_correction",
+            "uncertain"
+          ],
+          "title": "Verdict",
+          "type": "string"
+        },
+        "summary": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Summary",
+          "type": "string"
+        },
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/ReviewFinding"
+          },
+          "maxItems": 12,
+          "title": "Findings",
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          "maxItems": 10,
+          "title": "Limitations",
+          "type": "array"
+        },
+        "checks": {
+          "items": {
+            "$ref": "#/$defs/ReviewCheck"
+          },
+          "maxItems": 25,
+          "title": "Checks",
+          "type": "array"
+        }
+      },
+      "required": [
+        "verdict",
+        "summary",
+        "findings",
+        "limitations"
+      ],
+      "title": "ReviewJudgment",
       "type": "object"
     },
     "RoomDimensions": {
@@ -1073,6 +1529,22 @@
           },
           "maxItems": 200,
           "title": "Estimate Corrections",
+          "type": "array"
+        },
+        "interpretation_corrections": {
+          "items": {
+            "$ref": "#/$defs/InterpretationCorrection"
+          },
+          "maxItems": 200,
+          "title": "Interpretation Corrections",
+          "type": "array"
+        },
+        "appearance_corrections": {
+          "items": {
+            "$ref": "#/$defs/AppearanceCorrection"
+          },
+          "maxItems": 200,
+          "title": "Appearance Corrections",
           "type": "array"
         },
         "openings": {
@@ -1494,6 +1966,81 @@
         "reason"
       ],
       "title": "UnresolvedEntity",
+      "type": "object"
+    },
+    "VisualReviewResult": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "reviewed",
+            "unavailable"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "judgment": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReviewJudgment"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "repair": {
+          "enum": [
+            "not_needed",
+            "not_attempted",
+            "accepted",
+            "rejected",
+            "failed"
+          ],
+          "title": "Repair",
+          "type": "string"
+        },
+        "message": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Message",
+          "type": "string"
+        },
+        "reviewed_scene_hash": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Reviewed Scene Hash",
+          "type": "string"
+        },
+        "result_scene_hash": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Result Scene Hash",
+          "type": "string"
+        },
+        "revised_scene_visually_reviewed": {
+          "const": false,
+          "default": false,
+          "title": "Revised Scene Visually Reviewed",
+          "type": "boolean"
+        },
+        "applied_findings": {
+          "items": {
+            "type": "integer"
+          },
+          "maxItems": 12,
+          "title": "Applied Findings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status",
+        "judgment",
+        "repair",
+        "message",
+        "reviewed_scene_hash",
+        "result_scene_hash"
+      ],
+      "title": "VisualReviewResult",
       "type": "object"
     },
     "WalkingIssue": {
@@ -1923,6 +2470,17 @@
       "anyOf": [
         {
           "$ref": "#/$defs/FidelityReport"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "visual_review": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/VisualReviewResult"
         },
         {
           "type": "null"

@@ -30,6 +30,7 @@ class AgentRuns:
         advance: StepAdapter,
         *,
         execute_tool: StepAdapter | None = None,
+        review_scene: StepAdapter | None = None,
         default_limits: RunLimits | None = None,
         checkpoints: TemporaryCheckpoints | None = None,
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
@@ -39,6 +40,7 @@ class AgentRuns:
             raise ValueError("Run TTL must be between 1 second and 1 hour.")
         self.resolve_input, self.advance, self.now = resolve_input, advance, now
         self.execute_tool = execute_tool
+        self.review_scene = review_scene
         self.default_limits = default_limits or RunLimits()
         self.checkpoints = (
             checkpoints if checkpoints is not None else TemporaryCheckpoints()
@@ -202,6 +204,7 @@ class AgentRuns:
             entry.initial.usage,
             authorize,
             lambda: entry.cancel_requested,
+            run_id=run_id,
         )
         entry.busy = True
         try:
@@ -232,6 +235,7 @@ class AgentRuns:
                 owner=owner,
                 budget=budget,
                 execute_tool=self.execute_tool,
+                review_scene=self.review_scene,
             )
             entry.answer_in_flight = answer
             graph_input = (

@@ -129,6 +129,9 @@ class ObjectObservation(AnalysisModel):
     relative_location: Note | None
     wall_id: Identifier | None
     placement: Placement | None
+    # Detection confidence does not establish how an item is mounted. Legacy
+    # null values remain hypotheses; an explicitly high attachment is protected.
+    placement_confidence: Confidence | None = None
     support_object_id: Identifier | None
     appears_fixed: bool | None
     color: Color | None

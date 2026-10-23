@@ -10,6 +10,8 @@ from collections import Counter
 from roometry.scenes.schemas import RoomScene
 from roometry.scenes.validation import GeometryReport
 from roometry.vision.importance import importance
+from roometry.vision.interpretations import resolve_interpretations
+from roometry.vision.appearance import resolve_appearance
 from roometry.vision.proposal_schemas import ProposalIssue, SceneDraft, UnresolvedEntity
 from roometry.vision.proposals import Measurements, assemble, issue, notes, preflight
 from roometry.vision.schemas import RoomAnalysisResponse
@@ -18,7 +20,13 @@ from roometry.vision.schemas import RoomAnalysisResponse
 def assemble_partial(
     analysis: RoomAnalysisResponse, measurements: Measurements, draft: SceneDraft
 ) -> tuple[RoomScene | None, GeometryReport | None, list[ProposalIssue], list[UnresolvedEntity]]:
-    obs = analysis.observations
+    effective, errors = resolve_interpretations(analysis, draft.interpretation_corrections)
+    if errors:
+        return None, None, [issue("placement_mismatch", message, key) for key, message in errors][:50], []
+    effective, errors = resolve_appearance(effective, draft.appearance_corrections)
+    if errors:
+        return None, None, [issue("fidelity", message, key) for key, message in errors][:50], []
+    obs = effective.observations
     observed = {entity.id: entity for entity in [*obs.objects, *obs.openings]}
     object_ids = {obj.id for obj in obs.objects}
     unresolved: dict[str, UnresolvedEntity] = {}
@@ -30,7 +38,7 @@ def assemble_partial(
             reason=problem,
         ))
 
-    for problem in preflight(analysis):
+    for problem in preflight(effective):
         if not problem.entity_ids:
             return None, None, [problem], []
         for entity_id in problem.entity_ids:
@@ -101,6 +109,8 @@ def assemble_partial(
         selected = draft.model_copy(deep=True)
         selected.objects = [obj for obj in selected.objects if obj.id in remaining]
         selected.estimate_corrections = [c for c in selected.estimate_corrections if c.entity_id in remaining]
+        selected.interpretation_corrections = [c for c in selected.interpretation_corrections if c.entity_id in remaining]
+        selected.appearance_corrections = [c for c in selected.appearance_corrections if c.entity_id is None or c.entity_id in remaining]
         selected.openings = [obj for obj in selected.openings if obj.id in remaining]
         scene, report, problems = assemble(subset, measurements, selected, require_fidelity=False)
         if scene is not None:

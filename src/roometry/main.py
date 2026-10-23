@@ -47,13 +47,15 @@ def create_app(
     )
     analyzer = PhotoAnalyzer(settings, analysis_client)
     analysis_service = AnalysisService(settings, service.storage, analyzer)
+    scene_tools = SceneTools(analysis_service, FurnitureCatalogClient(
+        timeout_seconds=settings.mcp_furniture_timeout_seconds,
+        max_response_bytes=settings.mcp_furniture_max_response_bytes,
+    ))
     agent_runs = AgentRuns(
         service.storage.resolve,
         RoomAgent(settings, analyzer),
-        execute_tool=SceneTools(analysis_service, FurnitureCatalogClient(
-            timeout_seconds=settings.mcp_furniture_timeout_seconds,
-            max_response_bytes=settings.mcp_furniture_max_response_bytes,
-        )),
+        execute_tool=scene_tools,
+        review_scene=scene_tools.review,
         # A scene tool may make an initial request and one repair. Its outer
         # deadline must allow both configured per-request deadlines to run.
         default_limits=RunLimits(

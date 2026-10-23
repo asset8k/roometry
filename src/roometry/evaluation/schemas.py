@@ -39,6 +39,23 @@ class ReconstructionCase(ReferenceModel):
     relationships: list[ReferenceRelation]
 
 
+InventoryLossStage = Literal[
+    "analysis_unavailable", "analysis", "catalog", "construction",
+    "validation", "construction_or_validation",
+]
+
+
+class InventoryTrace(ReferenceModel):
+    expected_id: Identifier
+    observed_id: Identifier | None
+    detected: bool | None
+    catalog_compatible: bool | None
+    drafted: bool | None
+    retained: bool
+    loss_stage: InventoryLossStage | None
+    issue_codes: list[str]
+
+
 class EvaluationReport(ReferenceModel):
     case_id: Identifier
     passed: bool
@@ -50,3 +67,4 @@ class EvaluationReport(ReferenceModel):
     asset_match: float | None
     failures: list[str]
     matched_ids: dict[str, str]
+    inventory: list[InventoryTrace] = Field(default_factory=list)
