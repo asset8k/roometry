@@ -535,15 +535,15 @@ async def test_one_bounded_repair_preserves_authority(harness, defect):
     )
     assert response.status_code == 200, response.text
     assert response.json()["status"] == "ready", response.text
-    assert len(calls) == 3
+    assert len(calls) == (2 if defect == 'collision' else 3)
     context = json.loads(calls[-1]["input"][0]["content"][0]["text"])
-    assert context["validation_feedback"]
+    assert bool(context["validation_feedback"]) is (defect != 'collision')
     assert context["room_dimensions"]["width_m"] == 4
     assert [
         r.attempt
         for r in app.state.analysis_service.usage_records
         if r.stage == "scene_proposal"
-    ] == [1, 2]
+    ] == ([1] if defect == 'collision' else [1, 2])
 
 
 async def test_failed_repair_retains_valid_partial_and_never_exposes_invalid_scene(

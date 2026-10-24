@@ -81,16 +81,19 @@ async def test_targeted_review_moves_support_group_and_restores_color_or_keeps_p
     actions.extend([review_action(quality_review),repair,decision("finish")])
     result=await run(runs,owner,uploaded)
     review=result.proposal.visual_review
-    # Direction/size/reference regressions must never be accepted merely for
-    # recoloring the chair. A small incomplete move can accompany a real color
-    # improvement, but cannot be advertised as fixing the placement finding.
-    accepted=defect in {None,"insufficient_progress"}
+    # Invalid direction changes roll back independently of valid chair colors.
+    # Unauthorized size/reference rewrites still fail the patch scope check.
+    accepted=defect in {None,"insufficient_progress","wrong_direction"}
     assert review.repair in ({"accepted"} if accepted else {"rejected", "failed"})
     assert review.applied_findings==([0,1] if defect is None else [1] if accepted else [])
     objects={obj.id:obj for obj in result.base_scene.objects}
     if defect is None:
         assert objects["desk_observed"].position.z==objects["computer_observed"].position.z==.6
         assert objects["chair_a"].color=="#28558A"
+    elif defect == 'wrong_direction':
+        assert objects['desk_observed'].position.z == objects['computer_observed'].position.z == 1.7
+        assert objects['chair_a'].color == '#28558A'
+        assert any('rolled back' in warning for warning in result.proposal.warnings)
     elif not accepted:
         assert objects["desk_observed"].position.z==1.7
         assert objects["chair_a"].color!="#28558A"

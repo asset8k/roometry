@@ -100,9 +100,12 @@ def test_conflict_selection_is_stable_and_keeps_the_stronger_observation(reverse
         analysis.observations.objects.reverse()
         data["objects"].reverse()
     scene, _, _, unresolved = select(analysis, data)
-    assert scene and set(unresolved) == {"chair_b"}
-    assert "chair_a" in {obj.id for obj in scene.objects}
-    assert "chair_a" in unresolved["chair_b"].reason.entity_ids
+    assert scene and not unresolved
+    poses = {obj.id: obj.position for obj in scene.objects}
+    assert poses['chair_a'].model_dump() == next(o['position'] for o in data['objects'] if o['id'] == 'chair_a')
+    assert poses['chair_b'] != poses['chair_a']
+    assert validate_geometry(scene).valid
+    assert any('chair_b' in note and 'recovered locally' in note for note in scene.assumptions)
 
 
 def test_bad_opening_does_not_discard_furniture():

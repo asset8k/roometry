@@ -96,6 +96,49 @@ def reconstruction_changed(previous: RoomScene, candidate: RoomScene) -> bool:
     return not same_values(content(previous), content(candidate))
 
 
+def recover_appearance_groups(analysis, measurements, proposal, previous, patch, selected):
+    """Keep independent valid palettes on the original valid poses, without calls.
+
+    Only a patch which already passed the finding/authority scope check reaches
+    here. Per-entity audit groups still validate against the original evidence;
+    unsafe geometry, unsupported colors and protected edits cannot ride along.
+    """
+    existing = {(c.entity_id, c.field): c for c in previous.appearance_corrections}
+    groups = {}
+    for record in patch.appearance_corrections:
+        if record != existing.get((record.entity_id, record.field)):
+            groups.setdefault(record.entity_id, []).append(record)
+    retained = proposal.scene
+    accepted_draft = previous
+    for records in groups.values():
+        corrections = {(c.entity_id, c.field): c for c in accepted_draft.appearance_corrections}
+        corrections.update({(c.entity_id, c.field): c for c in records})
+        draft = accepted_draft.model_copy(update={'appearance_corrections': list(corrections.values())}, deep=True)
+        candidate, _, _, _ = assemble_partial(analysis, measurements, draft, recover_local=False)
+        if candidate is None:
+            continue
+        # Poses and catalog geometry remain exactly those of the last valid
+        # scene. This also preserves protected flags and existing limitations.
+        colors = {obj.id: obj for obj in candidate.objects}
+        safe = retained.model_copy(deep=True)
+        for obj in safe.objects:
+            if obj.id in colors:
+                obj.color, obj.material_colors = colors[obj.id].color, colors[obj.id].material_colors
+        safe.finishes = candidate.finishes
+        safe.appearance_corrections = candidate.appearance_corrections
+        findings = [finding for _, finding in selected]
+        progress = [finding_progress(proposal.scene, safe, finding) for finding in findings]
+        if (reconstruction_changed(retained, safe) and candidate_allowed(analysis, proposal.scene, safe)
+            and any(finding_progress(retained, safe, finding)[0] for finding in findings if finding.kind == 'color')
+            and not any(regressed for _, regressed in progress)):
+            retained = safe
+            accepted_draft = draft.model_copy(update={'appearance_corrections': safe.appearance_corrections}, deep=True)
+    if not reconstruction_changed(proposal.scene, retained):
+        return None
+    applied = [index for index, finding in selected if finding_progress(proposal.scene, retained, finding)[0]]
+    return retained, applied
+
+
 def patch_matches_findings(previous: SceneDraft, merged: SceneDraft, findings) -> bool:
     """A color complaint cannot authorize moving furniture or changing its size."""
     fields = {
@@ -269,7 +312,7 @@ class VisualReviewer:
                 candidate, report, candidate_issues = await anyio.to_thread.run_sync(assemble, analysis, measurements, draft)
                 unresolved = []
                 if candidate is None:
-                    candidate, report, candidate_issues, unresolved = await anyio.to_thread.run_sync(assemble_partial, analysis, measurements, draft)
+                    candidate, report, candidate_issues, unresolved = await anyio.to_thread.run_sync(partial(assemble_partial, recover_local=False), analysis, measurements, draft)
                 if candidate is not None:
                     old_objects = {item.id:item for item in proposal.scene.objects}
                     for obj in candidate.objects:
@@ -296,6 +339,16 @@ class VisualReviewer:
                     applied_findings = [index for (index,_),(addressed,_) in zip(selected,progress) if addressed]
                 else:
                     repair = "rejected"
+                    recovered = await anyio.to_thread.run_sync(recover_appearance_groups,
+                        analysis, measurements, proposal, previous, patch, selected)
+                    if recovered is not None:
+                        result.scene, applied_findings = recovered
+                        result.validation = validate_geometry(result.scene)
+                        result.fidelity = evaluate_fidelity(analysis, result.scene)
+                        repair = "accepted"
+                        result.warnings = notes([
+                            "Independent valid appearance corrections were retained. Unsuccessful placement changes were rolled back to their previous validated poses."
+                        ], result.warnings)
             except (APIError, AnalysisFailure, ValidationError, ValueError, RecursionError, TimeoutError) as error:
                 logging.getLogger(__name__).warning("Visual correction retained earlier scene: analysis_id=%s reason=%s", proposal.analysis_id, error.code if isinstance(error,AnalysisFailure) else type(error).__name__)
                 repair = "failed"

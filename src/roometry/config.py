@@ -55,7 +55,7 @@ class Settings(BaseSettings):
     assessment_max_output_tokens: int = Field(default=1536, ge=512, le=4096)
     scene_repair_reasoning_effort: ReasoningEffort = "medium"
     analysis_timeout_seconds: float = Field(
-        default=90, gt=0, le=300, allow_inf_nan=False
+        default=150, gt=0, le=300, allow_inf_nan=False
     )
     analysis_max_body_bytes: int = Field(default=4096, ge=128, le=16384)
     analysis_max_request_bytes: int = Field(default=45_000_000, ge=1024, le=50_000_000)

@@ -1,7 +1,8 @@
 """Deterministic fallback selection, using the authoritative assembly checks.
 
-This is not a layout optimizer: invalid entities are deferred with reasons, not
-resized, reclassified or merged. Observations and user measurements stay intact.
+This is not a layout optimizer: small estimated floor-pose conflicts may recover
+locally before deferral, never by resizing, reclassification or merging.
+Observations and user measurements stay intact.
 Every returned subset passes the same schema and geometry checks as a full scene.
 """
 
@@ -50,7 +51,7 @@ def recover_corrections(analysis, draft):
 
 
 def assemble_partial(
-    analysis: RoomAnalysisResponse, measurements: Measurements, draft: SceneDraft
+    analysis: RoomAnalysisResponse, measurements: Measurements, draft: SceneDraft, *, recover_local: bool = True,
 ) -> tuple[RoomScene | None, GeometryReport | None, list[ProposalIssue], list[UnresolvedEntity]]:
     draft, effective, correction_issues = recover_corrections(analysis, draft)
     obs = effective.observations
@@ -139,7 +140,7 @@ def assemble_partial(
         selected.interpretation_corrections = [c for c in selected.interpretation_corrections if c.entity_id in remaining]
         selected.appearance_corrections = [c for c in selected.appearance_corrections if c.entity_id is None or c.entity_id in remaining]
         selected.openings = [obj for obj in selected.openings if obj.id in remaining]
-        scene, report, problems = assemble(subset, measurements, selected, require_fidelity=False)
+        scene, report, problems = assemble(subset, measurements, selected, require_fidelity=False, recover_local=recover_local)
         if scene is not None:
             if problems and not (scene.objects or scene.openings):
                 return None, report, (reasons + problems)[:50], list(unresolved.values())

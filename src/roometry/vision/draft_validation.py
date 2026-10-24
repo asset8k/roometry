@@ -15,10 +15,32 @@ from roometry.vision.proposals import notes
 from roometry.vision.context_budget import photo_references
 
 
+def normalize_mounting(draft, analysis):
+    """A floor object's wall association is evidence, not a mounting reference.
+
+    Only a validated compass value on a known floor pose is redundant. Invalid
+    values, supports, opening links, placements and identities remain checked.
+    """
+    known = {obj.id for obj in analysis.observations.objects}
+    ids = [obj.id for obj in draft.objects if obj.id in known and obj.placement == 'floor'
+           and obj.wall is not None and obj.support_object_id is None
+           and obj.support_surface_id is None and obj.opening_id is None]
+    if not ids:
+        return draft
+    result = draft.model_copy(deep=True)
+    for obj in result.objects:
+        if obj.id in ids:
+            obj.wall = None
+    result.warnings = notes(result.warnings, [
+        f"Redundant floor mounting wall references were cleared for {len(ids)} objects; observed wall associations are preserved in the photo analysis."
+    ])
+    return result
+
+
 def parse_scene_draft(decoded, analysis):
     decoded = photo_references(decoded, analysis.observations.image_ids, decode=True)
     try:
-        return SceneDraft.model_validate(decoded)
+        return normalize_mounting(SceneDraft.model_validate(decoded), analysis)
     except ValidationError as original:
         if not isinstance(decoded, dict):
             raise
@@ -56,4 +78,4 @@ def parse_scene_draft(decoded, analysis):
                     continue
                 recovered[field].append(value.model_dump())
         recovered["warnings"] = notes(warnings, recovered["warnings"])
-        return SceneDraft.model_validate(recovered)
+        return normalize_mounting(SceneDraft.model_validate(recovered), analysis)

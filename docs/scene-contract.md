@@ -291,6 +291,23 @@ assembly (or unchanged entries in a repair). Invalid interpretation/appearance
 correction groups retain the original hypothesis while unrelated valid groups
 continue. Source observations and confirmed measurements are never rewritten.
 
+For known, structurally valid floor poses, redundant compass-valued mounting
+`wall` fields are cleared before assembly when support/opening references are
+empty. The original observation's wall association is unchanged, and the
+normalization is disclosed. Invalid wall values, links, identities and mounting
+changes remain invalid; this is not relaxed scene validation.
+
+Before partial assembly omits furniture, small estimated floor conflicts may be
+recovered by a translation of at most 0.5 m, carrying supported devices. Fixed,
+locked and user-added items cannot move. Sizes, rotations, identities, supports,
+opening geometry and room measurements are unchanged. Candidates must reduce
+hard errors without introducing others, preserve previously satisfied spatial
+relationships and avoid clearance regressions. At most eight conflicts and 24
+full candidate checks are attempted; larger or unsatisfied cases retain explicit
+omissions. Accepted shifts are recorded in scene assumptions. This search runs
+only during initial reconstruction, never on manual edits, optimization candidates
+or visual-review patches. Resolved conflicts no longer consume paid repair work.
+
 Visual review validates findings and checklist entries independently. Invalid
 items are skipped with visible limitations; missing, duplicate or contradictory
 checks become uncertain and cannot authorize repairs. An unsupported identity
@@ -301,6 +318,16 @@ truncation, resource limits and ownership/expiry failures are not locally repair
 Scene geometry and protected-state checks still govern accepted results; a failed
 correction retains the previous valid scene. This recovery does not establish
 photo likeness or increase provider-call budgets.
+
+When a scope-valid visual patch fails placement acceptance, independent appearance
+groups may still apply to the previous valid poses, using the same provider
+response. Each entity's audit group must retain valid original-photo evidence,
+approach an authorized material target, preserve inventory/protected state and
+pass geometry/fidelity checks. Invalid groups stay unchanged. Failed placement
+changes roll back, remain unresolved in review, and are never included in
+`applied_findings`; retained appearance groups and rollback are disclosed. A
+patch that exceeds its authorized finding scope still fails closed. No extra
+model call or automatic second visual review is introduced.
 
 Review checklist entries include bounded photo answers about selected local
 relationships and rendered material regions. The model records qualitative

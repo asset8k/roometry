@@ -123,7 +123,7 @@ def notes(*groups: list[str]) -> list[str]:
 
 def assemble(
     analysis: RoomAnalysisResponse, measurements: Measurements, draft: SceneDraft,
-    *, require_fidelity: bool = True,
+    *, require_fidelity: bool = True, recover_local: bool = False,
 ) -> tuple[RoomScene | None, GeometryReport | None, list[ProposalIssue]]:
     original_analysis = analysis
     analysis, interpretation_errors = resolve_interpretations(analysis, draft.interpretation_corrections)
@@ -419,6 +419,9 @@ def assemble(
             ],
         )
     report = validate_geometry(scene)
+    if recover_local and report.errors:
+        from roometry.vision.local_placement import recover_local_placements
+        scene, report = recover_local_placements(analysis, scene, report)
     fidelity = evaluate_fidelity(original_analysis, scene, wall_map)
     fidelity_problems = [
         issue("fidelity", check.message, *check.entity_ids)

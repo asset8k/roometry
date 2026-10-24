@@ -682,7 +682,8 @@ class AnalysisService:
                         # repair. A global inventory mismatch alone used to hide
                         # exactly which missing observations needed restoring.
                         if candidate[0] is not None:
-                            problems = [*candidate[2], *[p for p in problems if p.entity_ids]][:50]
+                            unresolved_ids = {item.entity_id for item in candidate[3]}
+                            problems = [*candidate[2], *[p for p in problems if unresolved_ids.intersection(p.entity_ids)]][:50]
                         retained = candidate[0]
                         if retained is not None:
                             major_high, major, secondary, total = partial_quality(retained, observed)
@@ -692,6 +693,8 @@ class AnalysisService:
                             if quality > best_quality:
                                 best_partial = candidate
                                 best_quality = quality
+                            if not candidate[2] and not candidate[3]:
+                                scene, report, problems = candidate[:3]
                 if problems and details is None:
                     details = {
                         "reason": "proposal_validation",

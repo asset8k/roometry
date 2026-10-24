@@ -178,7 +178,8 @@ revised_value, entity source_image_ids and reason. entity_id=null is only for ro
 finishes. Use rendered appearance controls, not lighting, imagined textures or
 style preferences. New visual claims must cite attached original sources.
 
-Floor y=0; ceiling TOP touches ceiling. Wall objects face inward: north=0,
+Floor y=0 and wall=null, even beside a wall; wall association stays in observations.
+Only wall-mounted objects use a non-null mounting wall. Ceiling TOP touches ceiling. Wall objects face inward: north=0,
 south=pi, west=pi/2, east=3*pi/2, back touching wall. Server derives attachment
 coordinates. Surface items must preserve their observed support_object_id and use
 support_surface_id from its declared surfaces; fit the rotated solid base inside
@@ -259,7 +260,9 @@ appearance unchanged; paint colors are not lighting, textures or screen content.
 For unknown positions choose plausible estimates and record assumptions. A scene
 is approximate, not an exact reconstruction. Catalog sizes are not measurements.
 Coordinates: meters, Y up, bottom-center object pivot; x from west to east,
-z from north to south. Floor y=0. Room extends x=[0,width], z=[0,length].
+z from north to south. Floor y=0 and wall=null, even when beside a wall.
+Only wall-mounted objects have a mounting wall; observed wall associations stay
+in the evidence. Room extends x=[0,width], z=[0,length].
 Object dimensions are local width(x), depth(z), height(y). Rotation is radians
 about positive Y. Wall attachments face inward: north=0, south=pi,
 west=pi/2, east=3*pi/2; back edge touches wall. Ceiling object TOP touches ceiling.
