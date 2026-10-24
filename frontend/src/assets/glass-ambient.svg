@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1200" viewBox="0 0 1600 1200" fill="none">
+  <!-- Static light behind the glass: no imagery, scripts, or animated filters. -->
+  <defs>
+    <filter id="soft"><feGaussianBlur stdDeviation="62"/></filter>
+    <filter id="bloom"><feGaussianBlur stdDeviation="15"/></filter>
+    <linearGradient id="ribbon" x1="220" y1="1050" x2="1250" y2="320" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#06291f" stop-opacity="0"/>
+      <stop offset=".35" stop-color="#178953" stop-opacity=".45"/>
+      <stop offset=".63" stop-color="#b9e742" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#183a19" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="vignette"><stop offset=".3" stop-color="#080b09" stop-opacity="0"/><stop offset="1" stop-color="#080b09" stop-opacity=".85"/></radialGradient>
+  </defs>
+  <g filter="url(#soft)">
+    <ellipse cx="370" cy="750" rx="310" ry="210" fill="#0f6747" fill-opacity=".33"/>
+    <ellipse cx="1190" cy="470" rx="240" ry="190" fill="#739a1a" fill-opacity=".28"/>
+    <ellipse cx="1120" cy="960" rx="260" ry="150" fill="#146a4c" fill-opacity=".25"/>
+  </g>
+  <g filter="url(#bloom)">
+    <path d="M-160 1110C300 1230 430 590 870 650S1320 230 1730 390" stroke="url(#ribbon)" stroke-width="65"/>
+    <path d="M90 1150C630 940 660 450 1450 490" stroke="url(#ribbon)" stroke-width="10" opacity=".8"/>
+    <circle cx="346" cy="590" r="19" fill="#cbf18a" fill-opacity=".18"/>
+    <circle cx="1235" cy="720" r="23" fill="#d7f562" fill-opacity=".23"/>
+    <circle cx="1070" cy="405" r="12" fill="#ebffb7" fill-opacity=".26"/>
+  </g>
+  <rect width="1600" height="1200" fill="url(#vignette)"/>
+</svg>

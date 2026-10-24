@@ -119,7 +119,6 @@ export default function RoomViewer({ scene, editor, state, onSelect }: {
               }}
             >
               <ContextMonitor onLost={onLost} />
-              <color attach="background" args={['#eeece4']} />
               <ambientLight intensity={1.5} />
               <directionalLight position={[scene.room.width_m + 2, 8, scene.room.length_m + 2]} intensity={2} />
               <WallModeContext.Provider value={wallMode}>

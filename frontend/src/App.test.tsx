@@ -6,9 +6,9 @@ describe('application entry', () => {
   it('opens one room generation flow without demo navigation or separate analysis/build actions', () => {
     const html = renderToStaticMarkup(<App />)
     expect(html).toContain('aria-label="Roometry home"')
-    expect(html).toContain('Check again')
+    expect(html).not.toContain('Check again')
     expect(html).toContain('aria-label="Choose room photos"')
-    expect(html.match(/>Generate room<\/button>/g)).toHaveLength(1)
+    expect(html.match(/>Create room<svg/g)).toHaveLength(1)
     for (const label of ['Explore example', 'Object catalog', 'Example bedroom', 'Analyze photos', 'Build base scene', 'Upload current inputs']) {
       expect(html).not.toContain(label)
     }

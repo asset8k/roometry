@@ -5,6 +5,7 @@ import type { DimensionAxis } from '../../lib/room-analysis'
 import { generationProgress } from '../../lib/room-generation-controller'
 import type { GenerationState, RoomGenerationController } from '../../lib/room-generation-controller'
 import type { AgentState, ClarificationAnswer } from '../../lib/agent-run'
+import { Button, GlassPanel, Icon } from '../ui/primitives'
 
 const titles: Partial<Record<GenerationState['phase'], string>> = {
   completed: 'Your reconstructed room', partial: 'Your partial reconstruction',
@@ -40,7 +41,7 @@ export default function RoomGenerationWorkspace({ state, controller, onConnectio
   const card = useRef<HTMLHeadingElement>(null)
   useEffect(() => {
     if (state.phase === 'awaiting_answer' || state.phase === 'completed' || state.phase === 'partial') {
-      card.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      card.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' })
       card.current?.focus({ preventScroll: true })
     }
   }, [state.phase, run?.pending_question?.id])
@@ -56,14 +57,13 @@ export default function RoomGenerationWorkspace({ state, controller, onConnectio
   const entityName = (id: string) => displayText(objects.find(obj => obj.id === id)?.label ?? run?.analysis?.observations.walls.find(wall => wall.id === id)?.label ?? id)
   const estimated = run?.proposal?.estimated_axes ?? []
   return <section className="analysis-workspace generation-workspace" aria-label="Room generation">
-    <div className="analysis-card" aria-live="polite">
-      <span className="section-label">From photos to your room</span>
-      <h2 ref={card} tabIndex={-1}>{needsDimensions ? 'Room measurements are still needed' : needsWall ? 'Room orientation still needs identifying' : preview ? 'Your reconstruction preview' : titles[state.phase] ?? 'Creating your room'}</h2>
-      {!terminal && <div className="upload-progress" role="status">
-        {state.phase !== 'awaiting_answer' && <progress aria-label="Room generation progress" />}
+    <GlassPanel className={`analysis-card${state.phase === 'awaiting_answer' ? ' clarification-card' : ''}`}>
+      <span className="section-label"><Icon name="spark" />From photos to your room</span>
+      <h2 ref={card} tabIndex={-1} aria-live="polite">{state.phase === 'awaiting_answer' ? 'One quick question' : needsDimensions ? 'Room measurements are still needed' : needsWall ? 'Room orientation still needs identifying' : preview ? 'Your reconstruction preview' : titles[state.phase] ?? 'Creating your room'}</h2>
+      {!terminal && state.phase !== 'awaiting_answer' && <div className="upload-progress" role="status">
+        <progress aria-label="Room generation progress" />
         <span>{generationProgress(state)}</span>
       </div>}
-      {!terminal && <p className="input-help">We’ll ask if a missing detail matters. Your entered measurements are used directly.</p>}
       {state.phase === 'completed' && <p>Your approximate reconstruction is ready to explore and edit. This shows your current room; you can try your own arrangement in the editor.</p>}
       {run?.catalog_reads.some(read => read.outcome === 'error') && <p className="analysis-caution">Furniture catalog checks were unavailable during this generation. Any validated reconstruction remains available below; catalog details were not verified.</p>}
       {run?.stop_reason === 'budget_limit' && ['completed', 'partial'].includes(state.phase) && <p className="input-help">Your validated reconstruction is available. Additional checks stopped at the run limit.</p>}
@@ -122,7 +122,7 @@ export default function RoomGenerationWorkspace({ state, controller, onConnectio
         {state.phase !== 'completed' && state.phase !== 'partial' && <p className="analysis-caution">This run did not finish successfully. The viewer contains only the geometry validated before it stopped.</p>}
         <details className="analysis-notes"><summary>Scene estimates, assumptions, and cautions</summary><ul>{[...scene.assumptions, ...scene.warnings].map((note, index) => <li key={index}>{note}</li>)}</ul></details>
       </>}
-    </div>
+    </GlassPanel>
     {scene && run?.base_scene && <section className="reconstructed-room" aria-label="Your reconstructed room">
       <RoomImprovementWorkspace key={run.run_id} run={run} onConnectionChange={onConnectionChange} />
     </section>}
@@ -157,14 +157,14 @@ export function ClarificationForm({ run, disabled, onAnswer }: {
     <fieldset disabled={disabled}>
       <legend><span className="section-label">Question {run.questions.length} of up to 3</span><strong>{displayText(question.question)}</strong></legend>
       <div className="clarification-choices">{question.choices.map(option => <label key={option.id}>
-        <input type="radio" name={`answer-${question.id}`} value={option.id} checked={choice === option.id} onChange={() => setChoice(option.id)} required /><span>{displayText(option.label)}</span>
+        <input type="radio" name={`answer-${question.id}`} value={option.id} checked={choice === option.id} onChange={() => setChoice(option.id)} required /><span>{displayText(option.label)}</span><Icon name="check" className="choice-check" />
       </label>)}</div>
       {choice === 'enter_measurements' && <div className="room-preferences"><div className="dimension-inputs">{question.dimension_axes.map(axis => <label key={axis}>
         {dimensionLabels[axis]} (m)<input type="number" inputMode="decimal" min="0" max={axis === 'height_m' ? 10 : 30} step="any" value={values[axis] ?? ''}
           onChange={event => setValues(current => ({ ...current, [axis]: event.target.value }))} />
-      </label>)}</div><p className="input-help">Leave anything you don’t know blank. We’ll only ask about measurements that are still missing.</p></div>}
+      </label>)}</div><p className="input-help">Enter the measurements you know.</p></div>}
       {error && <p className="input-notice error" role="alert">{error}</p>}
-      <div className="input-actions"><button className="primary-action" type="submit" disabled={!choice}>{disabled ? 'Resuming your generation…' : 'Continue'}</button></div>
+      <div className="input-actions"><Button variant="primary" type="submit" disabled={!choice || disabled}>{disabled ? 'Resuming…' : 'Continue'}<Icon name="arrow" /></Button></div>
     </fieldset>
   </form>
 }

@@ -46,7 +46,7 @@ export class RoomInputController {
     try {
       const limits = await this.client.limits(controller.signal)
       if (this.policy !== controller || controller.signal.aborted) return
-      this.update({ limits, policyLoading: false, notice: { kind: 'info', text: 'Ready to select your photos.', connected: true } })
+      this.update({ limits, policyLoading: false, notice: { kind: 'info', text: '', connected: true } })
     } catch (error) {
       if (this.policy !== controller || controller.signal.aborted) return
       this.update({ policyLoading: false, policyError: 'Couldn’t load upload limits. Check the service connection and try again.',
@@ -96,7 +96,7 @@ export class RoomInputController {
   }
   checkExpiry = () => {
     if (this.state.accepted && Date.parse(this.state.accepted.expires_at) <= this.now() && !this.state.busy) {
-      this.update({ accepted: null, dirty: true, notice: { kind: 'info', text: 'Your temporary photos have expired. Your selections are kept; choose Generate room to continue.' } })
+      this.update({ accepted: null, dirty: true, notice: { kind: 'info', text: 'Your temporary photos have expired. Your selections are kept; choose Create room to continue.' } })
     }
   }
   cancel = (notify = true) => {
@@ -105,7 +105,7 @@ export class RoomInputController {
     this.pending?.abort()
     this.pending = null
     if (this.state.busy) this.update({ busy: null, uncertain: true,
-      notice: notify ? { kind: 'info', text: wasUpload ? 'Cancelled. Your selections are kept; choose Generate room when ready.' : 'Discard cancelled. Your selections are kept; retry to confirm removal.' } : null })
+      notice: notify ? { kind: 'info', text: wasUpload ? 'Cancelled. Your selections are kept; choose Create room when ready.' : 'Discard cancelled. Your selections are kept; retry to confirm removal.' } : null })
   }
   submit = async (): Promise<boolean> => {
     if (this.state.busy || !this.state.limits || this.state.policyLoading) return false
