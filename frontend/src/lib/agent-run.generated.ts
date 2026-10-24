@@ -1323,6 +1323,97 @@ export type LengthM3 = number | null;
 export type HeightM4 = number | null;
 export type Axis1 = "width_m" | "length_m";
 export type WallId2 = string | null;
+export type PolicyVersion4 = "room-assessment-v1";
+export type SceneHash = string;
+export type Status7 = "rated" | "unassessed" | "not_applicable";
+export type Score = number | null;
+export type Confidence7 = "low" | "medium" | "high";
+export type Source1 = "geometry" | "photos";
+export type Explanation = string;
+/**
+ * @maxItems 200
+ */
+export type EntityIds8 = string[];
+/**
+ * @maxItems 12
+ */
+export type Metrics =
+  | []
+  | [ScoreMetric]
+  | [ScoreMetric, ScoreMetric]
+  | [ScoreMetric, ScoreMetric, ScoreMetric]
+  | [ScoreMetric, ScoreMetric, ScoreMetric, ScoreMetric]
+  | [ScoreMetric, ScoreMetric, ScoreMetric, ScoreMetric, ScoreMetric]
+  | [ScoreMetric, ScoreMetric, ScoreMetric, ScoreMetric, ScoreMetric, ScoreMetric]
+  | [ScoreMetric, ScoreMetric, ScoreMetric, ScoreMetric, ScoreMetric, ScoreMetric, ScoreMetric]
+  | [ScoreMetric, ScoreMetric, ScoreMetric, ScoreMetric, ScoreMetric, ScoreMetric, ScoreMetric, ScoreMetric]
+  | [
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric
+    ]
+  | [
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric
+    ]
+  | [
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric
+    ]
+  | [
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric,
+      ScoreMetric
+    ];
+export type Key = string;
+export type Value1 = number;
+export type Unit = "m" | "m2" | "m3" | "count" | "fraction";
+export type Recommended = ("openness" | "storage" | "workspace" | "aesthetics") | null;
+/**
+ * @maxItems 8
+ */
+export type Notes3 =
+  | []
+  | [string]
+  | [string, string]
+  | [string, string, string]
+  | [string, string, string, string]
+  | [string, string, string, string, string]
+  | [string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string];
 export type CallId = string;
 export type Name =
   | "analyze_photos"
@@ -1626,7 +1717,7 @@ export type Name2 =
 export type Outcome1 = "success" | "rejected" | "error";
 export type Message6 = string;
 export type Step = number;
-export type Status7 =
+export type Status8 =
   | "queued"
   | "running"
   | "awaiting_answer"
@@ -1665,6 +1756,7 @@ export interface AgentState {
   object_mobility: ObjectMobility;
   base_scene: RoomScene | null;
   working_scene: RoomScene | null;
+  room_assessment: RoomAssessment | null;
   pending_tool: ToolCall | null;
   catalog_reads: CatalogReads;
   tool_feedback: ToolFeedback;
@@ -2303,6 +2395,30 @@ export interface ObjectMobility {
    */
   [k: string]: boolean | null;
 }
+export interface RoomAssessment {
+  policy_version?: PolicyVersion4;
+  scene_hash: SceneHash;
+  openness: AssessmentCard;
+  storage: AssessmentCard;
+  workspace: AssessmentCard;
+  aesthetics: AssessmentCard;
+  recommended: Recommended;
+  notes: Notes3;
+}
+export interface AssessmentCard {
+  status: Status7;
+  score: Score;
+  confidence: Confidence7;
+  source: Source1;
+  explanation: Explanation;
+  entity_ids?: EntityIds8;
+  metrics?: Metrics;
+}
+export interface ScoreMetric {
+  key: Key;
+  value: Value1;
+  unit: Unit;
+}
 export interface ToolCall {
   call_id: CallId;
   name: Name;
@@ -2330,5 +2446,5 @@ export interface Details {
 }
 export interface RunEvent {
   step: Step;
-  status: Status7;
+  status: Status8;
 }

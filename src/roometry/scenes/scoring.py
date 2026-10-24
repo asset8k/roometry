@@ -197,7 +197,8 @@ def _workspace(scene: RoomScene, policy: LayoutScoringPolicy,
         surfaces = object_surfaces(desk.asset_id, desk.placement)
         if not surfaces:
             continue
-        top = max(surfaces, key=lambda s: (s.y, (s.x_max - s.x_min) * (s.z_max - s.z_min)))
+        top = next((s for s in surfaces if s.part == "worktop"), None) or max(
+            surfaces, key=lambda s: (s.y, (s.x_max - s.x_min) * (s.z_max - s.z_min)))
         width = (top.x_max - top.x_min) * desk.dimensions_m.width
         depth = (top.z_max - top.z_min) * desk.dimensions_m.depth
         height = desk.position.y + top.y * desk.dimensions_m.height

@@ -13,7 +13,7 @@ from typing import Literal, Protocol
 from openai.types.responses import ResponseUsage
 
 ModelOperation = Literal[
-    "analysis", "scene_proposal", "scene_repair", "visual_review", "visual_repair", "agent_decision"
+    "analysis", "scene_proposal", "scene_repair", "visual_review", "visual_repair", "agent_decision", "room_assessment"
 ]
 ReasoningEffort = Literal["default", "none", "low", "medium", "high", "xhigh", "max"]
 

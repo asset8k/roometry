@@ -5,7 +5,7 @@ import { RoomInputController } from '../../lib/room-input-controller'
 import { limits, photo, prepared } from '../../lib/test-support/room-input'
 
 async function setup() {
-  const controller = new RoomInputController({ limits: async () => limits, upload: async files => prepared(files), discard: async () => {} },
+  const controller = new RoomInputController({ limits: async () => limits, upload: async (files, options) => ({ ...prepared(files), options }), discard: async () => {} },
     { create: () => 'blob:preview', revoke: vi.fn() })
   await controller.loadLimits()
   const render = () => renderToStaticMarkup(<RoomInputForm state={controller.getSnapshot()} controller={controller} onGenerate={vi.fn(async () => {})} onCancel={vi.fn()} />)
@@ -13,15 +13,16 @@ async function setup() {
 }
 
 describe('room input form', () => {
-  it('offers common room categories, aesthetics, and one improvement note with an accessible file picker', async () => {
+  it('offers photos and current-room details without improvement preferences', async () => {
     const { render } = await setup()
     const html = render()
     expect(html).toContain('aria-label="Choose room photos"')
     expect(html).toContain('multiple=""')
     expect(html).toContain('.heic')
-    for (const label of ['Kitchen', 'Bathroom', 'Other', 'Budget', 'Currency', 'Width (m)', 'Height (m)', 'Better aesthetics', 'Anything you want to improve?', 'Tell us what to keep or avoid.']) expect(html).toContain(label)
-    for (const label of ['Dining room', 'Laundry room', 'Anything to keep or avoid?', 'Better furniture placement']) expect(html).not.toContain(label)
-    expect(html).toContain('Room details &amp; preferences')
+    for (const label of ['Kitchen', 'Bathroom', 'Other', 'Width (m)', 'Length (m)', 'Height (m)', 'Describe the room', '2. About your room']) expect(html).toContain(label)
+    for (const label of ['Dining room', 'Laundry room', 'Budget', 'Currency', 'Style preference', 'More storage', 'A better workspace', 'More open space', 'Better aesthetics', 'Anything you want to improve?', 'Room improvement goals', 'Room details &amp; preferences']) expect(html).not.toContain(label)
+    expect(html).toContain('reconstruct your current space')
+    expect(html).toContain('Measurements are optional')
     expect(html).toContain('Generate room')
     expect(html).not.toContain('Upload current inputs')
     expect(html).not.toContain('>Upload photos</button>')
@@ -43,9 +44,19 @@ describe('room input form', () => {
     expect(render()).toContain('Photos received')
     expect(render()).toContain('View submitted details')
     expect(render()).toContain('Generation progress and your room model appear below.')
-    controller.change({ goalText: 'Keep the desk' })
+    for (const label of ['<dt>Goals</dt>', '<dt>Budget</dt>', '<dt>Style</dt>', '<dt>Keep or avoid</dt>']) expect(render()).not.toContain(label)
+    controller.change({ description: 'My bedroom with a desk by the window' })
     expect(render()).toContain('Changes not generated')
     expect(render()).toContain('Clear inputs')
+  })
+  it('summarizes submitted descriptions and measurements', async () => {
+    const { controller, render } = await setup()
+    controller.addPhotos([photo()])
+    controller.change({ roomType: 'bedroom', description: 'Desk by the window', width: '3', length: '6', height: '3' })
+    await controller.submit()
+    expect(render()).toContain('Desk by the window')
+    expect(render()).toContain('3 × 6 × 3 m (provided by you)')
+    expect(controller.getSnapshot().accepted?.options.goals).toEqual(['general_analysis'])
   })
   it('uses an indeterminate progress state and holds form edits during submission', async () => {
     const { controller } = await setup()

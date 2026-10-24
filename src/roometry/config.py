@@ -51,6 +51,8 @@ class Settings(BaseSettings):
     review_reasoning_effort: ReasoningEffort = "low"
     visual_review_enabled: bool = True
     review_max_output_tokens: int = Field(default=6144, ge=512, le=8192)
+    room_assessment_enabled: bool = True
+    assessment_max_output_tokens: int = Field(default=1536, ge=512, le=4096)
     scene_repair_reasoning_effort: ReasoningEffort = "medium"
     analysis_timeout_seconds: float = Field(
         default=90, gt=0, le=300, allow_inf_nan=False
@@ -106,6 +108,7 @@ class Settings(BaseSettings):
             "visual_review": ModelRoute(
                 self.review_model_name or self.model_name, self.review_reasoning_effort
             ),
+            "room_assessment": ModelRoute(self.review_model_name or self.model_name, "low"),
             "visual_repair": ModelRoute(
                 self.scene_repair_model_name or self.model_name, self.scene_repair_reasoning_effort
             ),
@@ -119,7 +122,7 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def consistent_model_routes(self) -> "Settings":
         operations: tuple[ModelOperation, ...] = (
-            "analysis", "agent_decision", "visual_review", "visual_repair", "scene_proposal", "scene_repair"
+            "analysis", "agent_decision", "visual_review", "visual_repair", "scene_proposal", "scene_repair", "room_assessment"
         )
         for operation in operations:
             route = self.model_route(operation)

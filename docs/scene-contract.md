@@ -157,8 +157,11 @@ edit services; the stateless preview endpoint alone cannot establish ownership.
 
 ## Current user flow and lifecycle
 
-Users select **1–10 photos**, optionally enter room details, then press
-**Generate room**. The frontend uploads internally and starts one owned agent
+Users select **1–10 photos**, enter the room type if known, and optionally provide
+a description and dimensions, then press **Generate room**. The initial form
+submits `general_analysis`; improvement goals, budget and style are reserved for
+the later optimization flow. Their optional API fields remain compatible with
+existing clients. The frontend uploads internally and starts one owned agent
 run. The graph analyzes photos together, builds a base scene, and can inspect,
 validate, or correct it using bounded tools. It can interrupt for up to three
 questions with three choices each, then resume without repeating photo analysis.
@@ -291,3 +294,22 @@ the hutch. New analysis should match this connected item across views and preser
 separate freestanding shelves. Existing ambiguous IDs are never silently merged
 or removed; their identity issue remains provisional. The shared catalog now has
 106 model variants across the existing 68 object types.
+
+After reconstruction and visual review, the read-only `assess_room` node adds an
+optional `room_assessment` tied to the final scene hash. Four estimated 0–10 cards
+cover space and movement, storage and organization, workspace, and aesthetics and
+cohesion. Space uses connected usable floor regions and route checks; storage
+combines estimated capacity and front access; workspace uses the actual worktop
+and clearance. Missing evidence stays unassessed, and no dedicated workspace is
+not applicable rather than a zero. These versioned assessment proxies are
+separate from the existing raw layout-scoring diagnostics.
+
+Aesthetics uses one bounded, low-reasoning Luna request with the existing private
+photos and a fixed five-part rubric. Its attempt and result are cached under the
+same input ownership and expiry; polling and checkpoint resumption do not repeat
+it. Usage shares the run budget. A failed or unavailable visual rating preserves
+the measured cards and reconstruction. Major unresolved inventory makes ratings
+provisional. Only supported, non-low-confidence scores below 8 can be recommended;
+the lowest eligible category is selected. Ratings describe the original snapshot,
+not subsequent viewer edits. Improvement actions are displayed but disabled until
+the separate optimization flow is implemented.

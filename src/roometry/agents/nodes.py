@@ -11,6 +11,7 @@ from langgraph.types import interrupt
 from pydantic import ValidationError
 
 from roometry.agents.budget import RunBudget
+from roometry.assessment.schemas import RoomAssessment
 from roometry.agents.clarification import answer_updates, question_for
 from roometry.agents.state import (
     AgentState,
@@ -30,6 +31,10 @@ class StepAdapter(Protocol):
     async def __call__(self, state: AgentState, context: "RunContext") -> RunStep: ...
 
 
+class AssessmentAdapter(Protocol):
+    async def __call__(self, state: AgentState, context: "RunContext") -> RoomAssessment | None: ...
+
+
 @dataclass(frozen=True)
 class RunContext:
     """Injected per invocation; never serialized in graph checkpoints."""
@@ -42,6 +47,7 @@ class RunContext:
     budget: RunBudget | None = None
     execute_tool: StepAdapter | None = None
     review_scene: StepAdapter | None = None
+    assess_room: AssessmentAdapter | None = None
 
 
 async def guard(state: AgentState, runtime: Runtime[RunContext]) -> dict[str, object]:
@@ -337,6 +343,50 @@ async def review_scene(state: AgentState, runtime: Runtime[RunContext]) -> dict[
     if adapter is None:
         return {}  # Explicitly disabled or an injected deterministic test graph.
     return await _perform(state, runtime.context, adapter, reconstruction_review=True)
+
+
+async def assess_room(state: AgentState, runtime: Runtime[RunContext]) -> dict[str, object]:
+    """Optional read-only assessment after the final reconstruction, before END.
+
+    Paid work is outside interruption replay and uses the same run accounting.
+    Assessment failure never downgrades or hides an otherwise usable scene.
+    """
+    context = runtime.context
+    await context.authorize()
+    if context.cancelled():
+        return {"status": "cancelled"}
+    if context.now() >= state.expires_at:
+        return {"status": "expired"}
+    if (context.assess_room is None or state.analysis is None or state.working_scene is None
+        or state.status not in {"running", "budget_exhausted"} or state.room_assessment is not None):
+        return {}
+    if context.budget is not None:
+        context.budget.sync(state.usage)
+    before = context.budget.usage if context.budget is not None else RunUsage()
+    try:
+        with observe_model_calls(context.budget), anyio.fail_after(state.limits.step_timeout_seconds):
+            assessment = await context.assess_room(state.model_copy(deep=True), context)
+        if assessment is not None:
+            from roometry.scenes.hashing import scene_hash
+            assessment = RoomAssessment.model_validate(assessment)
+            if assessment.scene_hash != scene_hash(state.working_scene):
+                raise ValueError("Assessment belongs to another scene snapshot.")
+    except Exception:
+        # Keep deterministic cards on provider/node failure, without retrying.
+        from roometry.assessment.metrics import measure_room
+        assessment = await anyio.to_thread.run_sync(lambda: measure_room(
+            state.working_scene, incomplete_inventory=bool(state.proposal and state.proposal.unresolved_entities)))
+    usage = state.usage
+    if context.budget is not None:
+        delta = context.budget.delta(before)
+        usage = RunUsage(**{key: value + getattr(delta, key) for key, value in usage.model_dump().items()})
+        context.budget.sync(usage)
+    await context.authorize()
+    if context.cancelled():
+        return {"status": "cancelled", "usage": usage.model_dump()}
+    if context.now() >= state.expires_at:
+        return {"status": "expired", "usage": usage.model_dump()}
+    return {"room_assessment": assessment.model_dump() if assessment else None, "usage": usage.model_dump()}
 
 
 async def clarify(state: AgentState, runtime: Runtime[RunContext]) -> dict[str, object]:

@@ -172,15 +172,7 @@ footer { margin-top: 30px; text-align: center; color: #858a7e; font-size: 10px; 
 .room-preferences input:focus-visible, .room-preferences select:focus-visible, .room-preferences textarea:focus-visible, .photo-picker input:focus-visible, summary:focus-visible { outline: 2px solid #496751; outline-offset: 3px; }
 .room-preferences input:disabled, .room-preferences select:disabled, .room-preferences textarea:disabled { opacity: 0.6; }
 .optional { color: #8b9382; font-size: 10px; }
-.goal-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
-.goal-choices label { flex-direction: row; align-items: center; gap: 10px; padding: 13px; margin: 0; border: 1px solid #dce2d3; border-radius: 8px; color: #6a795f; }
-.goal-choices label:has(input:checked) { background: #eef2e6; border-color: #b3c5a3; color: #496751; }
-.goal-choices input { accent-color: #496751; width: 16px; height: 16px; flex-shrink: 0; }
-.optional-room-details { padding: 18px 0 0; border-top: 1px solid #e2e6db; }
-.optional-room-details summary { margin-bottom: 20px; cursor: pointer; font-size: 13px; color: #5d7353; }
-.optional-room-details summary span { margin-left: 8px; color: #8b9382; font-size: 10px; }
 .dimension-inputs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-.budget-inputs { display: grid; grid-template-columns: minmax(0, 1fr) 100px; gap: 12px; }
 .input-notice { margin-top: 20px; padding: 14px; border-radius: 8px; background: #edf1e5; color: #57734c; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
 .input-notice p { margin: 0; }
 .input-notice ul { margin: 8px 0 0; padding-left: 18px; }
@@ -204,7 +196,6 @@ footer { margin-top: 30px; text-align: center; color: #858a7e; font-size: 10px; 
 .input-summary-list > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 12px 0; border-bottom: 1px solid #d6dfcb; font-size: 12px; }
 .input-summary-list dt { color: #7e8a73; }
 .input-summary-list dd { margin: 0; color: #536c4b; }
-.submitted-note { white-space: pre-wrap; overflow-wrap: anywhere; }
 .accepted-details { margin: 20px 0; font-size: 12px; color: #627859; }
 .accepted-details summary { cursor: pointer; }
 .accepted-details dl { max-height: 300px; overflow: auto; margin-bottom: 0; }
@@ -217,7 +208,6 @@ footer { margin-top: 30px; text-align: center; color: #858a7e; font-size: 10px; 
   .room-input-form { padding: 22px 16px; }
   .input-section-title h2 { font-size: 23px; }
   .input-summary { padding: 24px 20px; }
-  .goal-choices { grid-template-columns: minmax(0, 1fr); }
   .photo-picker { padding: 20px 12px; }
   .photo-picker input { width: 100%; }
   .dimension-inputs { gap: 8px; }
@@ -267,6 +257,25 @@ footer { margin-top: 30px; text-align: center; color: #858a7e; font-size: 10px; 
 .analysis-caution p { margin: 8px 0; }
 .analysis-caution ul, .analysis-notes ul { padding-left: 20px; }
 .reconstructed-room { margin-top: 26px; }
+.room-assessment { margin-bottom: 28px; padding: 26px; border: 1px solid #dce2d3; border-radius: 14px; background: #fafaf5; }
+.room-assessment h2 { margin: 10px 0; font-size: 23px; font-weight: 500; }
+.room-assessment > p { color: #64775a; font-size: 13px; line-height: 1.7; }
+.assessment-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 22px; }
+.assessment-card { display: flex; flex-direction: column; min-width: 0; padding: 20px; border: 1px solid #dce2d3; border-radius: 10px; background: #fffef9; }
+.assessment-card.recommended { border-color: #78916b; background: #eef2e7; }
+.assessment-card-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.assessment-card h3 { margin: 0; font-size: 14px; font-weight: 500; }
+.assessment-recommendation { padding: 4px 7px; border-radius: 5px; background: #dce7d1; color: #496751; font-size: 10px; }
+.assessment-rating { margin: 22px 0 8px; color: #34472f; font-size: 32px; font-weight: 500; }
+.assessment-rating > span { font-size: 15px; font-weight: 400; color: #6a795f; }
+.assessment-rating .assessment-unrated { font-size: 17px; line-height: 1.5; }
+.assessment-confidence { color: #6a795f; font-size: 10px; }
+.assessment-explanation { flex: 1; font-size: 12px; line-height: 1.8; color: #64775a; }
+.assessment-card button { min-height: 42px; margin-top: 10px; padding: 9px; border: 1px solid #d4ddcc; border-radius: 7px; color: #798772; background: #f2f4ed; cursor: default; }
+.assessment-notes { font-size: 12px; line-height: 1.7; color: #64775a; }
+.assessment-notes summary { cursor: pointer; }
+@media (max-width: 1100px) { .assessment-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .assessment-grid { grid-template-columns: minmax(0, 1fr); } .room-assessment { padding: 22px 16px; } }
 .clarification-form { margin-top: 24px; }
 .clarification-form fieldset { min-width: 0; padding: 0; margin: 0; border: 0; }
 .clarification-form legend { width: 100%; padding: 0; }

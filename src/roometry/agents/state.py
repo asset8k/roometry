@@ -13,6 +13,7 @@ from pydantic import (
 from typing_extensions import TypedDict
 
 from roometry.scenes.schemas import Identifier, RoomScene
+from roometry.assessment.schemas import RoomAssessment
 from roometry.uploads.schemas import (
     MAX_IMAGES,
     Height,
@@ -194,6 +195,7 @@ class AgentState(RunModel):
     )
     base_scene: RoomScene | None = None
     working_scene: RoomScene | None = None
+    room_assessment: RoomAssessment | None = None
     pending_tool: ToolCall | None = None
     catalog_reads: Annotated[list[CatalogRead], Field(max_length=16)] = Field(default_factory=list)
     tool_feedback: Annotated[list[ToolFeedback], Field(max_length=16)] = Field(
@@ -223,6 +225,10 @@ class AgentState(RunModel):
             and self.confirmed_dimensions.measurements_source != "user_confirmed"
         ):
             raise ValueError("Confirmed dimensions must retain user provenance.")
+        if self.room_assessment is not None:
+            from roometry.scenes.hashing import scene_hash
+            if self.working_scene is None or self.room_assessment.scene_hash != scene_hash(self.working_scene):
+                raise ValueError("Assessment must describe the current reconstructed scene snapshot.")
         return self
 
 

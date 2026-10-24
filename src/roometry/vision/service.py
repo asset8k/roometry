@@ -20,6 +20,7 @@ from openai.types.responses import Response, ResponseUsage
 from pydantic import ValidationError
 
 from roometry.config import Settings
+from roometry.assessment.schemas import RoomAssessment
 from roometry.model_calls import ModelOperation
 from roometry.uploads.errors import UploadFailure
 from roometry.uploads.schemas import PreparedRoomInput
@@ -66,6 +67,9 @@ class AnalysisState:
     review_attempted: bool = False
     visual_repair_attempted: bool = False
     reviewed_proposal: SceneProposalResponse | None = None
+    assessment_key: str | None = None
+    assessment_attempted: bool = False
+    assessment_result: RoomAssessment | None = None
 
 
 @dataclass(frozen=True)

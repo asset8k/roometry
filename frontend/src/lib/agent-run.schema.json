@@ -123,6 +123,84 @@
       "title": "AppearanceTarget",
       "type": "object"
     },
+    "AssessmentCard": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "rated",
+            "unassessed",
+            "not_applicable"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "score": {
+          "anyOf": [
+            {
+              "maximum": 10,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Score"
+        },
+        "confidence": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "geometry",
+            "photos"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "explanation": {
+          "maxLength": 400,
+          "minLength": 1,
+          "title": "Explanation",
+          "type": "string"
+        },
+        "entity_ids": {
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "type": "string"
+          },
+          "maxItems": 200,
+          "title": "Entity Ids",
+          "type": "array"
+        },
+        "metrics": {
+          "items": {
+            "$ref": "#/$defs/ScoreMetric"
+          },
+          "maxItems": 12,
+          "title": "Metrics",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status",
+        "score",
+        "confidence",
+        "source",
+        "explanation"
+      ],
+      "title": "AssessmentCard",
+      "type": "object"
+    },
     "CatalogRead": {
       "additionalProperties": false,
       "properties": {
@@ -2713,6 +2791,70 @@
       "title": "RoomAnalysisResponse",
       "type": "object"
     },
+    "RoomAssessment": {
+      "additionalProperties": false,
+      "properties": {
+        "policy_version": {
+          "const": "room-assessment-v1",
+          "default": "room-assessment-v1",
+          "title": "Policy Version",
+          "type": "string"
+        },
+        "scene_hash": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Scene Hash",
+          "type": "string"
+        },
+        "openness": {
+          "$ref": "#/$defs/AssessmentCard"
+        },
+        "storage": {
+          "$ref": "#/$defs/AssessmentCard"
+        },
+        "workspace": {
+          "$ref": "#/$defs/AssessmentCard"
+        },
+        "aesthetics": {
+          "$ref": "#/$defs/AssessmentCard"
+        },
+        "recommended": {
+          "anyOf": [
+            {
+              "enum": [
+                "openness",
+                "storage",
+                "workspace",
+                "aesthetics"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Recommended"
+        },
+        "notes": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 8,
+          "title": "Notes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "scene_hash",
+        "openness",
+        "storage",
+        "workspace",
+        "aesthetics",
+        "recommended",
+        "notes"
+      ],
+      "title": "RoomAssessment",
+      "type": "object"
+    },
     "RoomDimensions": {
       "additionalProperties": false,
       "properties": {
@@ -3864,6 +4006,37 @@
       "title": "SceneProposalResponse",
       "type": "object"
     },
+    "ScoreMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        },
+        "unit": {
+          "enum": [
+            "m",
+            "m2",
+            "m3",
+            "count",
+            "fraction"
+          ],
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "value",
+        "unit"
+      ],
+      "title": "ScoreMetric",
+      "type": "object"
+    },
     "SpatialRelationship": {
       "additionalProperties": false,
       "description": "View-independent relationship between stable observation identities.",
@@ -4870,6 +5043,17 @@
       ],
       "default": null
     },
+    "room_assessment": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RoomAssessment"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
     "pending_tool": {
       "anyOf": [
         {
@@ -4964,6 +5148,7 @@
     "object_mobility",
     "base_scene",
     "working_scene",
+    "room_assessment",
     "pending_tool",
     "catalog_reads",
     "tool_feedback",

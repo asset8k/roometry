@@ -29,6 +29,10 @@ describe('guided room generation', () => {
     const { generation, upload, client, batch } = await setup()
     await generation.generate()
     expect(upload).toHaveBeenCalledTimes(1)
+    expect(upload).toHaveBeenCalledWith(expect.any(Array), {
+      room_type: null, description: null, goals: ['general_analysis'],
+      dimensions: { width_m: 4, length_m: 4, height_m: 2.6, measurements_source: 'user_confirmed' },
+    }, expect.any(AbortSignal))
     expect(client.start).toHaveBeenCalledWith({ input_id: batch().input_id, request_id: expect.any(String) }, expect.any(AbortSignal))
     expect(generation.getSnapshot().phase).toBe('completed')
     expect(generation.getSnapshot().run?.working_scene?.objects.length).toBeGreaterThan(0)
@@ -225,4 +229,10 @@ it.each(['search_furniture', 'get_furniture_details', 'list_furniture_categories
   const run = agentRun(input, { pending_tool: { call_id: 'mcp_1', name, arguments: {} } })
   expect(generationProgress({ phase: 'running', run, cancelling: false, answering: false, recovery: false, notice: null }))
     .toBe('Checking furniture models and dimensions…')
+})
+
+it('describes the final read-only assessment', () => {
+  const run = { ...finishedRun(prepared([photo()])), status: 'running' as const, continue_run: false }
+  expect(generationProgress({ phase: 'running', run, cancelling: false, answering: false, recovery: false, notice: null }))
+    .toBe('Assessing your room’s space, storage, workspace and aesthetics…')
 })

@@ -87,11 +87,11 @@ describe('room input controller', () => {
     controller.addPhotos([photo()])
     expect(await controller.submit()).toBe(true)
     const accepted = controller.getSnapshot().accepted
-    controller.change({ goalText: 'More storage' })
+    controller.change({ description: 'A bedroom with built-in storage' })
     vi.mocked(client.upload).mockRejectedValueOnce(new RoomInputError('Bad photo', [{ code: 'invalid_image', message: 'Bad photo', file_index: 0 }], true))
     expect(await controller.submit()).toBe(false)
     expect(controller.getSnapshot()).toMatchObject({ accepted, dirty: true, uncertain: false })
-    expect(controller.getSnapshot().draft.goalText).toBe('More storage')
+    expect(controller.getSnapshot().draft.description).toBe('A bedroom with built-in storage')
     expect(controller.getSnapshot().photos).toHaveLength(1)
   })
   it('keeps files and text on network failure and confirms a successful retry', async () => {

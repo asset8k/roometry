@@ -17,7 +17,7 @@ from roometry.agents.checkpointing import (
 )
 from roometry.agents.clarification import AnswerConflict, validate_answer
 from roometry.agents.graph import build_graph
-from roometry.agents.nodes import RunContext, StepAdapter
+from roometry.agents.nodes import RunContext, StepAdapter, AssessmentAdapter
 from roometry.agents.state import AgentState, ClarificationAnswer, RunLimits
 from roometry.uploads.errors import UploadFailure
 from roometry.uploads.schemas import PreparedRoomInput
@@ -31,6 +31,7 @@ class AgentRuns:
         *,
         execute_tool: StepAdapter | None = None,
         review_scene: StepAdapter | None = None,
+        assess_room: AssessmentAdapter | None = None,
         default_limits: RunLimits | None = None,
         checkpoints: TemporaryCheckpoints | None = None,
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
@@ -41,6 +42,7 @@ class AgentRuns:
         self.resolve_input, self.advance, self.now = resolve_input, advance, now
         self.execute_tool = execute_tool
         self.review_scene = review_scene
+        self.assess_room = assess_room
         self.default_limits = default_limits or RunLimits()
         self.checkpoints = (
             checkpoints if checkpoints is not None else TemporaryCheckpoints()
@@ -236,6 +238,7 @@ class AgentRuns:
                 budget=budget,
                 execute_tool=self.execute_tool,
                 review_scene=self.review_scene,
+                assess_room=self.assess_room,
             )
             entry.answer_in_flight = answer
             graph_input = (

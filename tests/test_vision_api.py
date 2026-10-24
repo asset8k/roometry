@@ -112,6 +112,7 @@ async def harness(tmp_path):
                 # Existing transport tests isolate their stage. Dedicated review
                 # tests explicitly enable the full pipeline with mock responses.
                 visual_review_enabled=False,
+                room_assessment_enabled=False,
                 openai_api_key="test-provider-key",
             )
             app = create_app(settings, analysis_client=sdk)

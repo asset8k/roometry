@@ -8,25 +8,28 @@ describe('photo input boundaries', () => {
     for (const invalid of [{ ...limits, allowed_extensions: undefined }, { ...limits, allowed_media_types: [] }, { ...limits, max_images: 11 },
       { ...limits, max_body_bytes: 1 }, { ...limits, max_room_height_m: -1 }]) expect(() => parseInputLimits(invalid)).toThrow()
   })
-  it('preserves unknown dimensions, zero budgets and user-entered measurements', () => {
-    const options = draftOptions({ ...emptyDraft(), width: '4', budget: '0', currency: 'kzt', goalText: ' keep desk ' }, limits)
+  it('submits the current room for reconstruction with optional, user-entered measurements', () => {
+    const options = draftOptions({ ...emptyDraft(), roomType: 'bedroom', width: '4', description: ' My bedroom ' }, limits)
     expect(options.dimensions).toEqual({ width_m: 4, length_m: null, height_m: null, measurements_source: 'user_confirmed' })
-    expect(options.budget).toEqual({ amount: 0, currency: 'KZT' })
     expect(options.goals).toEqual(['general_analysis'])
-    expect(options.goal_text).toBe('keep desk')
-    expect(draftOptions({ ...emptyDraft(), goals: ['better_aesthetics'], goalText: 'Keep the bed; make the room cozier.' }, limits)).toMatchObject({
-      goals: ['better_aesthetics'], goal_text: 'Keep the bed; make the room cozier.',
-    })
+    expect(options.description).toBe('My bedroom')
+    expect(options.room_type).toBe('bedroom')
     expect(draftOptions({ ...emptyDraft(), width: '4', length: '4' }, limits).dimensions?.measurements_source).toBe('user_confirmed')
     expect(draftOptions(emptyDraft(), limits).dimensions).toBeNull()
+  })
+  it('does not forward legacy improvement preferences hidden in a draft', () => {
+    const legacyDraft = { ...emptyDraft(), goals: ['workspace'], goalText: 'Move my desk',
+      budget: '500', currency: 'USD', style: 'Minimalist', constraints: 'Replace the chair' }
+    const options = draftOptions(legacyDraft, limits)
+    expect(options).toEqual({ room_type: null, description: null, dimensions: null, goals: ['general_analysis'] })
   })
   it.each(['0', '-1', 'NaN', 'Infinity', '0x10', '31'])('rejects invalid width %s', width => {
     expect(() => draftOptions({ ...emptyDraft(), width }, limits)).toThrow()
   })
-  it('checks combined UTF-8 metadata bytes as well as character lengths', () => {
-    expect(() => draftOptions({ ...emptyDraft(), description: '😀'.repeat(2000), goalText: '😀'.repeat(2000), style: '😀'.repeat(100) }, limits)).toThrow()
-    expect(() => draftOptions({ ...emptyDraft(), goals: ['workspace', 'workspace'] }, limits)).toThrow()
-    expect(() => draftOptions({ ...emptyDraft(), budget: '1', currency: 'US' }, limits)).toThrow()
+  it('keeps description limits and unknown room details without asking for preferences', () => {
+    expect(draftOptions({ ...emptyDraft(), description: '😀'.repeat(2000) }, limits).description).toBe('😀'.repeat(2000))
+    expect(() => draftOptions({ ...emptyDraft(), description: '😀'.repeat(2001) }, limits)).toThrow()
+    expect(draftOptions(emptyDraft(), limits)).toEqual({ room_type: null, description: null, dimensions: null, goals: ['general_analysis'] })
   })
   it('accepts ten files and the common iPhone/modern photo formats', () => {
     expect(checkPhotoFiles(Array.from({ length: 10 }, () => photo()), limits)).toEqual([])

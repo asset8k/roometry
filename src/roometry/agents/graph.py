@@ -12,6 +12,7 @@ from roometry.agents.nodes import (
     finalize,
     guard,
     review_scene,
+    assess_room,
 )
 from roometry.agents.state import AgentState
 
@@ -53,9 +54,10 @@ def build_graph(
     graph.add_node("clarify", clarify)
     graph.add_node("review_scene", review_scene)
     graph.add_node("finalize", finalize)
+    graph.add_node("assess_room", assess_room)
     graph.add_edge(START, "guard")
     graph.add_conditional_edges(
-        "guard", after_guard, {"advance": "advance", "finalize": "finalize"}
+        "guard", after_guard, {"advance": "advance", "finalize": "assess_room"}
     )
     graph.add_conditional_edges(
         "advance", after_advance, {"tools": "tools", "guard": "guard", "clarify": "clarify"}
@@ -66,4 +68,5 @@ def build_graph(
     graph.add_edge("review_scene", "guard")
     graph.add_edge("clarify", "guard")
     graph.add_edge("finalize", END)
+    graph.add_edge("assess_room", "finalize")
     return graph.compile(checkpointer=checkpointer, interrupt_after=interrupt_after)

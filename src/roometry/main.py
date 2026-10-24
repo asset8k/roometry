@@ -13,6 +13,7 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel
 
 from roometry.agents.adapter import RoomAgent
+from roometry.assessment.service import RoomAssessor
 from roometry.agents.router import RunFailure
 from roometry.agents.router import router as agent_router
 from roometry.agents.runs import AgentRuns
@@ -56,6 +57,7 @@ def create_app(
         RoomAgent(settings, analyzer),
         execute_tool=scene_tools,
         review_scene=scene_tools.review,
+        assess_room=RoomAssessor(analysis_service),
         # A scene tool may make an initial request and one repair. Its outer
         # deadline must allow both configured per-request deadlines to run.
         default_limits=RunLimits(

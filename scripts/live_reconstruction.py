@@ -92,7 +92,7 @@ async def run(args):
     directory = args.output.resolve()
     directory.mkdir(parents=True, exist_ok=False)  # Never replace an earlier run.
     settings = Settings()
-    operations = ("analysis", "scene_proposal", "scene_repair", "visual_review", "visual_repair", "agent_decision")
+    operations = ("analysis", "scene_proposal", "scene_repair", "visual_review", "visual_repair", "agent_decision", "room_assessment")
     expected = {op: "gpt-6.1-sol" if op == "scene_proposal" else "gpt-6-luna" for op in operations}
     if not settings.analysis_enabled or not settings.visual_review_enabled or not settings.openai_api_key:
         raise RuntimeError("Enable analysis and visual review, and configure the API key before this test.")

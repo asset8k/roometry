@@ -4,17 +4,11 @@ import { RoomGenerationController } from '../../lib/room-generation-controller'
 import { RoomInputController } from '../../lib/room-input-controller'
 import type { RoomInputState } from '../../lib/room-input-controller'
 import { formatBytes } from '../../lib/room-input'
-import type { GoalChoice } from '../../lib/room-input'
 
 const roomTypes = [
   ['bedroom', 'Bedroom'], ['living_room', 'Living room'], ['kitchen', 'Kitchen'], ['bathroom', 'Bathroom'],
   ['office', 'Office'], ['entryway', 'Entryway'], ['other', 'Other'],
 ] as const
-const goals: { value: GoalChoice; label: string }[] = [
-  { value: 'more_storage', label: 'More storage' }, { value: 'workspace', label: 'A better workspace' },
-  { value: 'more_open_space', label: 'More open space' },
-  { value: 'better_aesthetics', label: 'Better aesthetics' },
-]
 const roomLabel = (type: string | null | undefined) => roomTypes.find(([value]) => value === type)?.[1] ?? 'Not specified'
 
 export default function RoomInputWorkspace({ onConnectionChange, inputController }: { onConnectionChange: (online: boolean) => void; inputController?: RoomInputController }) {
@@ -52,7 +46,7 @@ export function RoomInputForm({ state, controller, onGenerate, onCancel, onClear
     <div className="input-workspace">
       <form className="room-input-form" onSubmit={event => { event.preventDefault(); void onGenerate() }}>
         <fieldset className="input-edit-lock" disabled={locked}>
-        <div className="input-section-title"><span className="section-label">Start with your space</span><h2>A few photos. A little context.</h2><p>Capture different angles of one room, then tell us what you’d like to improve.</p></div>
+        <div className="input-section-title"><span className="section-label">Start with your space</span><h2>A few photos. A little context.</h2><p>Capture different angles of one room. We’ll use your photos and room details to reconstruct your current space.</p></div>
         <section className="photo-section" aria-labelledby="photo-heading">
           <div className="input-section-heading"><h3 id="photo-heading">1. Room photos</h3><span>{photos.length}{limits ? ` / ${limits.max_images}` : ''} selected</span></div>
           {state.policyLoading && <p className="input-help" role="status">Loading photo requirements…</p>}
@@ -82,31 +76,18 @@ export function RoomInputForm({ state, controller, onGenerate, onCancel, onClear
         </section>
 
         <fieldset className="room-preferences" disabled={Boolean(busy)}>
-          <legend>2. How would you like to improve this room?</legend>
+          <legend>2. About your room</legend>
           <label>Room type<select value={draft.roomType ?? ''} onChange={event => set({ roomType: event.target.value as typeof draft.roomType })}>
             <option value="">Not sure yet</option>{roomTypes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select></label>
-          <div className="goal-choices" role="group" aria-label="Room improvement goals">{goals.map(goal => <label key={goal.value}>
-            <input type="checkbox" checked={draft.goals.includes(goal.value)} onChange={event => set({ goals: event.target.checked ? [...draft.goals, goal.value] : draft.goals.filter(value => value !== goal.value) })} /><span>{goal.label}</span>
-          </label>)}</div>
-          <p className="input-help">No specific goal? Leave these blank for a general room analysis.</p>
-          <label>Anything you want to improve? <span className="optional">Optional</span><textarea value={draft.goalText} maxLength={limits?.max_goal_text_chars} rows={3}
-            placeholder="A cozier look, better storage, a calmer layout… Tell us what to keep or avoid." onChange={event => set({ goalText: event.target.value })} /></label>
-
-          <details className="optional-room-details"><summary>Room details & preferences <span>Optional</span></summary>
-            <label>Describe the room<textarea value={draft.description} maxLength={limits?.max_description_chars} rows={3} placeholder="How do you use this room?"
-              onChange={event => set({ description: event.target.value })} /></label>
-            <div className="dimension-inputs">
-              <label>Width (m)<input type="number" step="any" min="0" max={limits?.max_room_side_m} inputMode="decimal" value={draft.width} onChange={event => set({ width: event.target.value })} /></label>
-              <label>Length (m)<input type="number" step="any" min="0" max={limits?.max_room_side_m} inputMode="decimal" value={draft.length} onChange={event => set({ length: event.target.value })} /></label>
-              <label>Height (m)<input type="number" step="any" min="0" max={limits?.max_room_height_m} inputMode="decimal" value={draft.height} onChange={event => set({ height: event.target.value })} /></label>
-            </div>
-            <p className="input-help">Leave unknown measurements blank. Photos alone don’t establish exact dimensions.</p>
-            <div className="budget-inputs"><label>Budget<input type="number" min={0} max={limits?.max_budget_amount} step="any" inputMode="decimal" placeholder="Not specified" value={draft.budget} onChange={event => set({ budget: event.target.value })} /></label>
-              <label>Currency<input type="text" maxLength={3} value={draft.currency} autoCapitalize="characters" onChange={event => set({ currency: event.target.value.toUpperCase() })} aria-describedby="budget-hint" /></label></div>
-            <p id="budget-hint" className="input-help">Use a three-letter code, such as USD, EUR or KZT. A budget of 0 means no purchase budget.</p>
-            <label>Style preference<input type="text" value={draft.style} maxLength={limits?.max_style_chars} placeholder="Simple, cozy, minimalist…" onChange={event => set({ style: event.target.value })} /></label>
-          </details>
+          <label>Describe the room <span className="optional">Optional</span><textarea value={draft.description} maxLength={limits?.max_description_chars} rows={3} placeholder="How do you use this room? Describe its current layout."
+            onChange={event => set({ description: event.target.value })} /></label>
+          <div className="dimension-inputs">
+            <label>Width (m)<input type="number" step="any" min="0" max={limits?.max_room_side_m} inputMode="decimal" value={draft.width} onChange={event => set({ width: event.target.value })} /></label>
+            <label>Length (m)<input type="number" step="any" min="0" max={limits?.max_room_side_m} inputMode="decimal" value={draft.length} onChange={event => set({ length: event.target.value })} /></label>
+            <label>Height (m)<input type="number" step="any" min="0" max={limits?.max_room_height_m} inputMode="decimal" value={draft.height} onChange={event => set({ height: event.target.value })} /></label>
+          </div>
+          <p className="input-help">Measurements are optional. Leave unknown values blank; we’ll ask if a missing dimension is needed to build your room.</p>
         </fieldset>
 
         </fieldset>
@@ -125,20 +106,15 @@ export function RoomInputForm({ state, controller, onGenerate, onCancel, onClear
       </form>
 
       <aside className="input-summary" aria-label="Your room input summary">
-        <span className="section-label">Your room, your priorities</span>
+        <span className="section-label">Your room details</span>
         {accepted ? <>
           <h2>{state.uncertain ? 'Request not completed' : state.dirty ? 'Changes not generated' : generating ? 'Generating your room' : generated ? 'Room generated' : 'Ready to generate'}</h2>
           <p>{state.uncertain ? 'Try Generate room again, or clear the inputs to start over.' : state.dirty ? 'Your form has changed. Choose Generate room to use the updated inputs.' : generating ? 'Your photos are being turned into an approximate room model.' : generated ? 'Your reconstructed room is ready below.' : 'Choose Generate room to continue with your current inputs.'}</p>
           <dl className="input-summary-list"><div><dt>Photos</dt><dd>{accepted.images.length}</dd></div><div><dt>Room type</dt><dd>{roomLabel(acceptedOptions?.room_type)}</dd></div>
             <div><dt>Available until</dt><dd>{new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' }).format(new Date(accepted.expires_at))}</dd></div></dl>
-          {acceptedOptions?.goal_text && <p className="submitted-note">{acceptedOptions.goal_text}</p>}
           <details className="accepted-details"><summary>View submitted details</summary><dl>
-            <dt>Goals</dt><dd>{acceptedOptions?.goals?.map(value => goals.find(goal => goal.value === value)?.label ?? 'General analysis').join(', ')}</dd>
             <dt>Dimensions</dt><dd>{acceptedOptions?.dimensions ? `${acceptedOptions.dimensions.width_m ?? '?'} × ${acceptedOptions.dimensions.length_m ?? '?'} × ${acceptedOptions.dimensions.height_m ?? '?'} m (${acceptedOptions.dimensions.measurements_source === 'user_confirmed' ? 'provided by you' : 'estimated'})` : 'Not specified'}</dd>
-            <dt>Budget</dt><dd>{acceptedOptions?.budget ? `${acceptedOptions.budget.amount} ${acceptedOptions.budget.currency}` : 'Not specified'}</dd>
             {acceptedOptions?.description && <><dt>Description</dt><dd>{acceptedOptions.description}</dd></>}
-            {acceptedOptions?.style && <><dt>Style</dt><dd>{acceptedOptions.style}</dd></>}
-            {acceptedOptions?.constraints && <><dt>Keep or avoid</dt><dd>{acceptedOptions.constraints}</dd></>}
           </dl></details>
           <p className="input-help">These are your submitted details. Generation progress and your room model appear below.</p>
         </> : <>

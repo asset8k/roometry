@@ -16,6 +16,16 @@ const ajv = new Ajv2020({ strict: true, allErrors: true })
 addFormats(ajv)
 const valid = ajv.compile<AgentState>(schema)
 const validError = ajv.compile<RunErrorResponse>(errorSchema)
+type Assessment = NonNullable<AgentState['room_assessment']>
+const validAssessment = ajv.compile<Assessment>({ $ref: '#/$defs/RoomAssessment', $defs: schema.$defs })
+function coherentAssessment(value: unknown): value is Assessment {
+  if (!validAssessment(value)) return false
+  const keys = ['openness', 'storage', 'workspace', 'aesthetics'] as const
+  if (keys.some(key => (value[key].status === 'rated') !== (value[key].score !== null))) return false
+  const eligible = keys.filter(key => value[key].status === 'rated' && value[key].confidence !== 'low' && value[key].score! < 8)
+  const recommended = eligible.reduce<typeof keys[number] | null>((best, key) => best === null || value[key].score! < value[best].score! ? key : best, null)
+  return value.recommended === recommended
+}
 export const activeRun = (run: AgentState) => run.status === 'queued' || run.status === 'running'
 
 export class AgentRunError extends Error {
@@ -24,6 +34,14 @@ export class AgentRunError extends Error {
 
 /** Validate the server contract and cross-references before opening a viewer. */
 export function parseAgentRun(data: unknown): AgentState {
+  // Optional assessment metadata cannot hide a valid reconstruction. Historical
+  // responses without cards are also readable; the UI explains their absence.
+  if (data && typeof data === 'object' && !Array.isArray(data)) {
+    const source = data as Record<string, unknown>
+    if (source.room_assessment === undefined || (source.room_assessment !== null && !coherentAssessment(source.room_assessment))) {
+      data = { ...source, room_assessment: null }
+    }
+  }
   if (!valid(data)) throw new AgentRunError('The service returned an unreadable generation status.')
   if (Date.parse(data.created_at) >= Date.parse(data.expires_at) || Date.parse(data.expires_at) > Date.parse(data.input_expires_at)
     || new Set(data.image_ids).size !== data.image_ids.length) throw new AgentRunError('The generation references are inconsistent.')

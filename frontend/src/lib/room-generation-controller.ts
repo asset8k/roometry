@@ -21,6 +21,7 @@ export function generationProgress(state: GenerationState): string {
   if (state.recovery) return 'Connection interrupted. Your generation may still be running.'
   if (state.phase === 'starting') return 'Starting your room reconstruction…'
   if (state.phase === 'awaiting_answer') return 'A little more context will help.'
+  if (state.phase === 'running' && state.run?.working_scene && !state.run.continue_run && !state.run.room_assessment) return 'Assessing your room’s space, storage, workspace and aesthetics…'
   if (state.run?.working_scene && !state.run.proposal?.visual_review && !state.run.pending_tool) return 'Comparing your room photos with the reconstruction…'
   switch (state.run?.pending_tool?.name) {
     case 'analyze_photos': return 'Analyzing your room photos together…'

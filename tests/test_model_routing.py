@@ -23,6 +23,7 @@ def test_default_stage_routes_and_visual_review_configuration_do_not_enable_call
         'visual_review': ('gpt-6-luna', 'low'),
         'visual_repair': ('gpt-6-luna', 'medium'),
         'agent_decision': ('gpt-6-luna', 'low'),
+        'room_assessment': ('gpt-6-luna', 'low'),
     }
     for operation, (model, effort) in expected.items():
         route = settings.model_route(operation)
