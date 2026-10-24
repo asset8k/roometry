@@ -234,7 +234,8 @@ class VisualReviewer:
             wall_ids = {item.id for item in analysis.observations.walls}
             room_appearance = any(f.kind == "color" and (not f.entity_ids or set(f.entity_ids) <= wall_ids) for f in actionable)
             try:
-                payload = await anyio.to_thread.run_sync(partial(build_proposal_request, operation="scene_repair"), settings, analysis, measurements, previous, problems, images)
+                required_photos = {key for finding in actionable for key in finding.source_image_ids}
+                payload = await anyio.to_thread.run_sync(partial(build_proposal_request, operation="scene_repair", mandatory_image_ids=required_photos), settings, analysis, measurements, previous, problems, images)
                 context = json.loads(payload["input"][0]["content"][0]["text"])
                 context["visual_review"] = judgment.model_dump(mode="json")
                 context["selected_findings"] = [index for index,_ in selected]
@@ -242,7 +243,10 @@ class VisualReviewer:
                 context["appearance_controls"] = {obj.id:appearance_controls(obj) for obj in proposal.scene.objects}
                 context["room_appearance_revision_allowed"] = room_appearance
                 context["protected_object_ids"] = [obj.id for obj in proposal.scene.objects if obj.locked or obj.provenance == "user_added"]
-                payload["input"][0]["content"][0]["text"] = json.dumps(context)
+                if settings.scene_compact_context:
+                    from roometry.vision.context_budget import photo_references
+                    context = photo_references(context, analysis.observations.image_ids)
+                payload["input"][0]["content"][0]["text"] = json.dumps(context, separators=(',', ':'))
                 # Reuse the very same bad-scene views and original photos, never
                 # rendered content substituted for original photo evidence.
                 for view in views:

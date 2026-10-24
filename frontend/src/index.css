@@ -271,7 +271,34 @@ footer { margin-top: 30px; text-align: center; color: #858a7e; font-size: 10px; 
 .assessment-rating .assessment-unrated { font-size: 17px; line-height: 1.5; }
 .assessment-confidence { color: #6a795f; font-size: 10px; }
 .assessment-explanation { flex: 1; font-size: 12px; line-height: 1.8; color: #64775a; }
-.assessment-card button { min-height: 42px; margin-top: 10px; padding: 9px; border: 1px solid #d4ddcc; border-radius: 7px; color: #798772; background: #f2f4ed; cursor: default; }
+.assessment-card button { min-height: 42px; margin-top: 10px; padding: 9px; border: 1px solid #d4ddcc; border-radius: 7px; color: #496751; background: #f2f4ed; cursor: pointer; }
+.assessment-card button:disabled { color: #798772; cursor: default; }
+.assessment-card button:focus-visible { outline: 2px solid #496751; outline-offset: 3px; }
+.improvement-request { padding: 28px; border: 1px solid #dce2d3; border-radius: 10px; margin-bottom: 22px; }
+.improvement-request h2 { font-size: 22px; }
+.improvement-request p { font-size: 13px; line-height: 1.7; }
+.improvement-request fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.improvement-request label { display: grid; gap: 8px; margin: 16px 0; font-size: 13px; }
+.improvement-request input, .improvement-request textarea { width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #cdd7c3; border-radius: 8px; background: #fffef9; color: #34472f; font: inherit; }
+.improvement-request textarea { min-height: 90px; resize: vertical; }
+.improvement-budget { display: grid; grid-template-columns: minmax(0, 1fr) 110px; gap: 16px; }
+.edit-copy { padding: 10px 12px; border: 1px solid #b7c7ac; border-radius: 7px; color: #496751; background: #f2f4ed; font-size: 12px; }
+.comparison-switch button:disabled { opacity: .55; cursor: default; }
+.improvement-version { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 12px; color: #64775a; }
+.improvement-version select { max-width: 100%; border: 1px solid #cdd7c3; border-radius: 7px; padding: 8px; color: #496751; background: #fcfbf7; }
+.improvement-comparison { padding: 22px; border-top: 1px solid #dddfd2; font-size: 12px; line-height: 1.7; }
+.comparison-summary-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 18px; }
+.comparison-summary-heading h3 { margin: 0; font-size: 17px; font-weight: 500; }
+.comparison-summary-heading > span { color: #64775a; }
+.comparison-table-scroll { overflow-x: auto; }
+.comparison-scores { width: 100%; border-collapse: collapse; margin: 16px 0; text-align: left; }
+.comparison-scores caption { text-align: left; font-size: 12px; color: #64775a; padding-bottom: 8px; }
+.comparison-scores th, .comparison-scores td { padding: 10px 14px 10px 0; border-bottom: 1px solid #e0e4d7; min-width: 80px; vertical-align: top; }
+.comparison-scores th { font-weight: 500; }
+.score-focus, .score-note { display: block; font-size: 10px; color: #64775a; }
+.comparison-changes summary { cursor: pointer; }
+.comparison-changes ul { padding-left: 20px; }
+.comparison-history-note { padding: 12px 22px; margin: 0; color: #64775a; font-size: 12px; line-height: 1.7; background: #eef2e7; }
 .assessment-notes { font-size: 12px; line-height: 1.7; color: #64775a; }
 .assessment-notes summary { cursor: pointer; }
 @media (max-width: 1100px) { .assessment-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

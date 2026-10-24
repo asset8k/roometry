@@ -62,7 +62,7 @@ def access(
     return cast(AgentRuns, request.app.state.agent_runs), owner
 
 
-async def result(operation: Awaitable[AgentState]) -> AgentState:
+async def result[T](operation: Awaitable[T]) -> T:
     try:
         return await operation
     except RunUnavailable:

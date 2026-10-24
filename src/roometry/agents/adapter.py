@@ -1,6 +1,7 @@
 """Responses function-call decisions, separate from deterministic tool dispatch."""
 
 import json
+from uuid import uuid4
 from typing import cast
 
 from openai import APIError, APITimeoutError
@@ -60,6 +61,20 @@ class RoomAgent:
             or not self.settings.openai_api_key.get_secret_value().strip()
         ):
             return failed("analysis_unavailable")
+        if self.settings.agent_deterministic_routing:
+            # Reconstruction phases are established by state, not model choice.
+            # Tools still execute through the same checkpointed authorization,
+            # cancellation and budget guards. Redesign has its own bounded graph.
+            if state.analysis is None:
+                return RunStep(action="continue", pending_tool=ToolCall(call_id=str(uuid4()), name="analyze_photos", arguments={}))
+            if state.working_scene is None and state.proposal is None:
+                questions = clarification_candidates(state, reserve_decision=False)
+                if questions:
+                    return RunStep(action="continue", pending_question=questions[0], feedback=ToolFeedback(
+                        name="request_clarification", outcome="success", message="Clarify an important reconstruction constraint."))
+                return RunStep(action="continue", pending_tool=ToolCall(call_id=str(uuid4()), name="propose_scene", arguments={}))
+            return RunStep(action="finish", feedback=ToolFeedback(name="finish", outcome="success",
+                message="The bounded reconstruction and review are complete; improvement is a separate user choice."))
         # This pure clarification runs after the analysis checkpoint, before any
         # paid construction/decision, and never inside replayed interrupt code.
         axis_question = next((q for q in clarification_candidates(state, reserve_decision=False) if q.kind == "room_wall_axis"), None)

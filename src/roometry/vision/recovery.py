@@ -4,6 +4,36 @@ from roometry.vision.errors import AnalysisFailure
 from roometry.vision.proposal_schemas import ProposalIssue, SceneDraft
 from roometry.vision.schemas import RoomAnalysisResponse
 from roometry.scenes.assets import ASSET_REGISTRY
+from roometry.scenes.catalog import candidates
+
+
+def actionable_repair(analysis, draft, issues):
+    """Do not pay again solely for unrepresentable or omitted loose accessories.
+
+    This is only used after retaining valid partial geometry. Unknown/global,
+    major-object, opening and placement failures always retain their repair path.
+    Original observations remain explicit unresolved entries, never deletions.
+    """
+    objects = {o.id: o for o in analysis.observations.objects}
+    present = {o.id for o in draft.objects}
+    for problem in issues:
+        if not problem.entity_ids or problem.code not in {"identity_mismatch", "unsupported_placement", "unknown_object"}:
+            return True
+        for key in problem.entity_ids:
+            obj = objects.get(key)
+            if obj is None or key in present:
+                return True
+            possible = candidates(obj.type, obj.placement) if obj.type else ()
+            if obj.placement_confidence != 'high' and obj.type:
+                possible = possible or candidates(obj.type)
+            if obj.alternative_type and obj.confidence != 'high':
+                possible = possible or candidates(obj.alternative_type)
+            if not possible:
+                continue
+            if obj.type == 'household_accessory' and not obj.appears_fixed and problem.code == 'identity_mismatch':
+                continue
+            return True
+    return False
 
 
 def wall_repair_allowed(analysis: RoomAnalysisResponse, issues: list[ProposalIssue]) -> bool:

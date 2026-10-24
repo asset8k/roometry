@@ -7,12 +7,12 @@ from openai import APIError
 from pydantic import ValidationError
 
 from roometry.assessment.metrics import measure_room, unknown, with_recommendation
-from roometry.assessment.schemas import AssessmentCard, PhotoAssessment
+from roometry.assessment.schemas import AssessmentCard, PhotoAssessment, AESTHETIC_FIELDS, AESTHETIC_INSTRUCTIONS
+from roometry.assessment.evidence import evidence_for_run
 from roometry.scenes.scoring import ScoreMetric
 from roometry.vision.analyzer import response_json
 from roometry.vision.errors import AnalysisFailure
 from roometry.vision.evidence import photo_content, strict_schema
-from roometry.vision.importance import importance
 
 INSTRUCTIONS = """Assess the aesthetics of the user's ORIGINAL room using the supplied
 photos, final reconstructed scene and measured assessment. This is a read-only
@@ -27,12 +27,12 @@ the arrangement. Do not reward expensive furniture, impose a preferred style,
 or mistake camera exposure, simplified catalog art or missing textures for poor
 taste. These are approximate subjective judgments, never an objective verdict.
 Return aesthetics=null if the room is not sufficiently visible to judge. Use low
-confidence when substantial occlusion, unclear evidence or an incomplete major
-inventory limits the judgment. Cite only supplied original photo IDs; use one or
+confidence when substantial occlusion or unclear PHOTO evidence limits the judgment.
+An unresolved reconstruction item alone does not reduce photo confidence. Cite only supplied original photo IDs; use one or
 two best sources and one short, concrete explanation of the visible strengths and
 opportunities. A missing desk does not mean a room is bad. Do not change or invent
 the numerical geometry scores. Keep the answer concise and follow the schema.
-"""
+""" + AESTHETIC_INSTRUCTIONS
 
 
 class RoomAssessor:
@@ -45,12 +45,14 @@ class RoomAssessor:
             return None
         state = await service._owned_analysis(run.analysis.analysis_id, context.owner)
         scene = run.working_scene
-        observed = {o.id: o for o in [*run.analysis.observations.objects, *run.analysis.observations.openings]}
-        incomplete = bool(run.proposal and any(importance(observed[item.entity_id]) <= 1
-            for item in run.proposal.unresolved_entities if item.entity_id in observed))
-        local = await anyio.to_thread.run_sync(lambda: measure_room(scene, incomplete_inventory=incomplete))
+        evidence = evidence_for_run(run)
+        local = await anyio.to_thread.run_sync(lambda: measure_room(scene, evidence=evidence))
         if state.assessment_key == local.scene_hash and state.assessment_result is not None:
-            return state.assessment_result.model_copy(deep=True)
+            # Photo judgment can be reused while clarified geometry evidence is
+            # remeasured, without another paid request at the same scene pose.
+            result = with_recommendation(local, aesthetics=state.assessment_result.aesthetics.model_dump())
+            state.assessment_result = result.model_copy(deep=True)
+            return result
 
         def unavailable(message):
             result = with_recommendation(local, aesthetics=unknown(message, source="photos").model_dump())
@@ -71,7 +73,8 @@ class RoomAssessor:
             schema["$defs"]["AestheticRubric"]["properties"]["source_image_ids"]["items"]["enum"] = run.image_ids
             content = [{"type": "input_text", "text": json.dumps({
                 "scene": scene.model_dump(mode="json"), "measured_assessment": local.model_dump(mode="json"),
-                "room_description": run.input_options.description, "major_inventory_incomplete": incomplete,
+                "room_description": run.input_options.description,
+                "uncertain_geometry_categories": sorted(evidence.uncertain_categories),
             })}]
             content.extend(photo_content(run.image_ids, images, settings.analysis_max_request_bytes))
             payload = {"model": settings.model_route("room_assessment").model, "instructions": INSTRUCTIONS,
@@ -95,10 +98,9 @@ class RoomAssessor:
             else:
                 if len(set(rubric.source_image_ids)) != len(rubric.source_image_ids) or not set(rubric.source_image_ids) <= set(run.image_ids):
                     raise ValueError("Photo assessment used unsupported evidence.")
-                fields = ("color_harmony", "material_cohesion", "visual_balance", "visual_order", "lighting_composition")
-                card = AssessmentCard(status="rated", score=float(sum(getattr(rubric, key) for key in fields)),
-                    confidence="low" if incomplete else rubric.confidence, source="photos", explanation=rubric.explanation,
-                    metrics=[ScoreMetric(key=key, value=float(getattr(rubric, key)), unit="count") for key in fields])
+                card = AssessmentCard(status="rated", score=rubric.total,
+                    confidence=rubric.confidence, source="photos", explanation=rubric.explanation,
+                    metrics=[ScoreMetric(key=key, value=float(getattr(rubric, key)), unit="count") for key in AESTHETIC_FIELDS])
                 result = with_recommendation(local, aesthetics=card.model_dump())
         except (APIError, AnalysisFailure, ValidationError, ValueError, TimeoutError, OSError, RecursionError):
             result = unavailable("The visual rating could not be completed. Other measured categories and your room remain available.")

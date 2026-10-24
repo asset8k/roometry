@@ -39,7 +39,7 @@ from roometry.vision.fidelity import evaluate_fidelity
 from roometry.vision.partial import assemble_partial
 from roometry.vision.importance import partial_quality
 from roometry.vision.proposal_request import build_proposal_request
-from roometry.vision.recovery import merge_repair
+from roometry.vision.recovery import merge_repair, actionable_repair
 from roometry.vision.draft_validation import parse_scene_draft
 from roometry.vision.proposal_schemas import (
     AXES,
@@ -782,6 +782,8 @@ class AnalysisService:
             if repair_failure is not None:
                 break
             if scene is not None:
+                break
+            if best_partial is not None and draft is not None and not actionable_repair(analysis, draft, problems):
                 break
         unresolved = []
         if scene is None and best_partial is not None:

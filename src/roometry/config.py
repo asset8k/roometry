@@ -67,8 +67,17 @@ class Settings(BaseSettings):
     analysis_max_provider_attempts: int = Field(default=2, ge=1, le=3)
     analysis_max_cached_inputs: int = Field(default=128, ge=1, le=1024)
     agent_max_steps: int = Field(default=16, ge=1, le=32)
+    agent_deterministic_routing: bool = True
+    scene_compact_context: bool = True
+    scene_photo_target: int = Field(default=3, ge=1, le=10)
+    # These independent requests rarely reuse a full dynamic room prefix.
+    # Explicit mode without markers avoids paying to write that unique suffix.
+    model_prompt_cache_mode: Literal["explicit", "implicit"] = "explicit"
     agent_max_model_calls: int = Field(default=20, ge=1, le=32)
     agent_max_tool_calls: int = Field(default=24, ge=1, le=64)
+    optimization_max_candidates: int = Field(default=3, ge=1, le=5)
+    optimization_max_model_calls: int = Field(default=6, ge=1, le=12)
+    optimization_max_output_tokens: int = Field(default=4096, ge=512, le=8192)
     agent_max_output_tokens: int = Field(default=2048, ge=128, le=8192)
     agent_max_request_bytes: int = Field(default=524288, ge=4096, le=2097152)
     mcp_furniture_transport: Literal["stdio"] = "stdio"
@@ -109,6 +118,8 @@ class Settings(BaseSettings):
                 self.review_model_name or self.model_name, self.review_reasoning_effort
             ),
             "room_assessment": ModelRoute(self.review_model_name or self.model_name, "low"),
+            "optimization_proposal": ModelRoute(self.agent_model_name or self.model_name, "low"),
+            "optimization_review": ModelRoute(self.review_model_name or self.model_name, "low"),
             "visual_repair": ModelRoute(
                 self.scene_repair_model_name or self.model_name, self.scene_repair_reasoning_effort
             ),
@@ -122,7 +133,7 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def consistent_model_routes(self) -> "Settings":
         operations: tuple[ModelOperation, ...] = (
-            "analysis", "agent_decision", "visual_review", "visual_repair", "scene_proposal", "scene_repair", "room_assessment"
+            "analysis", "agent_decision", "visual_review", "visual_repair", "scene_proposal", "scene_repair", "room_assessment", "optimization_proposal", "optimization_review"
         )
         for operation in operations:
             route = self.model_route(operation)

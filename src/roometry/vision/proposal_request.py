@@ -26,6 +26,8 @@ from roometry.vision.proposal_schemas import ProposalIssue, SceneDraft
 from roometry.vision.proposals import Measurements
 from roometry.vision.schemas import RoomAnalysisResponse
 from roometry.vision.wall_axes import AXIS_WALLS
+from roometry.vision.context_budget import compact_context, compact_schema, select_photo_ids, photo_references, photo_reference_schema
+from roometry.vision.prompts import COMPACT_SCENE_INSTRUCTIONS
 
 
 def build_proposal_request(
@@ -35,7 +37,7 @@ def build_proposal_request(
     draft: SceneDraft | None,
     issues: list[ProposalIssue],
     images: list[bytes] | None = None,
-    *, operation: Literal["scene_proposal", "scene_repair"] = "scene_proposal",
+    *, operation: Literal["scene_proposal", "scene_repair"] = "scene_proposal", mandatory_image_ids=(),
 ) -> ResponseCreateParamsNonStreaming:
     bindings = []
     alternatives = []
@@ -224,12 +226,29 @@ def build_proposal_request(
             schema["properties"]["openings"]["maxItems"] = 0
     else:
         schema["properties"]["openings"]["maxItems"] = 0
-    content: list[ResponseInputContentParam] = [{"type": "input_text", "text": json.dumps(context, ensure_ascii=True)}]
+    if settings.scene_compact_context:
+        context = compact_context(context, analysis, editable=editable)
+        schema = compact_schema(schema, context)
+    selected_ids = analysis.observations.image_ids
+    if images is not None and settings.scene_compact_context:
+        selected_ids = select_photo_ids(analysis.observations, settings.scene_photo_target, mandatory_image_ids)
+        context['photo_selection'] = {'attached_image_ids': selected_ids,
+            'analyzed_image_count': len(analysis.observations.image_ids),
+            'coverage': 'Every recorded entity, relation, wall span and finish has an attached source view; additional views are retained when needed.'}
+    if settings.scene_compact_context:
+        context = photo_references(context, analysis.observations.image_ids)
+        schema = photo_reference_schema(schema, analysis.observations.image_ids)
+        context['photo_reference_format'] = 'Use photo_N in source_image_ids; the server restores original upload IDs. Object and wall IDs are unchanged.'
+    content: list[ResponseInputContentParam] = [{"type": "input_text", "text": json.dumps(context, ensure_ascii=True, separators=(',', ':'))}]
     if images is not None:
-        content.extend(photo_content(analysis.observations.image_ids, images, settings.analysis_max_request_bytes))
+        if len(images) != len(analysis.observations.image_ids):
+            raise AnalysisFailure(503, "storage_unavailable", "The stored photos are unavailable. Upload them again.")
+        by_id = dict(zip(analysis.observations.image_ids, images))
+        names = [f'photo_{analysis.observations.image_ids.index(key)+1}' for key in selected_ids] if settings.scene_compact_context else selected_ids
+        content.extend(photo_content(names, [by_id[key] for key in selected_ids], settings.analysis_max_request_bytes))
     payload: ResponseCreateParamsNonStreaming = {
         "model": settings.model_route(operation).model,
-        "instructions": SCENE_PROPOSAL_INSTRUCTIONS,
+        "instructions": COMPACT_SCENE_INSTRUCTIONS if settings.scene_compact_context else SCENE_PROPOSAL_INSTRUCTIONS,
         "input": [
             {
                 "role": "user",

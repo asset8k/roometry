@@ -12,9 +12,11 @@ from pydantic import ValidationError
 from roometry.scenes.schemas import AppearanceCorrection, EstimateCorrection, InterpretationCorrection
 from roometry.vision.proposal_schemas import DraftObject, DraftOpening, SceneDraft
 from roometry.vision.proposals import notes
+from roometry.vision.context_budget import photo_references
 
 
 def parse_scene_draft(decoded, analysis):
+    decoded = photo_references(decoded, analysis.observations.image_ids, decode=True)
     try:
         return SceneDraft.model_validate(decoded)
     except ValidationError as original:

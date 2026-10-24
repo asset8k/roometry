@@ -172,8 +172,8 @@ async def test_construction_and_repair_receive_every_owned_photo_with_matching_i
         content = payload["input"][0]["content"]
         images = [part for part in content if part["type"] == "input_image"]
         assert len(images) == 2 and all(image["detail"] == "high" for image in images)
-        for metadata in upload["images"]:
-            assert {"type": "input_text", "text": "Photo evidence ID: " + metadata["image_id"]} in content
+        for index, metadata in enumerate(upload["images"]):
+            assert {"type": "input_text", "text": f"Photo evidence ID: photo_{index+1}"} in content
     assert result.json()["fidelity"]["major_object_coverage"] == 1.
     assert "data:image" not in json.dumps(result.json())
 

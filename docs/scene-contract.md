@@ -201,7 +201,7 @@ and enamel colors independently. Unknown roles retain catalog defaults.
 
 Photo observations may include evidence-backed facing, wall topology, adjacency,
 support and wall coverage. Construction receives the same private normalized
-photos, places anchors before accessories and gets one bounded repair. Entered
+photo evidence, places anchors before accessories and gets one bounded repair. Entered
 room measurements remain authoritative. Changed photo size estimates require
 `estimate_corrections` with exact before/after values, source views and a visual
 reason; observations remain unchanged. User identity/facing answers are stored as
@@ -239,6 +239,42 @@ joins provider usage by response ID, includes failed/incomplete output and cache
 writes at their total rates, and marks missing usage or unsupported pricing as
 unpriced. A write count without a TTL split uses the documented 30m default;
 timeouts without returned usage make the reported total a lower bound.
+
+Reconstruction routes its known phases directly through the existing checkpointed
+tools by default (`AGENT_DETERMINISTIC_ROUTING=true`): analyze, ask eligible
+clarifications, construct/review, finish and assess. It does not pay a model to
+choose those predetermined transitions. Interruption/resumption, ownership,
+cancellation, expiry and work budgets still apply. Set the flag to `false` to use
+the original model-driven tool router. User-triggered optimization retains its
+separate bounded proposal/validation/review loop.
+
+`SCENE_COMPACT_CONTEXT=true` deduplicates catalog models, supplies shared default
+dimensions and preserves each observed size axis, identity, support and
+relationship. Confident variant lists are shortlisted; uncertain alternatives are
+retained. Support metadata remains for observed or unknown hosts, and repairs keep
+their complete prior scenes and collision neighbors. Request-only `photo_N`
+references decode back to the original upload IDs before validation or storage.
+Foreign references still fail evidence checks. Compact source-reference schemas
+retain the same strict object, wall and measurement constraints.
+
+Analysis and visual review receive every original photo. Construction prefers
+`SCENE_PHOTO_TARGET=3` complementary views, retaining more whenever needed to cover
+every recorded entity, relationship, wall-span and finish source. Unattributed
+evidence falls back to all views; a visual repair also receives its findings'
+cited originals. A valid partial scene does not spend another repair solely on
+omitted objects with no compatible catalog representation or loose household
+accessories. Missing major furniture, openings and geometry failures keep their
+repair path. Original unresolved observations remain visible. Already-satisfied
+appearance targets do not authorize another paid correction.
+
+`MODEL_PROMPT_CACHE_MODE=explicit` avoids cache writes for these unique dynamic
+requests: no cache breakpoints are currently requested. The previous implicit
+behavior is configurable; savings never assume a cache hit across users or models.
+The provider ledger adds request text-character/image counts, cache mode and
+reported cache-write tokens, without logging photos or prompts. These sizes are
+diagnostics, not billed token estimates. `scripts/audit_generation_context.py`
+compares a saved run offline. The below-$0.10 target requires the final live
+reconstruction plus improvement test; it is not a hard dollar cap.
 
 Geometry-valid reconstructions with unresolved fidelity checks remain available as
 `partial` previews, even when every object is retained. Such previews carry
@@ -304,12 +340,114 @@ and clearance. Missing evidence stays unassessed, and no dedicated workspace is
 not applicable rather than a zero. These versioned assessment proxies are
 separate from the existing raw layout-scoring diagnostics.
 
+`room-assessment-v2` pairs a working chair with the actual offset catalog worktop
+using its size and facing, with a 0.1 m alignment allowance for photo estimates.
+Other chairs and obstacles still block the approach; geometry and edit acceptance
+are unchanged. Workspace combines worktop usability (4 points), working-side room
+(3) and unobstructed approach (3). A blocked approach caps the rating at 5; unusable
+worktop height or insufficient room caps it at 3. These are model usability
+estimates, not an ergonomics certification. Architectural window sills/ledges
+identified by observation labels do not count as storage furniture. Legacy v1
+cards remain readable; comparisons do not subtract scores across policy versions.
+
 Aesthetics uses one bounded, low-reasoning Luna request with the existing private
 photos and a fixed five-part rubric. Its attempt and result are cached under the
 same input ownership and expiry; polling and checkpoint resumption do not repeat
 it. Usage shares the run budget. A failed or unavailable visual rating preserves
-the measured cards and reconstruction. Major unresolved inventory makes ratings
-provisional. Only supported, non-low-confidence scores below 8 can be recommended;
+the measured cards and reconstruction. Unresolved evidence lowers confidence only
+in affected categories; a missing wall detail does not invalidate independent
+photo aesthetics. Missing major floor furniture or estimated room-side dimensions
+limits the geometry categories. Unknown observed workspaces stay unassessed rather
+than being described as absent. Only supported, non-low-confidence scores below 8 can be recommended;
 the lowest eligible category is selected. Ratings describe the original snapshot,
-not subsequent viewer edits. Improvement actions are displayed but disabled until
-the separate optimization flow is implemented.
+not subsequent viewer edits.
+
+Improvement actions now collect one selected focus and optional budget, style and
+constraints after reconstruction. `POST /api/agent-runs/{source_run_id}/optimizations`
+prepares a separate owned `OptimizationRun`; retrying its request UUID with the
+same normalized preferences returns that run. Reusing it for different data is a
+409. Read and cancel routes append `/{run_id}` and `/{run_id}/cancel`. All use the
+existing session, origin checks, JSON limits and no-store responses. Capacity is
+bounded; input revocation, parent expiry and cleanup revoke linked requests too.
+
+The server chooses the original scene snapshot, never a client-supplied scene.
+The snapshot retains the original assessment and privately keeps observations,
+confirmed dimensions, clarification answers, fixed/locked objects and reconstruction
+constraints for execution. Partial reconstructions are allowed with their existing
+limitations. Viewer edits and legacy upload improvement preferences are not
+silently imported. New optional preferences apply only to the improvement request;
+budget zero remains zero. Preparing, reading and cancelling make no model calls.
+Status `prepared` means saved, not an improved layout. Posting `{}` to
+`/{run_id}/execute` runs the separate checkpointed optimization graph once. Duplicate
+execute requests read progress or the terminal result; failed/disconnected paid
+attempts are not replayed. Progress reads and cooperative cancellation remain free.
+
+The graph proposes small atomic patches, validates components/supports, checks
+door/walking-clearance regressions, compares the same 0–10 assessment policy, and
+reviews a viable candidate against the retained scene using six diagnostic views.
+Supported items follow their parent transforms. Room dimensions, openings,
+inventory, assets, sizes, fixed/locked items and confirmed facing constraints are
+preserved. Generic photo placement relationships do not lock furniture during
+redesign. A measured target must improve by at least 0.2 points and other measured
+categories may not fall by more than 0.5. Aesthetics uses a qualitative pairwise
+judgment, never an invented numeric score; uncertain or contradicted preference
+reviews do not authorize application. Rejected candidates feed the next proposal;
+earlier validated gains survive later failures and budget exhaustion.
+
+Defaults allow three candidates, six economical Luna calls and 24 tool calls, with
+bounded request/output sizes and per-request deadlines. No photo analysis or Sol
+construction call is repeated. One optional read-only MCP search supplies unpriced
+catalog context; failure does not block rearrangement of existing furniture.
+Purchases, removals, asset swaps and resizing are excluded. A stated purchase
+budget also excludes unpriced finish changes; those remain suggestions. Without a
+stated budget, supported color overrides are design previews with unknown costs.
+Partial inventories retain provisional ratings and visible limitations.
+
+The frontend submits preferences and starts execution from the same user action,
+shows real stage/candidate progress, recovers the same run after connection loss,
+and displays its outcome and checks. `result_scene` and `result_assessment` are
+separate from the immutable original. An explicit `no_improvement` result preserves
+the original rather than presenting an unchanged room as improved.
+
+The viewer now offers read-only Original and Improved snapshots plus Your layout,
+an independent editable copy. Each source and candidate keeps its own accepted
+manual geometry and color previews across view and version switches. Editing a
+copy is explicit; reset restores that copy's baseline geometry, preserving color
+previews. A newly retained candidate opens automatically unless a drag or edit
+request is active; it cannot interrupt that manual operation. Switching views
+explicitly cancels pending edits and ignores stale responses. Previous candidates
+remain selectable when another focus produces a result. All copies are transient
+client state and reset on refresh; they do not start model calls or alter saved
+snapshots. Room dimensions remain identical, so camera framing is preserved.
+
+Only terminal runs with an actual retained, accepted change enable Improved.
+Failed, budget-limited and cancelled runs can expose their earlier validated best
+candidate with an early-stop warning. A no-improvement or unsuccessful run without
+a retained candidate leaves the original available. Comparison tables use the
+saved 0–10 assessments, mark unknown/not-applicable or provisional categories, and
+show deltas only under the same scoring policy. Aesthetics remains qualitative
+when no numeric candidate rating exists. An actual scene diff names moved,
+rotated and recolored objects, including supported children. Later manual edits
+do not silently change these saved-snapshot scores or improvement claims.
+
+The photo aesthetics card exposes its five 0–2 rubric aspects. An aesthetics
+optimization can return the same rubric for both retained and candidate designs
+inside its existing pairwise review call; no extra model request is made. The UI
+labels those figures as a separate rendered-design comparison, not an after-photo
+rating or a delta from the original photo score. Invalid optional rubric details
+are discarded without losing a valid pairwise judgment or retrying a paid call;
+low-confidence comparisons make no numerical improvement claim.
+
+Live verification is opt-in. `scripts/live_reconstruction.py --allow-paid`
+accepts local photos, confirmed dimensions, a private output directory and an
+independent `--case` annotation. Add `--optimize recommended` (or a category) to
+execute exactly one linked improvement after reconstruction in the same session.
+Clarifications require explicit answers; reference annotations are used only for
+offline evaluation. The harness saves source/candidate diagnostic views, provider
+usage and a pricing estimate, and checks snapshot preservation, call limits and
+idempotent prepare/execute/read retries. Private artifacts stay ignored by Git.
+To validate saved payloads through frontend contracts and comparison components
+without more paid calls, run from `frontend/`:
+`ROOMETRY_LIVE_ARTIFACTS=/absolute/path/to/artifacts npm test -- src/lib/live-flow.test.tsx`.
+This checks component output and comparison state; it is not a browser automation
+or a guarantee of improvement on every room.

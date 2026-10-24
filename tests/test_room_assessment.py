@@ -3,6 +3,7 @@
 import json
 from copy import deepcopy
 from math import pi
+from types import SimpleNamespace
 
 import anyio
 import httpx
@@ -11,6 +12,7 @@ from jsonschema import Draft202012Validator
 
 from roometry.assessment.metrics import measure_room, with_recommendation
 from roometry.assessment.schemas import AssessmentCard
+from roometry.assessment.evidence import assessment_evidence, AssessmentEvidence
 from roometry.scenes.hashing import scene_hash
 from roometry.scenes.scoring import score_layout
 from roometry.scenes.validation import validate_geometry
@@ -72,6 +74,72 @@ def test_provisional_major_inventory_never_becomes_a_recommendation():
     assert report.storage.confidence == 'low'
     card = AssessmentCard(status='rated', score=2., confidence='low', source='photos', explanation='Occluded.')
     assert with_recommendation(report, aesthetics=card.model_dump()).recommended is None
+
+
+def test_blocked_workspace_keeps_worktop_credit_without_hiding_the_blocker():
+    from tests.test_layout_scoring import desk
+    blocker = obj('blocker', kind='storage_box', x=2., z=3., width=.2, depth=.2, height=.5)
+    report = measure_room(case([desk(), blocker]))
+    assert 0 < report.workspace.score <= 5
+    assert 'obstruct' in report.workspace.explanation
+    assert report.policy_version == 'room-assessment-v2'
+
+
+def test_bad_worktop_height_remains_a_low_rating_not_a_good_clearance_score():
+    from tests.test_layout_scoring import desk
+    assert measure_room(case([desk(height=1.3)])).workspace.score <= 3
+
+
+def test_an_unresolved_observed_desk_is_unknown_instead_of_no_workspace():
+    report = measure_room(case(), evidence=AssessmentEvidence(missing_workspace=True))
+    assert report.workspace.status == 'unassessed' and report.workspace.score is None
+
+
+def evidence_case():
+    from tests.test_reconstruction_evaluation import load
+    _, analysis, scene = load('bedroom_multiview')
+    def unresolved(*ids):
+        return SimpleNamespace(unresolved_entities=[SimpleNamespace(entity_id=i) for i in ids], estimated_axes=[])
+    return analysis, scene, unresolved
+
+
+def test_wall_details_do_not_lower_unrelated_categories_but_missing_floor_furniture_does():
+    analysis, scene, unresolved = evidence_case()
+    door_leaf = analysis.observations.objects[0].model_copy(update={
+        'id': 'door_leaf', 'label': 'White door leaf', 'type': 'household_accessory', 'placement': 'wall', 'appears_fixed': True})
+    analysis.observations.objects.append(door_leaf)
+    evidence = assessment_evidence(analysis, unresolved('door_leaf'))
+    report = measure_room(scene, evidence=evidence)
+    assert not evidence.uncertain_categories
+    assert report.workspace.confidence == report.storage.confidence == 'medium'
+    desk_id = next(o.id for o in analysis.observations.objects if o.type == 'desk')
+    affected = assessment_evidence(analysis, unresolved(desk_id))
+    assert affected.missing_workspace
+    assert affected.uncertain_categories == {'openness', 'storage', 'workspace'}
+
+
+def test_missing_wall_storage_lowers_storage_confidence_only():
+    analysis, scene, unresolved = evidence_case()
+    missing = analysis.observations.objects[0].model_copy(update={
+        'id': 'missing_cabinet', 'label': 'Wall cabinet', 'type': 'wall_cabinet', 'placement': 'wall', 'appears_fixed': True})
+    analysis.observations.objects.append(missing)
+    report = measure_room(scene, evidence=assessment_evidence(analysis, unresolved('missing_cabinet')))
+    assert report.storage.confidence == 'low'
+    assert report.openness.confidence == report.workspace.confidence == 'medium'
+    assert 'uncertain' in report.storage.explanation
+
+
+def test_window_sill_is_not_counted_as_storage_and_other_shelves_still_count():
+    analysis, _, unresolved = evidence_case()
+    shelf = obj('ledge', kind='wall_shelf', placement='wall', wall='west', x=.1, z=3., y=1.,
+                width=1., depth=.2, height=.1, rotation=pi/2)
+    observed = analysis.observations.objects[0].model_copy(update={
+        'id': 'ledge', 'label': 'Window sill', 'type': 'wall_shelf', 'placement': 'wall'})
+    analysis.observations.objects.append(observed)
+    report = measure_room(case([shelf]), evidence=assessment_evidence(analysis, unresolved()))
+    assert report.storage.score is None
+    observed.label = 'Display shelf'
+    assert measure_room(case([shelf]), evidence=assessment_evidence(analysis, unresolved())).storage.score is not None
 
 
 def photo_assessment(*, failure=None):
@@ -192,6 +260,7 @@ async def test_assessment_reads_the_final_visually_corrected_snapshot(harness):
     initial = await runs.create(uploaded['input_id'], owner)
     state = await runs.execute(initial.run_id, owner)
     assert state.status == 'partial' and state.proposal.visual_review.repair == 'accepted'
+    assert state.room_assessment.aesthetics.confidence == 'medium'  # Photo evidence is assessed independently.
     assert state.room_assessment.scene_hash == scene_hash(state.working_scene)
     assert state.room_assessment.scene_hash != state.proposal.visual_review.reviewed_scene_hash
     assert state.usage.model_calls == len(calls) == 8

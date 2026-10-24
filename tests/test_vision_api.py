@@ -113,6 +113,9 @@ async def harness(tmp_path):
                 # tests explicitly enable the full pipeline with mock responses.
                 visual_review_enabled=False,
                 room_assessment_enabled=False,
+                # Legacy tool-choice tests explicitly exercise the optional LLM
+                # router. Cost-flow tests enable the default deterministic path.
+                agent_deterministic_routing=False,
                 openai_api_key="test-provider-key",
             )
             app = create_app(settings, analysis_client=sdk)

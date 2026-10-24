@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from roometry.agents.state import AgentState, ClarificationAnswer
+from roometry.optimization.schemas import OptimizationRun, StartOptimizationRequest
 from roometry.agents.router import StartRunRequest, RunErrorResponse
 from roometry.scenes.edit_schemas import PreviewEditRequest, PreviewEditResponse
 from roometry.scenes.decor import DECOR_CATALOG
@@ -29,6 +30,8 @@ SCENE_FIXTURES = ("bedroom_scene.json", "bedroom_after_scene.json", "kitchen_cat
 
 def main() -> None:
     outputs = {
+        ROOT / "frontend/src/lib/optimization-request.schema.json": StartOptimizationRequest.model_json_schema(),
+        ROOT / "frontend/src/lib/optimization-run.schema.json": OptimizationRun.model_json_schema(mode="serialization"),
         ROOT / "frontend/src/data/material-colors.generated.json": DEFAULT_MATERIAL_COLORS,
         ROOT / "frontend/src/lib/layout-score-request.schema.json": ScoreLayoutRequest.model_json_schema(),
         ROOT / "frontend/src/lib/layout-score-response.schema.json": LayoutScoreReport.model_json_schema(mode="serialization"),

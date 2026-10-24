@@ -2795,8 +2795,11 @@
       "additionalProperties": false,
       "properties": {
         "policy_version": {
-          "const": "room-assessment-v1",
-          "default": "room-assessment-v1",
+          "default": "room-assessment-v2",
+          "enum": [
+            "room-assessment-v1",
+            "room-assessment-v2"
+          ],
           "title": "Policy Version",
           "type": "string"
         },

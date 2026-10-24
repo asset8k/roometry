@@ -178,7 +178,9 @@ def test_provider_context_has_only_relevant_catalog_choices_and_strict_nullable_
     context = json.loads(payload["input"][0]["content"][0]["text"])
     options = context["asset_bindings"][0]["models"]
     assert {model["asset_id"] for model in options} == {"plant_standard_01", "plant_palm_01"}
-    assert all(set(model["configurations"]) == {"surface"} for model in options)
+    assert all(model['placements'] == ['surface'] for model in options)
+    options = [context['asset_models'][model['asset_id']] for model in options]
+    assert all('surface' in model['configurations'] for model in options)
     assert options[0]["configurations"]["surface"]["default_dimensions_m"]["height"] == .36
     assert "parts" not in json.dumps(context)
     schema = payload["text"]["format"]["schema"]

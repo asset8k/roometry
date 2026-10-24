@@ -13,7 +13,7 @@ from typing import Literal, Protocol
 from openai.types.responses import ResponseUsage
 
 ModelOperation = Literal[
-    "analysis", "scene_proposal", "scene_repair", "visual_review", "visual_repair", "agent_decision", "room_assessment"
+    "analysis", "scene_proposal", "scene_repair", "visual_review", "visual_repair", "agent_decision", "room_assessment", "optimization_proposal", "optimization_review"
 ]
 ReasoningEffort = Literal["default", "none", "low", "medium", "high", "xhigh", "max"]
 
@@ -41,6 +41,10 @@ class ModelAttempt:
     reasoning_tokens: int | None
     response_id: str | None
     provider_request_id: str | None
+    cache_write_tokens: int | None
+    prompt_cache_mode: str | None
+    request_text_characters: int
+    request_image_count: int
 
 
 class ModelCallObserver(Protocol):

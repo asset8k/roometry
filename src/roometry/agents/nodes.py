@@ -374,8 +374,9 @@ async def assess_room(state: AgentState, runtime: Runtime[RunContext]) -> dict[s
     except Exception:
         # Keep deterministic cards on provider/node failure, without retrying.
         from roometry.assessment.metrics import measure_room
+        from roometry.assessment.evidence import evidence_for_run
         assessment = await anyio.to_thread.run_sync(lambda: measure_room(
-            state.working_scene, incomplete_inventory=bool(state.proposal and state.proposal.unresolved_entities)))
+            state.working_scene, evidence=evidence_for_run(state)))
     usage = state.usage
     if context.budget is not None:
         delta = context.budget.delta(before)

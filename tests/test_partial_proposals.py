@@ -184,7 +184,7 @@ async def test_api_can_build_the_rest_when_one_observation_has_no_model(harness,
     response = await client.post("/api/rooms/propose-scene", json=body(analysis, dimensions=confirmed(length_m=4, height_m=2.6)))
     assert response.status_code == 200 and response.json()["status"] == "partial", response.text
     assert response.json()["unresolved_entities"][0]["reason"]["code"] == kind
-    assert len(calls) == 3
+    assert len(calls) == (2 if kind == "unknown_object" else 3)
 
 
 @pytest.mark.anyio

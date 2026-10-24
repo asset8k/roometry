@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import SceneWorkspace from '../room-viewer/SceneWorkspace'
-import RoomAssessmentCards from './RoomAssessmentCards'
+import RoomImprovementWorkspace from './RoomImprovementWorkspace'
 import { dimensionLabels } from '../../lib/room-analysis'
 import type { DimensionAxis } from '../../lib/room-analysis'
 import { generationProgress } from '../../lib/room-generation-controller'
@@ -125,8 +124,7 @@ export default function RoomGenerationWorkspace({ state, controller, onConnectio
       </>}
     </div>
     {scene && run?.base_scene && <section className="reconstructed-room" aria-label="Your reconstructed room">
-      <RoomAssessmentCards assessment={run.room_assessment ?? null} />
-      <SceneWorkspace goals={run.input_options.goals} initialScene={scene} beforeScene={run.base_scene} onConnectionChange={onConnectionChange} />
+      <RoomImprovementWorkspace key={run.run_id} run={run} onConnectionChange={onConnectionChange} />
     </section>}
   </section>
 }

@@ -2,7 +2,7 @@
 
 from copy import deepcopy
 import json
-from math import pi
+from math import pi, sin, cos
 
 import pytest
 from pydantic import ValidationError
@@ -184,6 +184,29 @@ def test_only_one_chair_is_exempted_from_the_approach_zone():
     assert report.workspace.score == 0
     assert report.workstations[0].permitted_chair_id == "chair_a"
     assert report.workstations[0].blocking_object_ids == ("chair_b",)
+
+
+@pytest.mark.parametrize("angle", [0., pi / 2, pi, 3 * pi / 2])
+def test_wide_gaming_chair_uses_offset_worktop_in_each_room_orientation(angle):
+    host = model('desk_shelved_01', 'desk', x=3., z=3., width=1.6, angle=angle)
+    lateral, forward = .15 * host.dimensions_m.width, .725
+    chair = model('chair_office_01', 'seat', x=3. + cos(angle) * lateral + sin(angle) * forward,
+                  z=3. - sin(angle) * lateral + cos(angle) * forward, angle=angle + pi)
+    report = score_layout(case([host, chair]))
+    assert report.geometry.valid, report.geometry.errors
+    assert report.workstations[0].permitted_chair_id == 'seat'
+    assert report.workspace.score == 100
+
+
+def test_allowing_gaming_chair_does_not_hide_an_obstacle_behind_it():
+    host = model('desk_shelved_01', 'desk', x=3., z=3.)
+    chair = model('chair_office_01', 'seat', x=3.2, z=3.7, angle=pi)
+    blocker = obj('blocker', kind='storage_box', x=3.2, z=4.1, width=.1, depth=.1, height=.2)
+    report = score_layout(case([host, chair, blocker]))
+    assert report.geometry.valid, report.geometry.errors
+    assert report.workstations[0].permitted_chair_id == 'seat'
+    assert report.workstations[0].blocking_object_ids == ('blocker',)
+    assert report.workspace.score == 0
 
 
 def test_non_desk_surfaces_are_not_invented_workstations_and_best_desk_is_used():

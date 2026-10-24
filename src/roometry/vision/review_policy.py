@@ -126,6 +126,10 @@ def select_findings(analysis, judgment, scene=None):
         eligible = [(index, finding) for index, finding in eligible if finding.placement_target is None or any(
             _placement_error(scene, key, finding.placement_target) > relationship_limit(scene, finding.placement_target.relation)
             for key in finding.entity_ids)]
+        eligible = [(index, finding) for index, finding in eligible if finding.appearance_target is None or any(
+            _color_error(appearance_value(scene, key, finding.appearance_target.field), finding.appearance_target.value)
+                > (45 if finding.appearance_target.value.startswith('#') else 0)
+            for key in ([None] if finding.appearance_target.field in {'floor_color', 'wall_color', 'floor_pattern'} else finding.entity_ids))]
     return sorted(eligible, key=lambda item: (
         priority(item[1]), item[1].severity != "major",
         0 if item[1].kind in LAYOUT_KINDS else 1 if item[1].kind == "color" else 2,

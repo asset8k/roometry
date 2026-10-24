@@ -130,6 +130,8 @@ class PhotoAnalyzer:
         # Routing belongs to trusted application code, never model tool arguments.
         route = self.settings.model_route(operation)
         payload = {**payload, "model": route.model}
+        if route.model.startswith(("gpt-6", "gpt-5.6")):
+            payload["prompt_cache_options"] = {"mode": self.settings.model_prompt_cache_mode}
         if route.reasoning_effort == "default":
             payload.pop("reasoning", None)
         else:
@@ -197,6 +199,16 @@ class PhotoAnalyzer:
                 provider_request_id=(
                     provider_id(getattr(response, "_request_id", None)) or request_id
                 ),
+                cache_write_tokens=getattr(getattr(usage, "input_tokens_details", None), "cache_write_tokens", None),
+                prompt_cache_mode=payload.get("prompt_cache_options", {}).get("mode"),
+                request_text_characters=sum(len(part.get("text", "")) for message in payload.get("input", [])
+                    if isinstance(message, dict) and isinstance(message.get("content"), list)
+                    for part in message['content'] if isinstance(part, dict) and part.get('type') == 'input_text')
+                    + len(payload.get('instructions', '')) + len(json.dumps(payload.get('text', {})))
+                    + len(json.dumps(payload.get('tools', []))),
+                request_image_count=sum(part.get('type') == 'input_image' for message in payload.get('input', [])
+                    if isinstance(message, dict) and isinstance(message.get('content'), list)
+                    for part in message['content'] if isinstance(part, dict)),
             )
             self.usage_records.append(record)
             logging.getLogger(__name__).log(

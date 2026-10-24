@@ -1,7 +1,11 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import type { RoomScene } from '../../lib/scene.generated'
 import { applyColorPreviews } from '../../lib/color-previews'
-import { SceneEditor } from '../../lib/scene-editor'
+import { SceneComparison } from '../../lib/scene-comparison'
+import type { ComparisonState } from '../../lib/scene-comparison'
+import { improvementLabels } from '../../lib/optimization'
+import type { OptimizationRun } from '../../lib/optimization'
+import ImprovementComparison from '../room-analysis/ImprovementComparison'
 import LayoutAssessment from './LayoutAssessment'
 import type { ScoreLayoutRequest } from '../../lib/layout-scoring'
 import ObjectList from './ObjectList'
@@ -9,12 +13,39 @@ import ObjectInspector from './ObjectInspector'
 
 const RoomViewer = lazy(() => import('./RoomViewer'))
 
-export default function SceneWorkspace({ initialScene, beforeScene, onConnectionChange, goals }: { goals?: ScoreLayoutRequest['goals']; initialScene: RoomScene; beforeScene: RoomScene; onConnectionChange: (online: boolean) => void }) {
-  const editor = useMemo(() => new SceneEditor(initialScene, undefined, beforeScene), [initialScene, beforeScene])
+export function ComparisonControls({ comparison, views }: { comparison: SceneComparison; views: ComparisonState }) {
+  const saved = views.improvements.find(run => run.run_id === views.selectedImprovementId)
+  const editing = views.improvements.find(run => run.run_id === views.editingId)
+  const label = editing ? `${improvementLabels[editing.focus].toLowerCase()} · candidate ${views.improvements.indexOf(editing) + 1}` : 'original'
+  return <div className="comparison-bar">
+    <div className="comparison-switch" role="group" aria-label="Layout comparison">
+      <button type="button" aria-pressed={views.view === 'original'} onClick={() => comparison.show('original')}>Original <span>Read-only</span></button>
+      <button type="button" aria-pressed={views.view === 'improved'} disabled={!saved} onClick={() => comparison.show('improved')}>Improved <span>{saved ? 'Read-only candidate' : 'No candidate yet'}</span></button>
+      <button type="button" aria-pressed={views.view === 'editing'} onClick={() => comparison.show('editing')}>Your layout <span>Editable copy</span></button>
+    </div>
+    {views.view !== 'editing' && <button className="edit-copy" type="button" onClick={comparison.editCopy}>Edit {views.view === 'improved' ? 'improved' : 'original'} copy</button>}
+    <button className="reset-layout" type="button" disabled={views.view !== 'editing'} onClick={views.editor.resetLayout}>Reset layout</button>
+    {views.improvements.length > 1 && <label className="improvement-version">Improvement<select value={views.selectedImprovementId ?? ''} onChange={event => comparison.selectImprovement(event.target.value)}>
+      {views.improvements.map((run, i) => <option key={run.run_id} value={run.run_id}>{i + 1}. {improvementLabels[run.focus]}{run.status !== 'completed' ? ' (run stopped early)' : ''}</option>)}
+    </select></label>}
+    <p>{views.view !== 'editing' ? 'Compare the saved scenes, or edit a separate copy. Manual edits stay when you switch.' : `Editing a copy of ${label}. Reset layout restores that copy’s starting arrangement and keeps your color previews.`}</p>
+  </div>
+}
+
+export default function SceneWorkspace({ initialScene, onConnectionChange, goals, improvement = null, objectLabels }: {
+  goals?: ScoreLayoutRequest['goals']; initialScene: RoomScene; onConnectionChange: (online: boolean) => void
+  improvement?: OptimizationRun | null; objectLabels?: Readonly<Record<string, string>>
+}) {
+  const comparison = useMemo(() => new SceneComparison(initialScene), [initialScene])
+  const views = useSyncExternalStore(comparison.subscribe, comparison.getSnapshot, comparison.getSnapshot)
+  const editor = views.editor
   const state = useSyncExternalStore(editor.subscribe, editor.getSnapshot, editor.getSnapshot)
   const [detailsView, setDetailsView] = useState<'room' | 'objects'>('room')
-  const [previewColors, setPreviewColors] = useState<Record<string, string>>({})
+  const previewColors = views.colors
   const readOnly = state.view === 'before'
+  const selectedImprovement = views.improvements.find(run => run.run_id === views.selectedImprovementId)
+  const editingImprovement = views.improvements.find(run => run.run_id === views.editingId)
+  const editingLabel = editingImprovement ? `${improvementLabels[editingImprovement.focus]} · candidate ${views.improvements.indexOf(editingImprovement) + 1}` : 'Original'
   const scene = useMemo(() => readOnly ? state.scene : applyColorPreviews(state.draft ?? state.scene, previewColors), [readOnly, state.draft, state.scene, previewColors])
   const selected = state.scene.objects.find(object => object.id === state.selectedId)
   const select = useCallback((id: string | null) => {
@@ -23,7 +54,8 @@ export default function SceneWorkspace({ initialScene, beforeScene, onConnection
   }, [editor])
 
   useEffect(() => () => editor.cancel(false), [editor])
-  useEffect(() => { setPreviewColors({}) }, [editor])
+  useEffect(() => () => comparison.cancelEdits(), [comparison])
+  useEffect(() => { comparison.offer(improvement) }, [comparison, improvement])
   useEffect(() => {
     if (state.notice?.connection !== undefined) onConnectionChange(state.notice.connection)
   }, [state.notice, onConnectionChange])
@@ -44,7 +76,7 @@ export default function SceneWorkspace({ initialScene, beforeScene, onConnection
         <div className="room-title">
           <span className="section-label">Your space</span>
           <h2>{`Your ${scene.room.room_type.replaceAll('_', ' ')}`}</h2>
-          <p>{readOnly ? 'Base scene · Approximate reconstruction, read-only.' : 'Your layout · Try your own arrangement.'}</p>
+          <p>{readOnly ? `${views.view === 'improved' ? 'Improved candidate' : 'Original reconstruction'} · Read-only.` : `Your layout · Copy of ${editingLabel.toLowerCase()}.`}</p>
         </div>
 
         <div className="details-switch" role="group" aria-label="Details view">
@@ -75,7 +107,7 @@ export default function SceneWorkspace({ initialScene, beforeScene, onConnection
 
             <div className="scene-note">
               <strong>Make it yours</strong>
-              <p>{readOnly ? 'Explore the original room. Switch to Your layout to move furniture and try colors.' : 'Open Objects to select furniture, edit its layout, and try colors. Changes stay here until you refresh.'}</p>
+              <p>{readOnly ? 'Explore this saved scene. Edit a copy to move furniture and try colors.' : 'Open Objects to select furniture, edit its layout, and try colors. Changes stay here until you refresh.'}</p>
             </div>
             <p className="approximation-note">An approximate model. Opening positions are estimated; verify measurements in your room.</p>
           </>
@@ -90,30 +122,27 @@ export default function SceneWorkspace({ initialScene, beforeScene, onConnection
             selectedId={state.selectedId}
             disabledSelection={state.busy || state.dragging}
             onSelect={select}
-            onColorChange={(id, color) => { if (!readOnly) setPreviewColors(current => ({ ...current, [id]: color })) }}
-            onResetColors={() => { if (!readOnly) setPreviewColors({}) }}
+            onColorChange={comparison.setColor}
+            onResetColors={comparison.resetColors}
           />
         )}
       </aside>
 
       <section className="viewer-card" aria-label="3D room viewer">
         <div className="viewer-heading"><h2>Room overview</h2><span>{scene.objects.length} objects</span></div>
-        <div className="comparison-bar">
-          <div className="comparison-switch" role="group" aria-label="Layout comparison">
-            <button type="button" aria-pressed={readOnly} onClick={() => editor.switchView('before')}>Base scene <span>Original</span></button>
-            <button type="button" aria-pressed={!readOnly} onClick={() => editor.switchView('after')}>Your layout <span>Editable</span></button>
-          </div>
-          <button className="reset-layout" type="button" disabled={readOnly} onClick={editor.resetLayout}>Reset layout</button>
-          <p>Your photo-based base scene and your manual edits. Edits stay when you switch.</p>
-        </div>
+        <ComparisonControls comparison={comparison} views={views} />
+        {improvement && selectedImprovement && improvement.run_id !== selectedImprovement.run_id && <p className="comparison-history-note" role="status">
+          {['prepared', 'running'].includes(improvement.status) ? 'A new improvement is in progress.' : 'This request produced no new retained candidate.'} The comparison still shows your earlier {improvementLabels[selectedImprovement.focus].toLowerCase()} candidate.
+        </p>}
         <div className="room-canvas">
           <Suspense fallback={<div className="viewer-message" role="status">Loading your room…</div>}>
             <RoomViewer scene={scene} editor={editor} state={state} onSelect={select} />
           </Suspense>
         </div>
+        {selectedImprovement && <ImprovementComparison run={selectedImprovement} labels={objectLabels} />}
         <LayoutAssessment key={JSON.stringify(state.scene)} scene={state.scene} goals={goals} />
         <div className="viewer-footer">
-          <p>{readOnly ? 'Base scene is read-only. Switch to Your layout to edit.' : 'Layout changes are checked before applying. Reset layout keeps your colors.'} Edits reset on refresh.</p>
+          <p>{readOnly ? 'Saved scenes are read-only. Edit a copy to make changes.' : 'Layout changes are checked before applying. Reset layout keeps your colors.'} Edits reset on refresh.</p>
           <span>Openings shown as markers</span>
         </div>
       </section>

@@ -67,7 +67,7 @@ async def test_targeted_review_moves_support_group_and_restores_color_or_keeps_p
             if defect=="insufficient_progress": obj["position"].update(x=3.3, z=1.6)
         old=next(obj for obj in context["observations"]["objects"] if obj["id"]=="chair_a")
         patch={"wall_assignments":[],"openings":[],"objects":items,"assumptions":[],"warnings":[],"appearance_corrections":[{
-            "entity_id":"chair_a","field":"color","previous_value":old["color"],
+            "entity_id":"chair_a","field":"color","previous_value":old.get("color"),
             "revised_value":"#FFFF00" if defect=="wrong_color" else "#28558A",
             "reason":"The original photo shows blue upholstery, independently of the black frame.","source_image_ids":old["source_image_ids"],
         }]}

@@ -21,6 +21,9 @@ from roometry.agents.state import RunLimits
 from roometry.agents.tools import SceneTools
 from roometry.config import Settings, get_settings
 from roometry.mcp.furniture_client import FurnitureCatalogClient
+from roometry.optimization.router import router as optimization_router
+from roometry.optimization.runs import OptimizationRuns
+from roometry.optimization.provider import OptimizationProvider
 from roometry.scenes.router import router as scenes_router
 from roometry.uploads.errors import UploadFailure
 from roometry.uploads.middleware import UploadBodyLimitMiddleware
@@ -68,6 +71,11 @@ def create_app(
         ),
     )
 
+    optimization_runs = OptimizationRuns(agent_runs, provider=OptimizationProvider(analyzer), catalog=scene_tools.catalog,
+        max_candidates=settings.optimization_max_candidates,
+        limits=RunLimits(max_model_calls=settings.optimization_max_model_calls,
+            max_tool_calls=settings.agent_max_tool_calls, step_timeout_seconds=settings.analysis_timeout_seconds))
+
     async def periodic_cleanup() -> None:
         while True:
             await anyio.sleep(settings.upload_cleanup_interval_seconds)
@@ -75,6 +83,7 @@ def create_app(
                 await service.cleanup()
                 await analysis_service.cleanup()
                 await agent_runs.cleanup()
+                await optimization_runs.cleanup()
             except OSError:
                 logging.getLogger(__name__).warning(
                     "Temporary upload cleanup will be retried."
@@ -104,6 +113,7 @@ def create_app(
     application.state.upload_service = service
     application.state.analysis_service = analysis_service
     application.state.agent_runs = agent_runs
+    application.state.optimization_runs = optimization_runs
     application.add_middleware(
         UploadBodyLimitMiddleware, max_bytes=settings.upload_max_body_bytes
     )
@@ -124,6 +134,7 @@ def create_app(
     application.include_router(uploads_router)
     application.include_router(analysis_router)
     application.include_router(agent_router)
+    application.include_router(optimization_router)
 
     @application.exception_handler(RunFailure)
     async def run_error(_request: Request, error: RunFailure) -> JSONResponse:

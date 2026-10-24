@@ -7,6 +7,7 @@ from uuid import uuid4
 import pytest
 
 from roometry.agents.state import AgentState
+from roometry.vision.context_budget import select_photo_ids
 from tests import test_vision_api as api
 from tests.test_agent_clarification import measurements
 from tests.test_agent_tools import decision, photo
@@ -58,7 +59,10 @@ async def test_five_photos_interrupt_resume_review_and_edit_through_http(harness
     for payload, attempt in zip(calls, ledger, strict=True):
         if payload.get("text", {}).get("format", {}).get("name") in {"room_observations", "room_scene_draft", "room_visual_review"}:
             image_parts = [part for part in payload["input"][0]["content"] if part["type"] == "input_image"]
-            assert len(image_parts) == (8 if attempt.operation in {"visual_review", "visual_repair"} else 5)
+            # Analysis and review retain all five originals; construction and
+            # repair use complementary views (plus three diagnostic repair views).
+            expected = 5 if attempt.operation == "analysis" else 8 if attempt.operation == "visual_review" else len(select_photo_ids(state.analysis.observations)) + (3 if attempt.operation == "visual_repair" else 0)
+            assert len(image_parts) == expected
     paid_count = len(calls)
     # Replayed starts, reads and answers must not pay for analysis/review again.
     assert (await client.post("/api/agent-runs", json=start)).json() == complete

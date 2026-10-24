@@ -281,7 +281,7 @@ async def test_appearance_revision_is_audited_and_source_observations_remain_imm
         context = json.loads(payload["input"][0]["content"][0]["text"])
         obj = context["observations"]["objects"][0]
         patch = {"wall_assignments":[],"openings":[],"objects":[],"assumptions":[],"warnings":[],"appearance_corrections":[{
-            "entity_id":obj["id"],"field":"color","previous_value":obj["color"],"revised_value":"#353535",
+                "entity_id":obj["id"],"field":"color","previous_value":obj.get("color"),"revised_value":"#353535",
             "reason":"The visible upholstery is dark charcoal, rather than the initial light estimate.","source_image_ids":obj["source_image_ids"],
         }]}
         return await scene_action(patch)(request,payload)

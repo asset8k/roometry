@@ -23,7 +23,7 @@ describe('room assessment cards', () => {
       '5.2 out of 10', 'Recommended', 'The main usable space is divided by furniture.', 'Photo-based estimate', 'Manual edits are not included']) expect(html).toContain(label)
     expect(html.match(/class="assessment-recommendation"/g)).toHaveLength(1)
     expect(html.match(/disabled=""/g)).toHaveLength(4)
-    expect(html).toContain('Improvement actions will be available soon')
+    expect(html).toContain('Improvement actions are unavailable for this run')
   })
 
   it('does not rate an absent workspace zero and still offers its future action', () => {
@@ -61,5 +61,22 @@ describe('room assessment cards', () => {
     const { room_assessment: _, ...historical } = run
     expect(parseAgentRun(historical).working_scene).toEqual(run.working_scene)
     expect(renderToStaticMarkup(<RoomAssessmentCards assessment={null} />)).toContain('Your reconstructed room is still available below')
+  })
+
+  it('shows the five-part photo rubric and keeps recommendations category-specific', () => {
+    const data = assessment()
+    data.policy_version = 'room-assessment-v2'
+    data.aesthetics = { ...data.aesthetics, score: 7, metrics: [
+      { key: 'color_harmony', value: 2, unit: 'count' }, { key: 'material_cohesion', value: 2, unit: 'count' },
+      { key: 'visual_balance', value: 1, unit: 'count' }, { key: 'visual_order', value: 1, unit: 'count' },
+      { key: 'lighting_composition', value: 1, unit: 'count' },
+    ] }
+    data.storage = { ...data.storage, score: 2, confidence: 'low' }
+    const html = renderToStaticMarkup(<RoomAssessmentCards assessment={data} onImprove={() => {}} />)
+    for (const label of ['How aesthetics was rated', 'Color harmony: 2 / 2', 'Material cohesion: 2 / 2',
+      'Visual balance: 1 / 2', 'Visual order: 1 / 2', 'Lighting composition: 1 / 2']) expect(html).toContain(label)
+    expect(html.match(/class="assessment-recommendation"/g)).toHaveLength(1)
+    expect(html).toContain('Limited evidence')
+    expect(html.match(/disabled=""/g)).toBeNull()
   })
 })

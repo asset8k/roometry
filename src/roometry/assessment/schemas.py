@@ -37,7 +37,7 @@ def recommendation(cards) -> Criterion | None:
 
 
 class RoomAssessment(AssessmentModel):
-    policy_version: Literal["room-assessment-v1"] = "room-assessment-v1"
+    policy_version: Literal["room-assessment-v1", "room-assessment-v2"] = "room-assessment-v2"
     scene_hash: str = Field(pattern=r"^[a-f0-9]{64}$")
     openness: AssessmentCard
     storage: AssessmentCard
@@ -53,13 +53,28 @@ class RoomAssessment(AssessmentModel):
         return self
 
 
-class AestheticRubric(AssessmentModel):
+AESTHETIC_FIELDS = ("color_harmony", "material_cohesion", "visual_balance", "visual_order", "lighting_composition")
+AESTHETIC_INSTRUCTIONS = """Use the same fixed five-part aesthetic rubric: color_harmony,
+material_cohesion, visual_balance, visual_order, lighting_composition. Each aspect
+is 0=weak/conflicting, 1=mixed, 2=cohesive. Do not reward expense or impose a style.
+Judge visible evidence, not camera exposure or missing catalog textures.
+"""
+
+
+class AestheticScores(AssessmentModel):
     # Fixed anchors: 0 weak, 1 mixed, 2 strong. Personal taste is not inferred.
     color_harmony: Annotated[int, Field(ge=0, le=2)]
     material_cohesion: Annotated[int, Field(ge=0, le=2)]
     visual_balance: Annotated[int, Field(ge=0, le=2)]
     visual_order: Annotated[int, Field(ge=0, le=2)]
     lighting_composition: Annotated[int, Field(ge=0, le=2)]
+
+    @property
+    def total(self) -> float:
+        return float(sum(getattr(self, key) for key in AESTHETIC_FIELDS))
+
+
+class AestheticRubric(AestheticScores):
     confidence: Literal["low", "medium", "high"]
     explanation: Annotated[str, Field(min_length=1, max_length=320)]
     source_image_ids: Annotated[list[str], Field(min_length=1, max_length=10)]
@@ -67,3 +82,10 @@ class AestheticRubric(AssessmentModel):
 
 class PhotoAssessment(AssessmentModel):
     aesthetics: AestheticRubric | None
+
+
+class AestheticComparison(AssessmentModel):
+    retained: AestheticScores
+    candidate: AestheticScores
+    confidence: Literal["low", "medium", "high"]
+    explanation: Annotated[str, Field(min_length=1, max_length=320)]

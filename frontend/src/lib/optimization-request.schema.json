@@ -1,0 +1,98 @@
+{
+  "$defs": {
+    "InputBudget": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "maximum": 1000000,
+          "minimum": 0,
+          "title": "Amount",
+          "type": "number"
+        },
+        "currency": {
+          "pattern": "^[A-Z]{3}$",
+          "title": "Currency",
+          "type": "string"
+        }
+      },
+      "required": [
+        "amount",
+        "currency"
+      ],
+      "title": "InputBudget",
+      "type": "object"
+    },
+    "OptimizationPreferences": {
+      "additionalProperties": false,
+      "properties": {
+        "budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InputBudget"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "style": {
+          "anyOf": [
+            {
+              "maxLength": 100,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Style"
+        },
+        "constraints": {
+          "anyOf": [
+            {
+              "maxLength": 1000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Constraints"
+        }
+      },
+      "title": "OptimizationPreferences",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "request_id": {
+      "description": "Reuse this ID and the identical request when retrying.",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "focus": {
+      "enum": [
+        "openness",
+        "storage",
+        "workspace",
+        "aesthetics"
+      ],
+      "title": "Focus",
+      "type": "string"
+    },
+    "preferences": {
+      "$ref": "#/$defs/OptimizationPreferences"
+    }
+  },
+  "required": [
+    "request_id",
+    "focus"
+  ],
+  "title": "StartOptimizationRequest",
+  "type": "object"
+}

@@ -203,13 +203,17 @@ def _workspace(scene: RoomScene, policy: LayoutScoringPolicy,
         depth = (top.z_max - top.z_min) * desk.dimensions_m.depth
         height = desk.position.y + top.y * desk.dimensions_m.height
         c, s = cos(desk.rotation_y_rad), sin(desk.rotation_y_rad)
+        # A shelved desk's worktop can be offset from its outer frame. Associate
+        # the working chair with that actual top, not a fixed 0.6 m-wide box.
+        lateral = (top.x_min + top.x_max) * desk.dimensions_m.width / 2
+        front = top.z_max * desk.dimensions_m.depth
+        seat_width = policy.chair_zone_width_m
 
         def zone(tuck: float) -> Rectangle:
-            offset = desk.dimensions_m.depth / 2 + (policy.chair_zone_depth_m - tuck) / 2
-            return Rectangle((desk.position.x + s * offset, desk.position.z + c * offset),
-                ((c, -s), (s, c)), (policy.chair_zone_width_m / 2, (policy.chair_zone_depth_m + tuck) / 2))
+            offset = front + (policy.chair_zone_depth_m - tuck) / 2
+            return Rectangle((desk.position.x + c * lateral + s * offset, desk.position.z - s * lateral + c * offset),
+                ((c, -s), (s, c)), (seat_width / 2, (policy.chair_zone_depth_m + tuck) / 2))
 
-        approach = zone(0.)
         allowed_chair = None
         for chair in sorted(scene.objects, key=lambda o: o.id):
             if chair.type not in {"chair", "stool"} or chair.placement != "floor":
@@ -218,9 +222,19 @@ def _workspace(scene: RoomScene, policy: LayoutScoringPolicy,
             distance = hypot(dx, dz)
             facing = chair.type == "stool" or (distance > TOLERANCE_M and
                 (sin(chair.rotation_y_rad) * dx + cos(chair.rotation_y_rad) * dz) / distance >= cos(pi / 4))
-            if facing and rectangle_contains(zone(policy.chair_tuck_allowance_m), object_bounds(chair).footprint):
+            footprint = object_bounds(chair).footprint
+            across = -c * dx + s * dz - lateral
+            forward = -s * dx - c * dz
+            radius = sum(abs(axis[0] * c - axis[1] * s) * half
+                         for axis, half in zip(footprint.axes, footprint.half_extents))
+            # Ten centimetres accommodates estimated alignment, not unrelated
+            # obstacles. The chair must face the desk and fit its working span.
+            if (facing and abs(across) + radius <= width / 2 + .1 + TOLERANCE_M
+                and front - policy.chair_tuck_allowance_m <= forward <= front + policy.chair_zone_depth_m + .1):
                 allowed_chair = chair.id
+                seat_width = max(seat_width, 2 * (abs(across) + radius))
                 break
+        approach = zone(0.)
         inside = rectangle_contains(room_floor, approach)
         approach_box = ObjectBounds(approach, (policy.floor_gap_m, policy.clearance_height_m))
         blockers = tuple(key for key, parts in solids.items() if key not in {desk.id, allowed_chair} and any(boxes_overlap(approach_box, part.bounds) for part in parts))
