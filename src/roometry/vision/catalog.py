@@ -141,8 +141,11 @@ def bind_catalog(
             c, s = abs(cos(relative)), abs(sin(relative))
             child_width = c * base_width + s * base_depth
             child_depth = s * base_width + c * base_depth
+            # A desk's work surface stays below an integrated hutch. Default
+            # tabletop devices to that surface, not the highest shelf board.
+            worktops = [area for area in surfaces if area.part == "worktop"] if ASSET_CATALOG[support.asset_id].object_type == "desk" else []
             top_height = max(area.y for area in surfaces)
-            top = [area for area in surfaces if area.y == top_height]
+            top = worktops or [area for area in surfaces if area.y == top_height]
 
             def fits(area: SupportSurface) -> bool:
                 width = (area.x_max - area.x_min) * host_size.width

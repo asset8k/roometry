@@ -14,9 +14,9 @@ function OpeningMarker({ scene, opening }: { scene: RoomScene; opening: Opening 
 
   return (
     <group ref={group} position={position} rotation={[0, rotationY, 0]}>
-      <mesh>
+      <mesh name={`opening_${opening.id}`}>
         <planeGeometry args={[opening.width_m, opening.height_m]} />
-        <meshStandardMaterial color={isWindow ? '#b2c9cb' : '#a1ad94'} side={DoubleSide} roughness={isWindow ? 0.3 : 0.9} />
+        <meshStandardMaterial color={isWindow ? '#b2c9cb' : '#f0f0ed'} side={DoubleSide} roughness={isWindow ? 0.3 : 0.9} />
       </mesh>
       <Line
         points={[
@@ -24,7 +24,7 @@ function OpeningMarker({ scene, opening }: { scene: RoomScene; opening: Opening 
           [halfWidth, halfHeight, 0.005], [-halfWidth, halfHeight, 0.005],
           [-halfWidth, -halfHeight, 0.005],
         ]}
-        color={isWindow ? '#f7f5ee' : '#788569'}
+        color={isWindow ? '#f7f5ee' : '#a6a8a3'}
         lineWidth={3}
       />
       {isWindow && (

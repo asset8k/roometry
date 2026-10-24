@@ -82,6 +82,7 @@ export default function RoomGenerationWorkspace({ state, controller, onConnectio
       {run?.analysis && <details className="analysis-notes"><summary>Photo observations and uncertainties</summary>
         <ul>{objects.map(obj => <li key={obj.id}><strong>{displayText(obj.label)}</strong>{obj.relative_location ? ` · ${obj.relative_location}` : ''}</li>)}</ul>
         <ul>{run.analysis.observations.unknowns.map((note, index) => <li key={index}>{note}</li>)}</ul>
+        <ul>{run.analysis.observations.warnings.map((note, index) => <li key={index}>{note}</li>)}</ul>
       </details>}
       {scene && <>
         {run?.proposal?.visual_review && <details className="analysis-notes" open={run.proposal.visual_review.status === 'unavailable' || run.proposal.visual_review.judgment?.verdict !== 'consistent'}>
@@ -93,7 +94,7 @@ export default function RoomGenerationWorkspace({ state, controller, onConnectio
           {run.proposal.visual_review.repair === 'failed' && <p>The correction could not finish. Your earlier scene is retained.</p>}
           {run.proposal.visual_review.judgment && <>
             <p>{run.proposal.visual_review.judgment.summary}</p>
-            {!!run.proposal.visual_review.judgment.checks?.length && <p>Placement and appearance reviewed for {run.proposal.visual_review.judgment.checks.length - 1} room elements and the room finishes.</p>}
+            {!!run.proposal.visual_review.judgment.checks?.length && <p>Comparison checks for {run.proposal.visual_review.judgment.checks.length - 1} room elements and the room finishes. Unverified checks are marked uncertain below.</p>}
             <ul>{run.proposal.visual_review.judgment.findings.map((finding, i) => <li key={i}>{finding.entity_ids.length > 0 && <strong>{finding.entity_ids.map(entityName).join(', ')}: </strong>}{finding.description}{run.proposal?.visual_review?.applied_findings?.some(index => index === i) && <span> · Adjusted toward the review target; photo likeness still needs checking.</span>}</li>)}</ul>
             <ul>{run.proposal.visual_review.judgment.checks?.filter(check => check.placement === 'uncertain' || check.appearance === 'uncertain').map((check, i) => <li key={i}><strong>{check.entity_id ? entityName(check.entity_id) : 'Room finishes'}: </strong>{check.placement === 'uncertain' && 'Placement uncertain. '}{check.appearance === 'uncertain' && 'Appearance uncertain. '}{check.evidence}</li>)}</ul>
             <ul>{run.proposal.visual_review.judgment.limitations.map((note, i) => <li key={i}>{note}</li>)}</ul>

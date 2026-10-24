@@ -9,10 +9,12 @@ from math import cos, hypot, inf, isclose, sin
 from roometry.scenes.catalog import ASSET_CATALOG
 from roometry.vision.importance import importance
 from roometry.vision.review_render import material_color
-from roometry.vision.spatial import planar_bounds, planar_gap
+from roometry.vision.spatial import planar_bounds, planar_gap, relationship_error, relationship_limit, POSITION_TOLERANCE_M, FACING_TOLERANCE_DEG
 
 MAX_REVIEW_ENTITIES = 24
 MAX_REPAIR_FINDINGS = 6
+MAX_RELATION_COMPARISONS = 24
+MAX_MATERIAL_COMPARISONS = 32
 LAYOUT_KINDS = {"position", "orientation", "opening", "support", "proportion", "identity"}
 
 
@@ -33,11 +35,25 @@ def appearance_controls(obj):
     controls = {role: role for role in roles & {"wood", "metal", "linen", "inset", "rubber", "enamel"}}
     if roles & {"primary", "primary_dark", "primary_metal", "primary_ceramic"}:
         controls["color"] = "primary"
-    return {
+    result = {
         field: {"value": obj.color if field == "color" else material_color(obj, role),
                 "parts": [part.name for part in parts if part.material == role or (field == "color" and part.material.startswith("primary"))][:16]}
         for field, role in sorted(controls.items())
     }
+    for field, control in result.items():
+        names = control["parts"]
+        if "seat" in names:
+            region = "seat and upholstery panels"
+        elif "high_back" in names:
+            region = "back panel"
+        elif any(name in {"tabletop", "worktop"} for name in names):
+            region = "work surface"
+        elif any(name.startswith(("board_", "side_board_", "shelf_")) for name in names):
+            region = "shelf boards"
+        else:
+            region = {"color": "main surfaces", "metal": "metal frame", "wood": "wood surfaces", "inset": "contrasting panels", "rubber": "armrests and feet", "linen": "fabric", "enamel": "enamel surfaces"}[field]
+        control["region"] = region
+    return result
 
 
 def review_targets(analysis, scene):
@@ -60,10 +76,43 @@ def review_targets(analysis, scene):
     targets.append({"entity_id": None, "kind": "room", "label": "Room finishes",
                     "source_image_ids": analysis.observations.image_ids,
                     "appearance_controls": scene.finishes.model_dump() if scene.finishes else {}})
+    relation_budget, material_budget = MAX_RELATION_COMPARISONS, MAX_MATERIAL_COMPARISONS
+    by_id = {item.id: item for item in observed}
+    for target in targets:
+        key = target["entity_id"]
+        source = by_id.get(key)
+        relations = []
+        if source is not None:
+            for relation in analysis.observations.relationships:
+                if relation.subject_id == key and relation.alternative_target_id is None and relation.kind in {"near", "beside", "faces", "against_wall"}:
+                    relations.append((relation.target_id, "near" if relation.kind == "beside" else relation.kind))
+            # These are questions for the photos, never inferred facts. Probe
+            # local groups even when the initial analysis missed a relationship.
+            if getattr(source, "type", None) in {"desk", "shelf", "radiator"}:
+                relations.extend((opening.id, "near") for opening in sorted(analysis.observations.openings, key=lambda item: item.id)
+                                 if opening.type == "window" and set(source.source_image_ids) & set(opening.source_image_ids))
+            facing_type = {"chair": "desk", "sofa": "tv", "armchair": "tv"}.get(getattr(source, "type", None))
+            peers = [item for item in analysis.observations.objects if item.type == facing_type and facing_type and set(item.source_image_ids) & set(source.source_image_ids)]
+            if len(peers) == 1 and not any(kind == "faces" for _, kind in relations):
+                relations.append((peers[0].id, "faces"))
+        target["relation_probes"] = []
+        for target_id, kind in list(dict.fromkeys(relations))[:min(6, relation_budget)]:
+            error = relationship_error(scene, key, target_id, kind)
+            if error == inf:
+                continue
+            target["relation_probes"].append({"target_id": target_id, "relation": kind,
+                "candidate_error": round(error, 3), "unit": "degrees" if kind == "faces" else "meters",
+                "correction_trigger": relationship_limit(scene, kind), "correction_target": relationship_limit(scene, kind, corrective=True)})
+            relation_budget -= 1
+        controls = target["appearance_controls"]
+        fields = [field for field in ("color", "inset", "wood", "metal", "linen", "enamel", "rubber", "floor_color", "wall_color", "floor_pattern") if field in controls]
+        fields = fields[:min(3, material_budget)]
+        target["material_probes"] = fields
+        material_budget -= len(fields)
     return targets, len(observed) > MAX_REVIEW_ENTITIES
 
 
-def select_findings(analysis, judgment):
+def select_findings(analysis, judgment, scene=None):
     sources = {item.id: item for item in [*analysis.observations.objects, *analysis.observations.openings]}
     def priority(finding):
         ranks = [importance(sources[key]) for key in finding.entity_ids if key in sources]
@@ -73,6 +122,10 @@ def select_findings(analysis, judgment):
                 # Minor unsupported accessories cannot consume the sole visual
                 # repair while the arrangement still needs checking.
                 and not (finding.kind == "missing" and finding.severity == "minor" and priority(finding) > 1)]
+    if scene is not None:
+        eligible = [(index, finding) for index, finding in eligible if finding.placement_target is None or any(
+            _placement_error(scene, key, finding.placement_target) > relationship_limit(scene, finding.placement_target.relation)
+            for key in finding.entity_ids)]
     return sorted(eligible, key=lambda item: (
         priority(item[1]), item[1].severity != "major",
         0 if item[1].kind in LAYOUT_KINDS else 1 if item[1].kind == "color" else 2,
@@ -96,16 +149,7 @@ def _color_error(actual, target):
 
 
 def _placement_error(scene, subject_id, target):
-    walls = {item.observation_id: item.wall for item in scene.wall_mapping}
-    if target.relation != "faces":
-        return planar_gap(subject_id, target.target_id, scene, walls)
-    subject = next((obj for obj in scene.objects if obj.id == subject_id), None)
-    bounds = planar_bounds(target.target_id, scene, walls)
-    if subject is None or bounds is None:
-        return inf
-    dx, dz = (bounds[0]+bounds[1])/2-subject.position.x, (bounds[2]+bounds[3])/2-subject.position.z
-    distance = hypot(dx, dz)
-    return 1-(sin(subject.rotation_y_rad)*dx+cos(subject.rotation_y_rad)*dz)/distance if distance > .05 else inf
+    return relationship_error(scene, subject_id, target.target_id, target.relation)
 
 
 def finding_progress(previous, candidate, finding):
@@ -120,9 +164,10 @@ def finding_progress(previous, candidate, finding):
         before = [_placement_error(previous, key, finding.placement_target) for key in ids]
         after = [_placement_error(candidate, key, finding.placement_target) for key in ids]
         relation = finding.placement_target.relation
-        limit = 1-cos(.7853981634) if relation == "faces" else .4 if relation == "against_wall" else max(.8, .15*min(candidate.room.width_m, candidate.room.length_m))
-        return (all(new <= limit and new < old-.001 for old,new in zip(before,after)),
-                any(new > old+1e-6 for old,new in zip(before,after)))
+        limit = relationship_limit(candidate, relation, corrective=True)
+        tolerance = FACING_TOLERANCE_DEG if relation == "faces" else POSITION_TOLERANCE_M
+        return (any(old > relationship_limit(previous, relation) for old in before) and all(new <= limit and new < old-.001 for old,new in zip(before,after)),
+                any(new > old+tolerance for old,new in zip(before,after)))
     if finding.appearance_target is not None:
         target = finding.appearance_target
         # A color finding on wall IDs refers to room finishes, not wall objects.

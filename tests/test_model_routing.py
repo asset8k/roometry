@@ -20,7 +20,7 @@ def test_default_stage_routes_and_visual_review_configuration_do_not_enable_call
         'analysis': ('gpt-6-luna', 'medium'),
         'scene_proposal': ('gpt-6.1-sol', 'medium'),
         'scene_repair': ('gpt-6-luna', 'medium'),
-        'visual_review': ('gpt-6-luna', 'medium'),
+        'visual_review': ('gpt-6-luna', 'low'),
         'visual_repair': ('gpt-6-luna', 'medium'),
         'agent_decision': ('gpt-6-luna', 'low'),
     }

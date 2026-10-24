@@ -39,6 +39,13 @@ describe('guided generation workspace', () => {
     expect(html).toContain('Reset layout')
     expect(html).not.toContain('Example bedroom')
   })
+  it('keeps recovered analysis warnings visible alongside the usable scene', () => {
+    const run = finishedRun(input, true)
+    run.analysis!.observations.warnings = ['Invalid wall-span evidence was ignored; other observations were retained.']
+    const html = render({ phase: 'partial', run })
+    expect(html).toContain('Invalid wall-span evidence was ignored')
+    expect(html).toContain('3D room viewer')
+  })
   it('asks about the measured wall with three choices and no redundant measurement inputs', () => {
     const run = waitingRun(input)
     run.pending_question = { id: 'q1', kind: 'room_wall_axis', question: 'Which wall measures 4 m?', dimension_axes: ['width_m'], entity_ids: ['window_wall', 'tv_wall'],

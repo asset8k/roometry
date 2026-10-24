@@ -292,6 +292,7 @@ export type AssetId =
   | "sofa_sleeper_01"
   | "chair_office_01"
   | "shelf_metal_01"
+  | "desk_shelved_01"
   | "ceiling_light_track_01"
   | "bed_crib_01"
   | "sofa_sectional_left_01"
@@ -579,7 +580,10 @@ export type Relation = "near" | "against_wall" | "faces";
 export type TargetId = string;
 export type Field3 =
   "color" | "wood" | "metal" | "linen" | "inset" | "rubber" | "enamel" | "floor_color" | "wall_color" | "floor_pattern";
-export type Value = string;
+/**
+ * Use wood, tile or plain only for floor_pattern. Every color field requires a six-digit #RRGGBB value, never a color name or description.
+ */
+export type Value = string | ("wood" | "tile" | "plain");
 export type Repairable = boolean;
 /**
  * @maxItems 10
@@ -615,6 +619,60 @@ export type SourceImageIds4 =
   | [string, string, string, string, string, string, string, string]
   | [string, string, string, string, string, string, string, string, string]
   | [string, string, string, string, string, string, string, string, string, string];
+/**
+ * @maxItems 6
+ */
+export type Relations =
+  | []
+  | [RelationComparison]
+  | [RelationComparison, RelationComparison]
+  | [RelationComparison, RelationComparison, RelationComparison]
+  | [RelationComparison, RelationComparison, RelationComparison, RelationComparison]
+  | [RelationComparison, RelationComparison, RelationComparison, RelationComparison, RelationComparison]
+  | [
+      RelationComparison,
+      RelationComparison,
+      RelationComparison,
+      RelationComparison,
+      RelationComparison,
+      RelationComparison
+    ];
+export type TargetId1 = string;
+export type Relation1 = "near" | "against_wall" | "faces";
+export type PhotoSupport = "supported" | "contradicted" | "unknown";
+/**
+ * @maxItems 7
+ */
+export type Materials =
+  | []
+  | [MaterialComparison]
+  | [MaterialComparison, MaterialComparison]
+  | [MaterialComparison, MaterialComparison, MaterialComparison]
+  | [MaterialComparison, MaterialComparison, MaterialComparison, MaterialComparison]
+  | [MaterialComparison, MaterialComparison, MaterialComparison, MaterialComparison, MaterialComparison]
+  | [
+      MaterialComparison,
+      MaterialComparison,
+      MaterialComparison,
+      MaterialComparison,
+      MaterialComparison,
+      MaterialComparison
+    ]
+  | [
+      MaterialComparison,
+      MaterialComparison,
+      MaterialComparison,
+      MaterialComparison,
+      MaterialComparison,
+      MaterialComparison,
+      MaterialComparison
+    ];
+export type Field4 =
+  "color" | "wood" | "metal" | "linen" | "inset" | "rubber" | "enamel" | "floor_color" | "wall_color" | "floor_pattern";
+/**
+ * Use wood, tile or plain only for floor_pattern. Every color field requires a six-digit #RRGGBB value, never a color name or description. Use null when the photo does not establish a useful approximate color.
+ */
+export type PhotoValue = string | ("wood" | "tile" | "plain") | null;
 /**
  * @maxItems 25
  */
@@ -988,6 +1046,17 @@ export interface ReviewCheck {
   appearance: Appearance;
   evidence: Evidence;
   source_image_ids: SourceImageIds4;
+  relations?: Relations;
+  materials?: Materials;
+}
+export interface RelationComparison {
+  target_id: TargetId1;
+  relation: Relation1;
+  photo_support: PhotoSupport;
+}
+export interface MaterialComparison {
+  field: Field4;
+  photo_value: PhotoValue;
 }
 export interface WallAxisResolution {
   status: Status4;

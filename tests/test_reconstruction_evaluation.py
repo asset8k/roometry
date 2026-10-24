@@ -141,3 +141,27 @@ def test_offline_cli_reports_failed_runs_without_images_or_paid_calls(tmp_path):
     report = json.loads(result.stdout)
     assert report['passed'] is False and len(report['inventory']) == 10
     assert all(item['loss_stage'] == 'analysis_unavailable' for item in report['inventory'])
+
+
+@pytest.mark.parametrize('defect', [None, 'moved', 'missing'])
+def test_window_shelf_matching_ignores_desk_and_display_distractors_without_hiding_losses(defect):
+    case, analysis, scene = load('bedroom_multiview')
+    original = next(item for item in scene.objects if item.id == 'shelf_a')
+    observation = next(item for item in analysis.observations.objects if item.id == 'shelf_a')
+    # Distractor sorts first and even sits in a valid place: scoring must not use
+    # position, relationship success, or model IDs as proof of photo identity.
+    scene.objects.append(original.model_copy(update={'id': 'aaa_desk_shelf'}, deep=True))
+    analysis.observations.objects.append(observation.model_copy(update={
+        'id': 'aaa_desk_shelf', 'label': 'Open shelving integrated into desk'}, deep=True))
+    if defect == 'moved':
+        original.position.z = 4.
+    elif defect == 'missing':
+        scene.objects = [item for item in scene.objects if item.id != original.id]
+    scene.objects.reverse()
+    report = evaluate_reconstruction(case, analysis, scene)
+    assert 'aaa_desk_shelf' not in report.matched_ids.values()
+    assert report.passed is (defect is None), report.failures
+    if defect == 'moved':
+        assert any('near relationship failed' in message for message in report.failures)
+    if defect == 'missing':
+        assert report.major_object_coverage == .9

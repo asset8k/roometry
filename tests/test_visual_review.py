@@ -55,6 +55,18 @@ def with_checks(data, context):
             "placement":"not_applicable" if key is None else "difference" if any(f["kind"] != "color" for f in findings) else "consistent",
             "appearance":"not_applicable" if target["kind"] == "opening" else "difference" if any(f["kind"] == "color" for f in findings) else "uncertain" if not target.get("retained", True) else "consistent",
             "evidence":"Synthetic provider comparison of placement and visible materials.", "source_image_ids":target["source_image_ids"]})
+    for check in data["checks"]:
+        target = next(item for item in context["review_targets"] if item["entity_id"] == check["entity_id"])
+        check.setdefault("relations", [{"target_id": p["target_id"], "relation": p["relation"],
+            "photo_support": "supported" if p["candidate_error"] <= p["correction_trigger"] or any(
+                f.get("placement_target") == {"target_id":p["target_id"],"relation":p["relation"]} and check["entity_id"] in f["entity_ids"] for f in data["findings"]
+            ) else "contradicted"} for p in target.get("relation_probes", [])])
+        controls = target["appearance_controls"]
+        check.setdefault("materials", [{"field": field, "photo_value": next((f["appearance_target"]["value"] for f in data["findings"]
+            if f.get("appearance_target") and f["appearance_target"]["field"] == field and
+            (check["entity_id"] in f["entity_ids"] if check["entity_id"] else not f["entity_ids"])),
+            controls[field]["value"] if isinstance(controls[field], dict) else controls[field])}
+            for field in target.get("material_probes", [])])
     return data
 
 
@@ -114,7 +126,7 @@ async def test_full_graph_compares_original_photos_three_views_and_scene_with_on
     images = [part["image_url"] for part in review["input"][0]["content"] if part["type"] == "input_image"]
     assert sum(image.startswith("data:image/jpeg;") for image in images) == len(uploaded["images"])
     assert sum(image.startswith("data:image/png;") for image in images) == 3
-    assert review["model"] == "gpt-6-luna" and review["reasoning"]["effort"] == "medium"
+    assert review["model"] == "gpt-6-luna" and review["reasoning"]["effort"] == "low"
     assert not review["store"] and review["tools"] == [] and review["truncation"] == "disabled"
     assert "data:image" not in result.model_dump_json()
     ledger = app.state.analysis_service.analyzer.usage_records

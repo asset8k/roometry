@@ -142,7 +142,7 @@ def render_views(scene: RoomScene) -> list[ReviewView]:
             else:
                 x = .002 if opening.wall == "west" else width-.002
                 vertices = ((x,low,a),(x,low,b),(x,high,b),(x,high,a))
-            color = "#B2C9CB" if opening.type == "window" else "#A1AD94"
+            color = "#B2C9CB" if opening.type == "window" else "#F0F0ED"
             if view_id == "top":
                 draw.line([project(vertices[0]),project(vertices[1])], fill=color, width=7)
             else:

@@ -44,7 +44,8 @@ def quality_review(payload):
 def far_desk():
     data=draft_data()
     for item in data["objects"][1:3]:
-        item["position"]["z"]=1.3
+        item["position"]["z"]=1.7
+        item["position"]["x"]=3.3
     return data
 
 
@@ -62,8 +63,8 @@ async def test_targeted_review_moves_support_group_and_restores_color_or_keeps_p
         for obj in items:
             obj["asset_id"]=None
             obj["dimensions_m"]=None
-            if defect=="wrong_direction": obj["position"]["z"]=1.4
-            if defect=="insufficient_progress": obj["position"]["z"]=1.25
+            if defect=="wrong_direction": obj["position"]["z"]=2.3
+            if defect=="insufficient_progress": obj["position"].update(x=3.3, z=1.6)
         old=next(obj for obj in context["observations"]["objects"] if obj["id"]=="chair_a")
         patch={"wall_assignments":[],"openings":[],"objects":items,"assumptions":[],"warnings":[],"appearance_corrections":[{
             "entity_id":"chair_a","field":"color","previous_value":old["color"],
@@ -91,7 +92,7 @@ async def test_targeted_review_moves_support_group_and_restores_color_or_keeps_p
         assert objects["desk_observed"].position.z==objects["computer_observed"].position.z==.6
         assert objects["chair_a"].color=="#28558A"
     elif not accepted:
-        assert objects["desk_observed"].position.z==1.3
+        assert objects["desk_observed"].position.z==1.7
         assert objects["chair_a"].color!="#28558A"
     assert result.status=="partial" and result.proposal.validation.valid
     assert result.analysis==app.state.analysis_service._states[uploaded["input_id"]].result
@@ -106,18 +107,29 @@ async def test_incomplete_or_unsupported_review_never_authorizes_paid_repair(har
     construction(actions)
     def invalid(payload):
         context=json.loads(payload["input"][0]["content"][0]["text"])
-        data=with_checks(quality_review(payload) if defect in {"unused_material","no_target"} else consistent(),context)
+        data=quality_review(payload) if defect in {"unused_material","no_target"} else consistent()
+        if defect in {"unused_material","no_target"}:
+            data["findings"] = [data["findings"][1 if defect == "unused_material" else 0]]
+        data=with_checks(data,context)
         if defect=="skipped": data["checks"].pop(0)
         elif defect=="duplicate": data["checks"].append(deepcopy(data["checks"][0]))
         elif defect=="hidden_difference": data["checks"][0]["placement"]="difference"
         elif defect=="unrelated_photo": data["checks"][0]["source_image_ids"]=["foreign_photo"]
         elif defect=="not_applicable": data["checks"][0]["placement"]="not_applicable"
-        elif defect=="unused_material": data["findings"][1]["appearance_target"]["field"]="enamel"
+        elif defect=="unused_material":
+            data["findings"][0]["appearance_target"]["field"]="enamel"
+            for check in data["checks"]:
+                if check["entity_id"] == "chair_a":
+                    for material in check["materials"]: material["photo_value"] = None
         else: data["findings"][0]["placement_target"]=None
         return data
     actions.extend([review_action(invalid),decision("finish")])
     result=await run(runs,owner,uploaded)
-    assert result.proposal.visual_review.status=="unavailable"
+    assert result.proposal.visual_review.status=="reviewed"
+    assert result.proposal.visual_review.judgment.verdict != "consistent"
+    assert result.proposal.visual_review.judgment.limitations
+    assert result.proposal.visual_review.repair == "not_attempted"
+    assert result.status == "partial"
     assert result.proposal.validation.valid and len(result.base_scene.objects)==5
     assert len(calls)==6
 

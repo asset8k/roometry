@@ -28,6 +28,13 @@ photos, with all relevant evidence IDs. Distinct similar objects retain separate
 IDs. For uncertain matches retain both observations and add a possible_duplicates
 pair; never merge merely because two objects share a type or color. Apply the same
 principle to walls and openings. Every entity ID must be unique across kinds.
+Count connected furniture once across ALL views. A desk with a shelving frame,
+side boards or an overhead hutch is one desk observation describing the whole
+assembly, not a plain desk plus another freestanding shelf for its own frame.
+Keep genuinely separate shelves beside it as separate objects. Check the frame's
+continuous uprights and shared boards across views; proximity alone is not proof
+of integration. If uncertain, keep distinct IDs with a possible_duplicates hint
+and an explicit uncertainty rather than silently merging them.
 
 For each visible wall, record span only when there is evidence about whether
 it belongs to the shorter or longer pair of walls. Include supporting image IDs,
@@ -161,6 +168,11 @@ Choose asset_id from that observation's asset_bindings models, using its label,
 shape and placement. null uses an eligible standard model. A composite model is
 only suitable when the observation already describes that whole item; never
 double-count separately observed appliances, basins, or furniture components.
+Use desk_shelved_01 for a whole observed desk with connected side shelving/hutch;
+its worktop supplies desktop devices below the upper shelves. Prefer its worktop
+support surface for a monitor/laptop, not the highest hutch board. Never add a
+second shelf for the same connected boards, or merge distinct existing IDs to
+make this variant fit. Existing ambiguous observations remain explicitly unresolved.
 Use dimensions_m=null when size is unknown: the server overlays recorded photo
 estimates onto the model's placement-specific catalog defaults. Provide explicit
 dimensions when the photos support different size estimates. Recorded photo

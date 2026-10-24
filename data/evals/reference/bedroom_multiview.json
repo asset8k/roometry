@@ -213,7 +213,7 @@
         {
           "id": "shelf_a",
           "type": "shelf",
-          "label": "shelf a",
+          "label": "Freestanding open shelf beside the window",
           "source_image_ids": [
             "11111111-1111-4111-8111-000000000001",
             "11111111-1111-4111-8111-000000000002",
@@ -242,7 +242,7 @@
         {
           "id": "shelf_b",
           "type": "shelf",
-          "label": "shelf b",
+          "label": "Freestanding open shelf beside the window",
           "source_image_ids": [
             "11111111-1111-4111-8111-000000000001",
             "11111111-1111-4111-8111-000000000002",

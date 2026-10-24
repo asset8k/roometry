@@ -98,10 +98,22 @@
           "type": "string"
         },
         "value": {
-          "maxLength": 16,
-          "minLength": 1,
-          "title": "Value",
-          "type": "string"
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "enum": [
+                "wood",
+                "tile",
+                "plain"
+              ],
+              "type": "string"
+            }
+          ],
+          "description": "Use wood, tile or plain only for floor_pattern. Every color field requires a six-digit #RRGGBB value, never a color name or description.",
+          "title": "Value"
         }
       },
       "required": [
@@ -1281,6 +1293,54 @@
       "title": "MaterialColors",
       "type": "object"
     },
+    "MaterialComparison": {
+      "additionalProperties": false,
+      "properties": {
+        "field": {
+          "enum": [
+            "color",
+            "wood",
+            "metal",
+            "linen",
+            "inset",
+            "rubber",
+            "enamel",
+            "floor_color",
+            "wall_color",
+            "floor_pattern"
+          ],
+          "title": "Field",
+          "type": "string"
+        },
+        "photo_value": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "enum": [
+                "wood",
+                "tile",
+                "plain"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Use wood, tile or plain only for floor_pattern. Every color field requires a six-digit #RRGGBB value, never a color name or description. Use null when the photo does not establish a useful approximate color.",
+          "title": "Photo Value"
+        }
+      },
+      "required": [
+        "field",
+        "photo_value"
+      ],
+      "title": "MaterialComparison",
+      "type": "object"
+    },
     "ObjectDimensions": {
       "additionalProperties": false,
       "properties": {
@@ -2299,6 +2359,43 @@
       "title": "ReconstructionConstraints",
       "type": "object"
     },
+    "RelationComparison": {
+      "additionalProperties": false,
+      "properties": {
+        "target_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Target Id",
+          "type": "string"
+        },
+        "relation": {
+          "enum": [
+            "near",
+            "against_wall",
+            "faces"
+          ],
+          "title": "Relation",
+          "type": "string"
+        },
+        "photo_support": {
+          "enum": [
+            "supported",
+            "contradicted",
+            "unknown"
+          ],
+          "title": "Photo Support",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target_id",
+        "relation",
+        "photo_support"
+      ],
+      "title": "RelationComparison",
+      "type": "object"
+    },
     "ReviewCheck": {
       "additionalProperties": false,
       "properties": {
@@ -2349,6 +2446,22 @@
           "maxItems": 10,
           "minItems": 1,
           "title": "Source Image Ids",
+          "type": "array"
+        },
+        "relations": {
+          "items": {
+            "$ref": "#/$defs/RelationComparison"
+          },
+          "maxItems": 6,
+          "title": "Relations",
+          "type": "array"
+        },
+        "materials": {
+          "items": {
+            "$ref": "#/$defs/MaterialComparison"
+          },
+          "maxItems": 7,
+          "title": "Materials",
           "type": "array"
         }
       },
@@ -3413,6 +3526,7 @@
             "sofa_sleeper_01",
             "chair_office_01",
             "shelf_metal_01",
+            "desk_shelved_01",
             "ceiling_light_track_01",
             "bed_crib_01",
             "sofa_sectional_left_01",

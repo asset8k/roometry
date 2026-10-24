@@ -39,6 +39,7 @@ from roometry.vision.partial import assemble_partial
 from roometry.vision.importance import partial_quality
 from roometry.vision.proposal_request import build_proposal_request
 from roometry.vision.recovery import merge_repair
+from roometry.vision.draft_validation import parse_scene_draft
 from roometry.vision.proposal_schemas import (
     AXES,
     DimensionName,
@@ -646,7 +647,7 @@ class AnalysisService:
                     details = error.diagnostics
                     decoded = None
                 try:
-                    draft = SceneDraft.model_validate(decoded)
+                    draft = parse_scene_draft(decoded, analysis)
                     if operation == "scene_repair" and previous_draft is not None:
                         draft = merge_repair(analysis, previous_draft, draft, problems)
                 except (ValidationError, ValueError, RecursionError) as error:

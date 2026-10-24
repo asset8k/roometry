@@ -5,10 +5,34 @@ import re
 
 from pydantic import Field, model_validator
 
-from roometry.scenes.schemas import Identifier, Note, SceneModel
+from roometry.scenes.schemas import Color, Identifier, Note, SceneModel
 
 ViewId = Literal["cutaway_nw", "cutaway_se", "top"]
 CheckStatus = Literal["consistent", "difference", "uncertain", "not_applicable"]
+AppearanceField = Literal["color", "wood", "metal", "linen", "inset", "rubber", "enamel", "floor_color", "wall_color", "floor_pattern"]
+# Keep the wire shape unchanged while exposing the local value restriction to
+# Structured Outputs. The validators below still enforce field/value pairing.
+AppearanceValue = Color | Literal["wood", "tile", "plain"]
+VALUE_FORMAT = "Use wood, tile or plain only for floor_pattern. Every color field requires a six-digit #RRGGBB value, never a color name or description."
+
+
+class RelationComparison(SceneModel):
+    target_id: Identifier
+    relation: Literal["near", "against_wall", "faces"]
+    photo_support: Literal["supported", "contradicted", "unknown"]
+
+
+class MaterialComparison(SceneModel):
+    field: AppearanceField
+    photo_value: AppearanceValue | None = Field(description=VALUE_FORMAT + " Use null when the photo does not establish a useful approximate color.")
+
+    @model_validator(mode="after")
+    def supported_value(self) -> Self:
+        if self.photo_value is not None:
+            valid = self.photo_value in {"wood", "tile", "plain"} if self.field == "floor_pattern" else re.fullmatch(r"#[0-9a-fA-F]{6}", self.photo_value)
+            if not valid:
+                raise ValueError("Photo material evidence requires a supported color or floor pattern.")
+        return self
 
 
 class ReviewCheck(SceneModel):
@@ -17,6 +41,10 @@ class ReviewCheck(SceneModel):
     appearance: CheckStatus
     evidence: Annotated[str, Field(min_length=1, max_length=320)]
     source_image_ids: Annotated[list[str], Field(min_length=1, max_length=10)]
+    # Empty defaults read historical checkpoints. New requests select bounded
+    # comparisons; the server computes differences rather than trusting a vote.
+    relations: Annotated[list[RelationComparison], Field(max_length=6)] = Field(default_factory=list)
+    materials: Annotated[list[MaterialComparison], Field(max_length=7)] = Field(default_factory=list)
 
 
 class PlacementTarget(SceneModel):
@@ -25,8 +53,8 @@ class PlacementTarget(SceneModel):
 
 
 class AppearanceTarget(SceneModel):
-    field: Literal["color", "wood", "metal", "linen", "inset", "rubber", "enamel", "floor_color", "wall_color", "floor_pattern"]
-    value: Annotated[str, Field(min_length=1, max_length=16)]
+    field: AppearanceField
+    value: AppearanceValue = Field(description=VALUE_FORMAT)
 
     @model_validator(mode="after")
     def valid_value(self) -> Self:

@@ -46,7 +46,9 @@ class Settings(BaseSettings):
     scene_repair_model_name: str | None = Field(default=None, min_length=1, max_length=128)
     scene_model_name: str = Field(default="gpt-6.1-sol", min_length=1, max_length=128)
     analysis_reasoning_effort: ReasoningEffort = "medium"
-    review_reasoning_effort: ReasoningEffort = "medium"
+    # A bounded material/relationship checklist needs room for its JSON output;
+    # medium reasoning can consume the review allowance before checks finish.
+    review_reasoning_effort: ReasoningEffort = "low"
     visual_review_enabled: bool = True
     review_max_output_tokens: int = Field(default=6144, ge=512, le=8192)
     scene_repair_reasoning_effort: ReasoningEffort = "medium"

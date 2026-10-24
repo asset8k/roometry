@@ -47,11 +47,38 @@ Use uncertain rather than a generic claim of agreement when evidence is weak.
 Every difference check needs a matching finding; every uncertainty belongs in
 limitations. Do not call the overall result consistent with uncertain checks.
 
+For each target, answer EVERY relation_probes entry in checks.relations and EVERY
+material_probes field in checks.materials. These are separate photo questions,
+not a vote about whether the candidate looks acceptable. For each relation say
+supported, contradicted, or unknown FROM THE PHOTOS. An automatically selected
+desk/window probe is not an instruction that every desk belongs near a window.
+For each material field return photo_value from the surfaces in that control's
+parts list; null means occluded, lighting-dependent or not reliably established.
+For EVERY color field use a six-digit hexadecimal string such as "#2458B0"
+(approximate blue) or "#202124" (approximate black), never "blue", "Brown wood"
+or prose. Only floor_pattern accepts "wood", "tile" or "plain". Use the same
+format for findings.appearance_target.value. These are approximate material
+colors, not exact color measurements or colored illumination.
+A blue seat and a black back are TWO answers: do not call them consistent merely
+because the candidate contains some blue and some black. Do not copy candidate
+values or initial observation colors as photo evidence. The server compares these
+answers with measured candidate gaps/angles and actual rendered material fields.
+Use the supplied broad correction_trigger; small approximate position differences
+of about 0.5 m alone do not justify moving furniture. Wrong room ends, broken local
+groups and facing away from the intended target do. Do not invent metric photo
+coordinates. Keep evidence concise (one short sentence and the best 1–2 photo IDs).
+
 Prioritize major arrangement, orientation, scale and material colors BEFORE
 minor missing accessories. A minor absent backpack must not overshadow a wrongly
 positioned workstation or lost colored upholstery. If a difference cannot be
 represented with available controls/assets, set repairable=false and explain
 the limitation; do not request an unrelated substitute or a pointless repair.
+An unavailable exact fabric pattern does not prevent a useful approximate color
+correction: use each supplied appearance_control's parts and region to select
+the closest photo-supported color for that region, and disclose the remaining
+pattern limitation separately. For example, a blue seat/side region and black
+back can improve a swapped-color chair even if its exact gaming-chair panel
+pattern is unavailable. Do not demand new assets or exact texture reproduction.
 For a repairable position/orientation finding, name ONE subject in entity_ids and
 provide placement_target: target_id must be an observed wall/object/opening, with
 relation near, against_wall or faces. Use broad photo-supported relationships,
@@ -62,6 +89,11 @@ parts listed in appearance_controls; use inset/metal/wood only when listed.
 
 Every finding must cite supplied photo IDs, supplied view IDs and a concrete
 visible difference. Do not invent entity IDs, measurements, furniture or supports.
+Verify physical identity across views: connected shelf boards/uprights on an
+integrated desk are parts of that desk, while freestanding neighboring shelves
+remain separate. If existing observations double-count connected furniture,
+report an unrepairable identity limitation; never delete/merge stable IDs merely
+to increase the apparent coverage score. A new analysis can reconcile the inventory.
 Use existing observation IDs even for omitted scene objects. If important furniture
 was never observed, report a missing finding with entity_ids=[]; this requires
 better analysis/human input and cannot authorize inserting an invented object.
@@ -112,6 +144,7 @@ def build_review_request(settings: Settings, analysis: RoomAnalysisResponse, pro
     if ids:
         schema["$defs"]["ReviewFinding"]["properties"]["entity_ids"]["items"]["enum"] = ids
         schema["$defs"]["PlacementTarget"]["properties"]["target_id"]["enum"] = ids
+        schema["$defs"]["RelationComparison"]["properties"]["target_id"]["enum"] = ids
     else:
         schema["$defs"]["ReviewFinding"]["properties"]["entity_ids"]["maxItems"] = 0
     payload = {

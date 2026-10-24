@@ -12,6 +12,7 @@ from dataclasses import asdict
 from datetime import UTC, datetime
 from decimal import Decimal
 import json
+import mimetypes
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from time import perf_counter
@@ -27,29 +28,56 @@ from roometry.main import create_app
 from roometry.scenes.validation import validate_geometry
 from roometry.vision.review_render import render_views
 
-# Standard API USD / million tokens, verified 2026-10-23. Cached tokens are a
-# subset of input tokens; reasoning tokens are already included in output.
-PRICES = {"gpt-6-luna": ("0.10", "0.01", "0.50"), "gpt-6.1-sol": ("2", "0.10", "10")}
+# Standard API USD / million tokens, verified 2026-10-24. Reads and writes are
+# disjoint subsets of input. Write prices are total rates, not surcharges.
+PRICES = {"gpt-6-luna": ("0.10", "0.01", "0.50", "0.125", "0.25"),
+          "gpt-6.1-sol": ("2", "0.10", "10", "2.50", "5")}
 PRICE_SOURCE = "https://developers.openai.com/api/docs/pricing"
 
 
-def estimate_cost(records):
+def estimate_cost(records, responses=()):
+    """Join complete provider usage by response ID; never infer a missing charge.
+
+    Legacy ModelAttempt rows omit cache writes. They are unpriced without their
+    full response. An explicit write count with no TTL split uses the documented
+    default 30m used by this harness (which sends no cache retention override).
+    """
+    by_id = {item["response"]["id"]: item["response"] for item in responses}
     rows, total, unknown = [], Decimal(0), 0
     for entry in records:
+        entry = dict(entry)
+        response = by_id.get(entry.get("response_id"))
+        if response is not None:
+            usage = response.get("usage") or {}
+            details = usage.get("input_tokens_details") or {}
+            entry.update(input_tokens=usage.get("input_tokens"), output_tokens=usage.get("output_tokens"),
+                         cached_input_tokens=details.get("cached_tokens"),
+                         cache_write_tokens=details.get("cache_write_tokens"),
+                         cache_write_tokens_details=details.get("cache_write_tokens_details"),
+                         service_tier=response.get("service_tier"))
         rates = next((prices for model, prices in PRICES.items() if entry["model"] == model or entry["model"].startswith(model + "-")), None)
-        tokens = [entry[key] for key in ("input_tokens", "cached_input_tokens", "output_tokens")]
+        tokens = [entry.get(key) for key in ("input_tokens", "cached_input_tokens", "output_tokens", "cache_write_tokens")]
         cost = None
-        if rates is not None and all(value is not None for value in tokens):
-            incoming, cached, outgoing = tokens
-            if 0 <= cached <= incoming < 272_000 and outgoing >= 0:
-                a, b, c = map(Decimal, rates)
-                cost = ((incoming-cached)*a + cached*b + outgoing*c) / 1_000_000
+        if rates is not None and all(type(value) is int and value >= 0 for value in tokens):
+            incoming, cached, outgoing, written = tokens
+            split = entry.get("cache_write_tokens_details")
+            if split is None:
+                short, long = written, 0
+                entry["write_ttl_assumption"] = "30m default" if written else None
+            else:
+                short, long = split.get("ttl_30m_tokens"), split.get("ttl_12h_tokens")
+            if (all(type(value) is int and value >= 0 for value in (short, long))
+                and short + long == written and cached + written <= incoming < 272_000
+                and entry.get("service_tier", "default") == "default"):
+                a, b, c, d, e = map(Decimal, rates)
+                entry["ordinary_input_tokens"] = incoming - cached - written
+                cost = ((incoming-cached-written)*a + cached*b + outgoing*c + short*d + long*e) / 1_000_000
         if cost is None:
             unknown += 1
         else:
             total += cost
         rows.append({**entry, "estimated_usd": str(cost) if cost is not None else None})
-    return {"currency": "USD", "pricing_date": "2026-10-23", "pricing_source": PRICE_SOURCE,
+    return {"currency": "USD", "pricing_date": "2026-10-24", "pricing_source": PRICE_SOURCE,
             "standard_rates_per_million": PRICES, "estimated_usd": str(total),
             "unpriced_calls": unknown, "complete_usage": unknown == 0,
             "note": "Estimate from provider-reported tokens at standard short-context rates; not a billing invoice. Unknown usage is excluded, so an incomplete total is a lower bound. Includes image and reasoning tokens in reported totals; no second charge for them.",
@@ -71,7 +99,9 @@ async def run(args):
     if any(settings.model_route(op).model != model for op, model in expected.items()):
         raise RuntimeError("This check expects one Sol 6.1 construction and Luna for all other operations.")
     save(directory, "manifest.json", {"started_at": datetime.now(UTC).isoformat(),
-         "photo_files": [path.name for path in args.photos], "dimensions_m": [args.width, args.length, args.height],
+         "photo_files": [path.name for path in args.photos], "room_type": args.room_type,
+         "dimensions_m": [args.width, args.length, args.height],
+         "provider_timeout_seconds": settings.analysis_timeout_seconds,
          "routes": {op: asdict(settings.model_route(op)) for op in operations},
          "one_generation_only": True, "reference_injected_into_prompts": False})
     case = ReconstructionCase.model_validate_json(args.case.read_text())
@@ -91,7 +121,7 @@ async def run(args):
                 save(directory, "responses.json", responses)
                 return result
             finally:
-                save(directory, "cost.json", estimate_cost([asdict(record) for record in analyzer.usage_records]))
+                save(directory, "cost.json", estimate_cost([asdict(record) for record in analyzer.usage_records], responses))
                 if analyzer.usage_records:
                     record = analyzer.usage_records[-1]
                     print(f"Finished {operation}: {record.outcome}, {record.input_tokens} input / {record.output_tokens} output tokens", flush=True)
@@ -106,9 +136,9 @@ async def run(args):
         try:
             async with app.router.lifespan_context(app):
                 async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://testserver") as client:
-                    options = {"room_type": "bedroom", "goals": ["better_aesthetics"],
+                    options = {"room_type": args.room_type, "goals": ["better_aesthetics"],
                                "dimensions": {"width_m": args.width, "length_m": args.length, "height_m": args.height, "measurements_source": "user_confirmed"}}
-                    files = [("images", (path.name, path.read_bytes(), "image/heic")) for path in args.photos]
+                    files = [("images", (path.name, path.read_bytes(), mimetypes.guess_type(path)[0] or "application/octet-stream")) for path in args.photos]
                     files.append(("options", (None, json.dumps(options))))
                     upload = await client.post("/api/rooms/inputs", files=files)
                     upload.raise_for_status()
@@ -149,7 +179,7 @@ async def run(args):
                           "openings": len(state.working_scene.openings) if state.working_scene else 0,
                           "elapsed_seconds": round(perf_counter()-started, 2)}, indent=2), flush=True)
         finally:
-            save(directory, "cost.json", estimate_cost([asdict(record) for record in analyzer.usage_records]))
+            save(directory, "cost.json", estimate_cost([asdict(record) for record in analyzer.usage_records], responses))
             save(directory, "timing.json", {"elapsed_seconds": round(perf_counter()-started, 2)})
 
 
@@ -157,6 +187,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--allow-paid", action="store_true", required=True)
     parser.add_argument("--photos", type=Path, nargs="+", required=True)
+    parser.add_argument("--room-type", choices=["bedroom", "living_room"], default="bedroom")
     parser.add_argument("--width", type=float, required=True)
     parser.add_argument("--length", type=float, required=True)
     parser.add_argument("--height", type=float, required=True)

@@ -14,9 +14,9 @@ afterEach(async () => { for (const renderer of mounted.splice(0)) await renderer
 const configurations = DECOR_CATALOG.flatMap(asset => asset.placements.map(placement => ({ asset, placement })))
 
 describe('decorations and finishing models', () => {
-  it('has 105 unique models, covers all 68 types, and resolves every scene-approved ID', () => {
-    expect(ASSET_CATALOG).toHaveLength(105)
-    expect(new Set(ASSET_CATALOG.map(asset => asset.asset_id)).size).toBe(105)
+  it('has 106 unique models, covers all 68 types, and resolves every scene-approved ID', () => {
+    expect(ASSET_CATALOG).toHaveLength(106)
+    expect(new Set(ASSET_CATALOG.map(asset => asset.asset_id)).size).toBe(106)
     expect(new Set(ASSET_CATALOG.map(asset => asset.object_type)).size).toBe(68)
     expect(DECOR_CATALOG).toHaveLength(31)
     for (const asset of ASSET_CATALOG) expect(getModelKind(asset.asset_id)).not.toBe('placeholder')

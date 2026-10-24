@@ -35,8 +35,22 @@ describe('photo appearance', () => {
     const root = r.scene.children[0].instance
     const back = root.getObjectByName('high_back') as Mesh
     const panel = root.getObjectByName('back_color_1') as Mesh
+    const seat = root.getObjectByName('seat') as Mesh
     expect((back.material as MeshStandardMaterial).color.getHexString()).toBe('111111')
     expect((panel.material as MeshStandardMaterial).color.getHexString()).toBe('28558a')
+    expect((seat.material as MeshStandardMaterial).color.getHexString()).toBe('28558a')
+  })
+
+  it('renders an integrated desk as one frame with distinct worktop, shelves and metal', async () => {
+    const r = await ReactThreeTestRenderer.create(<FurnitureParts assetId="desk_shelved_01" color="#8A6038" materialColors={{ wood: '#AA8254', metal: '#17191B' }} />)
+    mounted.push(r)
+    const root = r.scene.children[0].instance
+    const worktop = root.getObjectByName('worktop') as Mesh
+    const board = root.getObjectByName('side_board_0') as Mesh
+    const upright = root.getObjectByName('upright_0') as Mesh
+    expect((worktop.material as MeshStandardMaterial).color.getHexString()).toBe('8a6038')
+    expect((board.material as MeshStandardMaterial).color.getHexString()).toBe('aa8254')
+    expect((upright.material as MeshStandardMaterial).color.getHexString()).toBe('17191b')
   })
 
   it('uses observed floor and wall colors without wood seams on a plain floor', async () => {

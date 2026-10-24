@@ -20,10 +20,10 @@ CONFIGURATIONS = [(asset, placement) for asset in DECOR_CATALOG.values()
                   for placement in sorted(ASSET_REGISTRY[asset.asset_id].placements)]
 
 
-def test_all_105_approved_models_and_68_types_have_exactly_one_recipe():
+def test_all_106_approved_models_and_68_types_have_exactly_one_recipe():
     catalogs = (FURNITURE_CATALOG, EQUIPMENT_CATALOG, FIXTURE_CATALOG, DECOR_CATALOG)
     ids = [key for catalog in catalogs for key in catalog]
-    assert len(ids) == len(set(ids)) == 105
+    assert len(ids) == len(set(ids)) == 106
     assert set(ids) == set(ASSET_REGISTRY)
     assert {asset.object_type for catalog in catalogs for asset in catalog.values()} == set(get_args(ObjectType))
     assert len(get_args(ObjectType)) == 68

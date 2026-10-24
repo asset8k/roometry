@@ -22,15 +22,17 @@ from roometry.scenes.validation import validate_geometry
 from roometry.vision.analyzer import response_json
 from roometry.vision.errors import AnalysisFailure
 from roometry.vision.evidence import apply_constraints
+from roometry.vision.draft_validation import parse_scene_draft
 from roometry.vision.fidelity import evaluate_fidelity
 from roometry.vision.partial import assemble_partial
 from roometry.vision.proposal_request import build_proposal_request
 from roometry.vision.proposal_schemas import DraftObject, DraftOpening, SceneDraft, SceneProposalResponse
 from roometry.vision.proposals import Measurements, assemble, issue, notes
 from roometry.vision.recovery import merge_repair
-from roometry.vision.review_render import VIEW_IDS, render_views
+from roometry.vision.review_render import render_views
 from roometry.vision.review_request import build_review_request, enforce_review_limit
-from roometry.vision.review_schemas import ReviewJudgment, VisualReviewResult
+from roometry.vision.review_schemas import VisualReviewResult
+from roometry.vision.review_validation import parse_judgment, validate_judgment as validate_judgment
 from roometry.vision.review_policy import appearance_controls, finding_progress, review_targets, same_values, select_findings
 from roometry.vision.schemas import ReconstructionConstraints, RoomAnalysisResponse
 
@@ -92,57 +94,6 @@ def reconstruction_changed(previous: RoomScene, candidate: RoomScene) -> bool:
         }
 
     return not same_values(content(previous), content(candidate))
-
-
-def validate_judgment(analysis: RoomAnalysisResponse, judgment: ReviewJudgment, scene: RoomScene) -> None:
-    ids = {item.id for item in [*analysis.observations.walls, *analysis.observations.objects, *analysis.observations.openings]}
-    walls = {item.id for item in analysis.observations.walls}
-    objects = {item.id:item for item in scene.objects}
-    targets, _ = review_targets(analysis, scene)
-    expected = {target["entity_id"]:target for target in targets}
-    if {check.entity_id for check in judgment.checks} != set(expected):
-        raise ValueError("Complete the server-selected placement and appearance checks.")
-    for finding in judgment.findings:
-        for values, allowed in ((finding.entity_ids, ids), (finding.source_image_ids,set(analysis.observations.image_ids)), (finding.view_ids,set(VIEW_IDS))):
-            if not set(values) <= allowed or len(values) != len(set(values)):
-                raise ValueError("Review findings must cite unique original evidence and known identities.")
-        if finding.repairable and finding.kind in {"position", "orientation"}:
-            target = finding.placement_target
-            if target is None or len(finding.entity_ids) != 1 or finding.entity_ids[0] not in objects or target.target_id not in ids or target.target_id == finding.entity_ids[0]:
-                raise ValueError("Placement findings require one observed subject and a distinct reference target.")
-            if (finding.kind == "orientation") != (target.relation == "faces") or (target.relation == "against_wall" and target.target_id not in walls):
-                raise ValueError("The placement target must match the kind of correction.")
-        elif finding.placement_target is not None:
-            raise ValueError("Placement targets belong only to repairable position/orientation findings.")
-        if finding.repairable and finding.kind == "color":
-            target = finding.appearance_target
-            if target is None:
-                raise ValueError("Color findings require a rendered appearance target.")
-            room_field = target.field in {"floor_color", "wall_color", "floor_pattern"}
-            if room_field:
-                if finding.entity_ids and not set(finding.entity_ids) <= walls:
-                    raise ValueError("Room appearance targets may reference only observed walls or room finishes.")
-            elif not finding.entity_ids or any(key not in objects or target.field not in appearance_controls(objects[key]) for key in finding.entity_ids):
-                raise ValueError("Choose a material control actually rendered by this object's catalog model.")
-        elif finding.appearance_target is not None:
-            raise ValueError("Appearance targets belong only to repairable color findings.")
-    for check in judgment.checks:
-        target = expected[check.entity_id]
-        if len(set(check.source_image_ids)) != len(check.source_image_ids) or not set(check.source_image_ids) <= set(target["source_image_ids"]):
-            raise ValueError("Each object check requires its own recorded photo evidence.")
-        if (check.placement == "not_applicable") != (check.entity_id is None) or (check.appearance == "not_applicable" and target["kind"] != "opening"):
-            raise ValueError("Major furniture needs placement and appearance checks.")
-        if check.entity_id is not None and not target["retained"] and (
-            check.placement == "consistent" or check.appearance == "consistent"
-        ):
-            raise ValueError("An omitted major item cannot be reported as a consistent reconstruction.")
-        for aspect, status in (("placement", check.placement), ("appearance", check.appearance)):
-            matching = [finding for finding in judgment.findings if
-                ((check.entity_id in finding.entity_ids) if check.entity_id is not None else
-                 (finding.kind == "color" and (not finding.entity_ids or set(finding.entity_ids) <= walls)))
-                and ((finding.kind == "color") == (aspect == "appearance"))]
-            if (status == "difference") != bool(matching):
-                raise ValueError("Each reported difference must agree with its object check and finding.")
 
 
 def patch_matches_findings(previous: SceneDraft, merged: SceneDraft, findings) -> bool:
@@ -265,14 +216,13 @@ class VisualReviewer:
         with anyio.fail_after(settings.analysis_timeout_seconds):
             response = await service.analyzer.request(payload, operation="visual_review")
         await service._owned_analysis(proposal.analysis_id, owner)
-        judgment = ReviewJudgment.model_validate(response_json(response, settings.analysis_max_output_bytes))
-        validate_judgment(analysis, judgment, proposal.scene)
+        judgment = parse_judgment(response_json(response, settings.analysis_max_output_bytes), analysis, proposal.scene, require_comparisons=True)
         _, scope_limited = review_targets(analysis, proposal.scene)
         if scope_limited:
             judgment.limitations = notes(["The bounded review did not check every major item; further placement and appearance checks remain."], judgment.limitations)[:10]
             if judgment.verdict == "consistent":
                 judgment.verdict = "uncertain"
-        selected = select_findings(analysis, judgment)
+        selected = select_findings(analysis, judgment, proposal.scene)
         actionable = [finding for _,finding in selected]
         applied_findings = []
         repair = "not_needed" if judgment.verdict == "consistent" else "not_attempted"
@@ -308,7 +258,7 @@ class VisualReviewer:
                 with anyio.fail_after(settings.analysis_timeout_seconds):
                     response = await service.analyzer.request(payload, operation="visual_repair")
                 await service._owned_analysis(proposal.analysis_id, owner)
-                patch = SceneDraft.model_validate(response_json(response, settings.analysis_max_output_bytes))
+                patch = parse_scene_draft(response_json(response, settings.analysis_max_output_bytes), analysis)
                 draft = merge_repair(analysis, previous, patch, problems, allow_room_appearance=room_appearance)
                 if not patch_matches_findings(previous, draft, actionable):
                     raise ValueError("The correction exceeds the visual findings.")

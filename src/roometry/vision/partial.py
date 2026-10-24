@@ -17,15 +17,42 @@ from roometry.vision.proposals import Measurements, assemble, issue, notes, pref
 from roometry.vision.schemas import RoomAnalysisResponse
 
 
+def recover_corrections(analysis, draft):
+    """Quarantine rejected hypothesis groups, preserving the original evidence.
+
+    Valid records for other entities still apply. All records for a rejected
+    entity are removed together because placement/support revisions can depend
+    on one another. No unvalidated interpretation is applied to a partial scene.
+    """
+    selected = draft.model_copy(deep=True)
+    problems = []
+    effective = analysis
+    known_ids = {obj.id for obj in analysis.observations.objects}
+    for field, resolver in (
+        ("interpretation_corrections", resolve_interpretations),
+        ("appearance_corrections", resolve_appearance),
+    ):
+        records = getattr(selected, field)
+        # Every unsuccessful pass must remove at least one record group.
+        for _ in range(len(records) + 1):
+            revised, errors = resolver(effective, records)
+            if not errors:
+                effective = revised
+                break
+            invalid = {key for key, _ in errors}
+            kept = [record for record in records if (record.entity_id or "room") not in invalid]
+            if len(kept) == len(records):
+                raise ValueError("Rejected corrections must identify their record group.")
+            problems.append(issue("fidelity", "An invalid photo-hypothesis correction was ignored; the original evidence was retained.", *sorted(invalid & known_ids)))
+            records = kept
+        setattr(selected, field, records)
+    return selected, effective, problems
+
+
 def assemble_partial(
     analysis: RoomAnalysisResponse, measurements: Measurements, draft: SceneDraft
 ) -> tuple[RoomScene | None, GeometryReport | None, list[ProposalIssue], list[UnresolvedEntity]]:
-    effective, errors = resolve_interpretations(analysis, draft.interpretation_corrections)
-    if errors:
-        return None, None, [issue("placement_mismatch", message, key) for key, message in errors][:50], []
-    effective, errors = resolve_appearance(effective, draft.appearance_corrections)
-    if errors:
-        return None, None, [issue("fidelity", message, key) for key, message in errors][:50], []
+    draft, effective, correction_issues = recover_corrections(analysis, draft)
     obs = effective.observations
     observed = {entity.id: entity for entity in [*obs.objects, *obs.openings]}
     object_ids = {obj.id for obj in obs.objects}
@@ -93,7 +120,7 @@ def assemble_partial(
     for _ in range(len(observed) + 1):
         defer_dependencies()
         remaining = set(observed) - unresolved.keys()
-        reasons = [item.reason for item in unresolved.values()]
+        reasons = [*correction_issues, *[item.reason for item in unresolved.values()]]
         if not remaining and unresolved:
             return None, None, reasons[:50], list(unresolved.values())
         # Internal deep copies only: the owned analysis cache and raw draft must
@@ -125,6 +152,10 @@ def assemble_partial(
             if problems:
                 scene.warnings = notes(scene.warnings, [
                     "Provisional reconstruction: geometry passed, but some observed spatial relationships still need correction."
+                ])
+            if correction_issues:
+                scene.warnings = notes(scene.warnings, [
+                    "Some photo-hypothesis corrections were invalid and were ignored. Original evidence and other valid corrections were retained."
                 ])
             return scene, report, (reasons + problems)[:50], list(unresolved.values())
 

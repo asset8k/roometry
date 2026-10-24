@@ -1,6 +1,6 @@
 """Planar proximity for relationships, independent of solid collision checks."""
 
-from math import cos, hypot, sin
+from math import acos, cos, degrees, hypot, sin
 
 from roometry.scenes.schemas import RoomScene, Wall
 
@@ -35,3 +35,33 @@ def planar_gap(left: str, right: str, scene: RoomScene, wall_map: dict[str, Wall
     if a is None or b is None:
         return float("inf")
     return hypot(max(0., a[0] - b[1], b[0] - a[1]), max(0., a[2] - b[3], b[2] - a[3]))
+
+
+POSITION_TOLERANCE_M = .5
+FACING_TOLERANCE_DEG = 15.
+
+
+def relationship_limit(scene, relation, *, corrective=False):
+    """Broad reconstruction bands, with a dead band before requesting edits.
+
+    A half-meter discrepancy alone is not a correction objective. Physical
+    collision, attachment and clearance checks remain independent and unchanged.
+    """
+    base = 45. if relation == "faces" else .4 if relation == "against_wall" else max(.8, .15 * min(scene.room.width_m, scene.room.length_m))
+    return base if corrective else base + (FACING_TOLERANCE_DEG if relation == "faces" else POSITION_TOLERANCE_M)
+
+
+def relationship_error(scene, subject_id, target_id, relation):
+    walls = {item.observation_id: item.wall for item in scene.wall_mapping}
+    if relation != "faces":
+        return planar_gap(subject_id, target_id, scene, walls)
+    subject = next((obj for obj in scene.objects if obj.id == subject_id), None)
+    bounds = planar_bounds(target_id, scene, walls)
+    if subject is None or bounds is None:
+        return float("inf")
+    dx, dz = (bounds[0] + bounds[1]) / 2 - subject.position.x, (bounds[2] + bounds[3]) / 2 - subject.position.z
+    distance = hypot(dx, dz)
+    if distance <= .05:
+        return float("inf")
+    dot = (sin(subject.rotation_y_rad) * dx + cos(subject.rotation_y_rad) * dz) / distance
+    return degrees(acos(max(-1., min(1., dot))))

@@ -222,6 +222,20 @@ annotations in `data/evals/` catch omissions from analysis itself; reference sce
 are hand-authored test arrangements, not evidence of live model accuracy. Run
 `scripts/run_evals.py --case data/evals/bedroom_multiview.json --run /tmp/run.json`
 against a saved agent response. Personal source photos are not copied into fixtures.
+The two bedroom shelf anchors use photo-label evidence to distinguish the window
+shelves from desk/display shelving; matching never chooses objects by whether
+their candidate positions make a relationship pass. Independent evaluation keeps
+its original stricter distance/orientation targets, separate from production's
+broader uncertainty bands.
+
+`scripts/live_reconstruction.py --allow-paid` runs one opt-in HTTP generation with
+interactive clarification answers and saves private pre/post-review views,
+evaluations and provider responses under an ignored artifact directory. Use
+`--room-type bedroom` or `living_room` and the actual photo MIME types. Costing
+joins provider usage by response ID, includes failed/incomplete output and cache
+writes at their total rates, and marks missing usage or unsupported pricing as
+unpriced. A write count without a TTL split uses the documented 30m default;
+timeouts without returned usage make the reported total a lower bound.
 
 Geometry-valid reconstructions with unresolved fidelity checks remain available as
 `partial` previews, even when every object is retained. Such previews carry
@@ -229,3 +243,51 @@ Geometry-valid reconstructions with unresolved fidelity checks remain available 
 labeled `ready`. General observed `wall_id` references are advisory for floor
 furniture; only explicit relationships establish precise placement constraints.
 Construction failures do not imply that the user's input is missing information.
+
+Recoverable model data is isolated at item boundaries. Invalid optional wall-span,
+relationship, duplicate-hint or finish evidence is ignored with analysis warnings;
+core observation identities, photo manifests and evidence remain strictly checked.
+Malformed poses for known observations become explicit omissions in partial
+assembly (or unchanged entries in a repair). Invalid interpretation/appearance
+correction groups retain the original hypothesis while unrelated valid groups
+continue. Source observations and confirmed measurements are never rewritten.
+
+Visual review validates findings and checklist entries independently. Invalid
+items are skipped with visible limitations; missing, duplicate or contradictory
+checks become uncertain and cannot authorize repairs. An unsupported identity
+difference may concern appearance without implying incorrect placement. Other
+validated findings can still use the existing single correction allowance.
+Malformed response envelopes, ambiguous core identities, invalid JSON, refusals,
+truncation, resource limits and ownership/expiry failures are not locally repaired.
+Scene geometry and protected-state checks still govern accepted results; a failed
+correction retains the previous valid scene. This recovery does not establish
+photo likeness or increase provider-call budgets.
+
+Review checklist entries include bounded photo answers about selected local
+relationships and rendered material regions. The model records qualitative
+support and material colors from the original photos; the server compares them
+with candidate gaps/angles and the actual catalog controls. An overall match vote
+cannot conceal a supported, substantially wrong relation or swapped upholstery
+colors. Unknown or invalid subcomparisons remain uncertain while valid comparisons
+can still authorize the existing bounded correction.
+Review value schemas expose hexadecimal color constraints to Structured Outputs;
+only floor patterns use `wood`, `tile` or `plain`. Exact unavailable upholstery
+patterns remain limitations while useful approximate region colors can be repaired.
+Review defaults to low reasoning to leave its bounded output allowance available
+for the checklist; construction and repair reasoning settings remain independent.
+Opening markers use neutral white doors and blue windows consistently in the
+viewer, sidebar and review renders; door colors are defaults, not photo estimates.
+
+Reconstruction relationship checks allow a 0.5 m uncertainty band beyond their
+usual near/wall groups and a 15-degree band beyond the 45-degree facing target.
+Accepted positional corrections must reach the inner group/facing band; small
+cosmetic movements cannot be advertised as fixes. Collision, attachment and
+clearance checks use their own unchanged tolerances. Devices follow a corrected
+support, preserving measurements, stable identities and locked objects.
+
+`desk_shelved_01` represents a connected metal/wood desk, side shelves and hutch as
+one observed piece. Its worktop is the default support for desktop devices, below
+the hutch. New analysis should match this connected item across views and preserve
+separate freestanding shelves. Existing ambiguous IDs are never silently merged
+or removed; their identity issue remains provisional. The shared catalog now has
+106 model variants across the existing 68 object types.

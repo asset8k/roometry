@@ -34,6 +34,7 @@ from roometry.vision.errors import AnalysisFailure
 from roometry.vision.prompts import OBSERVATION_INSTRUCTIONS, observation_context
 from roometry.vision.schemas import RoomObservations
 from roometry.vision.evidence import strict_schema
+from roometry.vision.observation_recovery import recover_optional_observations
 
 
 class PhotoAnalyzer:
@@ -385,16 +386,17 @@ def parse_observations(
 ) -> RoomObservations:
     decoded = response_json(response, max_bytes)
     try:
-        observations = RoomObservations.model_validate(
-            _normalize_observations(decoded, image_ids)
-        )
+        normalized = _normalize_observations(decoded, image_ids)
+        observations = RoomObservations.model_validate(normalized)
     except ValidationError as error:
-        raise AnalysisFailure(
-            502,
-            "invalid_analysis",
-            "The model returned inconsistent room observations. Please try again.",
-            diagnostics=validation_diagnostics(error, RoomObservations),
-        ) from None
+        observations = recover_optional_observations(normalized)
+        if observations is None:
+            raise AnalysisFailure(
+                502,
+                "invalid_analysis",
+                "The model returned inconsistent room observations. Please try again.",
+                diagnostics=validation_diagnostics(error, RoomObservations),
+            ) from None
     except (ValueError, RecursionError):
         raise AnalysisFailure(
             502,

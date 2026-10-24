@@ -56,7 +56,11 @@ def build_proposal_request(
             if roles & {"primary", "primary_dark", "primary_metal", "primary_ceramic"}:
                 fields.add("color")
             models.append({"asset_id": asset.asset_id, "label": asset.label, "configurations": configurations,
-                           "appearance_fields": sorted(fields)})
+                           "appearance_fields": sorted(fields),
+                           "appearance_regions": {field: [p.name for p in asset.parts if
+                               (p.material.startswith("primary") if field == "color" else p.material == field)
+                               and (not p.placements or obj.placement is None or obj.placement in p.placements)][:4]
+                               for field in sorted(fields)}})
         bindings.append(
             {
                 "id": obj.id,

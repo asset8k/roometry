@@ -72,7 +72,7 @@ h2, h3, p { margin-top: 0; }
 .openings-summary h3 { font-size: 12px; font-weight: 500; }
 .openings-summary ul { padding: 0; margin: 0; list-style: none; }
 .openings-summary li { display: flex; align-items: center; gap: 11px; margin-top: 16px; }
-.opening-swatch { width: 25px; height: 29px; border: 1px solid #899779; border-radius: 3px; background: #a1ad94; flex-shrink: 0; }
+.opening-swatch { width: 25px; height: 29px; border: 1px solid #a6a8a3; border-radius: 3px; background: #f0f0ed; flex-shrink: 0; }
 .opening-swatch.window { height: 23px; border-color: #9eb7ba; background: #b2c9cb; }
 .openings-summary strong { display: block; font-size: 12px; font-weight: 500; margin-bottom: 4px; }
 .openings-summary li div > span { color: #818779; font-size: 10px; text-transform: capitalize; }

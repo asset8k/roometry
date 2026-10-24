@@ -818,9 +818,25 @@ def metal_shelf() -> tuple[list[FurniturePart], list[SupportSurface]]:
     return p + boards, [surface(board, inset=.015) for board in boards]
 
 
+def shelved_desk() -> tuple[list[FurniturePart], list[SupportSurface]]:
+    """One connected metal frame, side shelves, hutch and usable 0.75 m worktop."""
+    worktop = part("worktop", (.68, .03, .96), (.15, .75 / 1.4 - .015, 0), radius=.008)
+    parts = [worktop]
+    for i, (x, z) in enumerate(((-.48, -.45), (-.48, .45), (-.21, -.45), (-.21, .45), (.48, -.45), (.48, .45))):
+        parts.append(part(f"upright_{i}", (.025, .94, .035), (x, .47, z), "metal", radius=.003))
+    boards = [part(f"side_board_{i}", (.25, .025, .92), (-.345, y, 0), "wood", radius=.005)
+              for i, y in enumerate((.08, .28, .52, .74))]
+    hutch = part("hutch_board", (.98, .025, .94), (0, .9525, 0), "wood", radius=.005)
+    parts += boards + [hutch,
+        part("rear_crossbar", (.93, .025, .035), (0, .35, -.45), "metal", radius=.003),
+        part("rear_top_rail", (.93, .025, .035), (0, .92, -.45), "metal", radius=.003)]
+    return parts, [surface(worktop, inset=.015), *[surface(board, inset=.01) for board in boards], surface(hutch, inset=.015)]
+
+
 register("bed", "Low tufted futon / sleeper", (1.2, .5, 2), "#292B2F", low_futon(seated=False), asset_id="bed_futon_01")
 register("sofa", "Low armless sleeper sofa", (2, .75, .95), "#292B2F", low_futon(seated=True), asset_id="sofa_sleeper_01")
 register("chair", "High-back office / gaming chair", (.7, 1.25, .7), "#28558A", office_chair(), asset_id="chair_office_01")
 register("shelf", "Narrow open metal and wood shelving", (.6, 1.8, .32), "#303436", metal_shelf(), asset_id="shelf_metal_01")
+register("desk", "Metal and wood desk with integrated side shelving and hutch", (1.35, 1.4, .65), "#8A6038", shelved_desk(), asset_id="desk_shelved_01")
 
 FURNITURE_CATALOG = MappingProxyType(_assets)

@@ -10,7 +10,8 @@
   "annotation_notes": [
     "Human visual annotations of the five local photos; images stay untracked.",
     "Window and radiator occupy one short end; wardrobe and door occupy the opposite end. Desk and two open shelves are near the window. Dark low tufted furniture is a sleeper/futon; exact purpose needs clarification.",
-    "Ratios and colors are broad visual ranges, not measured ground truth. Wall and floor texture reproduction is outside this test."
+    "Ratios and colors are broad visual ranges, not measured ground truth. Wall and floor texture reproduction is outside this test.",
+    "The two shelf anchors are the freestanding shelves beside the window; desk-integrated shelving and the display shelf are separate and must not substitute for them. Matching uses observation labels, never candidate positions or successful relationships."
   ],
   "objects": [
     {
@@ -78,6 +79,9 @@
       ],
       "allowed_assets": [
         "shelf_metal_01"
+      ],
+      "label_terms": [
+        "window"
       ]
     },
     {
@@ -87,6 +91,9 @@
       ],
       "allowed_assets": [
         "shelf_metal_01"
+      ],
+      "label_terms": [
+        "window"
       ]
     },
     {

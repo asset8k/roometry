@@ -28,6 +28,11 @@ describe('wall display settings', () => {
     renderers.push(renderer)
     await renderer.advanceFrames(1, 1 / 60)
     const shell = renderer.scene.children[0].instance
+    for (const opening of scene.openings) {
+      const marker = shell.getObjectByName(`opening_${opening.id}`) as Mesh
+      expect((marker.material as MeshStandardMaterial).color.getHexString())
+        .toBe(opening.type === 'door' ? 'f0f0ed' : 'b2c9cb')
+    }
     const wall = shell.getObjectByName('wall_south')
     const tv = renderer.scene.children[1].instance.getObjectByName('tv_1')!
     expect(tv.visible).toBe(mode !== 'cutaway')

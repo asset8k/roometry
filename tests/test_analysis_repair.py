@@ -26,6 +26,8 @@ def inconsistent(kind):
                 'role': 'shorter', 'confidence': 'medium',
                 'source_image_ids': [sources[1]], 'evidence': 'Two room views show the wall span.',
             }
+        elif kind == 'support_reference':
+            obs['objects'][2]['support_object_id'] = 'private_missing_support'
         else:
             obs['relationships'] = [{
                 'id': 'relation_1', 'subject_id': 'computer_observed',
@@ -48,7 +50,25 @@ def inconsistent(kind):
 
 
 @pytest.mark.parametrize('rule', ['wall_span_evidence', 'relationship_endpoint_evidence', 'relationship_endpoint', 'relationship_support'])
-async def test_completed_multi_view_inconsistency_gets_one_grounded_correction(harness, rule, caplog):
+async def test_optional_multi_view_inconsistency_is_isolated_without_another_paid_attempt(harness, rule, caplog):
+    app, client, calls, actions = harness
+    actions.append(inconsistent(rule))
+    uploaded = await api.upload(client, 5)
+    response = await client.post('/api/rooms/analyze', json={'input_id': uploaded['input_id']})
+    assert response.status_code == 200, response.text
+    assert len(calls) == 1
+    result = response.json()
+    for kind in ('walls', 'objects', 'openings'):
+        assert [item['id'] for item in result['observations'][kind]] == [item['id'] for item in api.SOURCE[kind]]
+    assert result['observations']['warnings']
+    assert 'private' not in response.text.lower() and 'private' not in caplog.text.lower()
+    assert [r.outcome for r in app.state.analysis_service.usage_records] == ['success']
+    cached = await client.post('/api/rooms/analyze', json={'input_id': uploaded['input_id']})
+    assert cached.json() == result and len(calls) == 1
+
+
+async def test_core_support_inconsistency_gets_one_grounded_correction(harness, caplog):
+    rule = 'support_reference'
     app, client, calls, actions = harness
     actions.append(inconsistent(rule))
     uploaded = await api.upload(client, 5)
@@ -79,7 +99,7 @@ async def test_completed_multi_view_inconsistency_gets_one_grounded_correction(h
 
 async def test_a_second_invalid_result_stops_and_cannot_loop_on_client_retry(harness):
     app, client, calls, actions = harness
-    actions.extend([inconsistent('relationship_support')] * 2)
+    actions.extend([inconsistent('support_reference')] * 2)
     uploaded = await api.upload(client, 5)
     api.assert_error(await client.post('/api/rooms/analyze', json={'input_id': uploaded['input_id']}), 502, 'invalid_analysis')
     api.assert_error(await client.post('/api/rooms/analyze', json={'input_id': uploaded['input_id']}), 429, 'analysis_limit_reached')
@@ -100,7 +120,7 @@ async def test_a_repair_cannot_succeed_by_removing_or_renaming_observed_furnitur
         response['output'][0]['content'][0]['text'] = json.dumps(obs)
         return httpx.Response(200, json=response)
 
-    actions.extend([inconsistent('relationship_support'), empty_inventory])
+    actions.extend([inconsistent('support_reference'), empty_inventory])
     uploaded = await api.upload(client, 5)
     api.assert_error(await client.post('/api/rooms/analyze', json={'input_id': uploaded['input_id']}), 502, 'invalid_analysis')
     assert len(calls) == 2 and next(iter(app.state.analysis_service._states.values())).result is None
@@ -110,7 +130,7 @@ async def test_repair_does_not_run_after_input_deletion(harness):
     app, client, calls, actions = harness
 
     async def discard(request, payload):
-        response = await inconsistent('relationship_support')(request, payload)
+        response = await inconsistent('support_reference')(request, payload)
         await client.delete(f'/api/rooms/inputs/{uploaded["input_id"]}')
         return response
 
@@ -125,7 +145,7 @@ async def test_repair_respects_request_size_limit(harness):
 
     async def at_limit(request, payload):
         app.state.settings.analysis_max_request_bytes = len(json.dumps(payload, ensure_ascii=True).encode('utf-8'))
-        return await inconsistent('relationship_support')(request, payload)
+        return await inconsistent('support_reference')(request, payload)
 
     actions.append(at_limit)
     uploaded = await api.upload(client, 5)
@@ -137,7 +157,7 @@ async def test_five_photo_graph_repair_then_clarification_resumes_without_analys
     app, client, calls, actions = harness
     uploaded = await api.upload(client, 5)
     actions.extend([
-        decision('analyze_photos'), inconsistent('relationship_support'),
+        decision('analyze_photos'), inconsistent('support_reference'),
         # Default action returns a valid analysis after the failed one.
         lambda request, payload: _valid_response(payload),
         decision('request_clarification', {'kind': 'room_dimensions', 'object_id': None}),

@@ -13,7 +13,7 @@ from roometry.scenes.schemas import Identifier, RoomScene, SceneModel, Wall
 from roometry.vision.importance import importance
 from roometry.vision.interpretations import resolve_interpretations
 from roometry.vision.appearance import resolve_appearance
-from roometry.vision.spatial import planar_gap
+from roometry.vision.spatial import planar_gap, relationship_error, relationship_limit
 from roometry.vision.wall_axes import wall_axis
 from roometry.vision.schemas import RoomAnalysisResponse
 
@@ -97,15 +97,15 @@ def evaluate_fidelity(analysis: RoomAnalysisResponse, scene: RoomScene, wall_map
             else:
                 dx, dz = b[0] - a[0], b[1] - a[1]
                 distance = hypot(dx, dz)
-                passed = distance > .05 and (sin(subject.rotation_y_rad) * dx + cos(subject.rotation_y_rad) * dz) / distance >= cos(0.7853981634)
+                passed = distance > .05 and relationship_error(scene, ids[0], ids[1], "faces") <= relationship_limit(scene, "faces")
             check("facing", ids, passed, "This item should face the target shown in the photos.", required)
         elif relation.kind == "against_wall":
             wall = wall_map.get(ids[1])
-            check("wall", ids, subject is not None and wall is not None and wall_gap(subject, wall) <= .4, "Keep this item against its observed wall (within 0.4 m).", required)
+            check("wall", ids, subject is not None and wall is not None and wall_gap(subject, wall) <= relationship_limit(scene, "against_wall"), "Keep this item in its observed wall group, allowing approximate placement.", required)
         elif relation.kind == "supported_by":
             check("support", ids, subject is not None and subject.support_object_id == ids[1], "Preserve the observed support relationship.", required)
         else:
-            passed = planar_gap(ids[0], ids[1], scene, wall_map) <= max(.8, .15 * min(room.width_m, room.length_m))
+            passed = planar_gap(ids[0], ids[1], scene, wall_map) <= relationship_limit(scene, "near")
             check("adjacency", ids, passed, "Keep nearby/beside items in the same local group.", required)
     corrections = {(c.entity_id, c.field) for c in scene.estimate_corrections}
     for source in obs.objects:
