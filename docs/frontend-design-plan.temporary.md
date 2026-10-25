@@ -6,9 +6,9 @@ Delete this file after the frontend is implemented, visually reviewed, and verif
 
 ## Direction and references
 
-**A black room-design workspace with optical liquid glass and neon lime controls. Clear next action, very little text.**
+**A black room-design workspace with smoky charcoal liquid glass and neon lime actions. Clear next action, very little text.**
 
-Current direction: keep a black background, with localized emerald/lime light behind genuinely translucent glass. Follow the supplied Ventus crop closely: smoked green glass, blurred backdrops, bright beveled rims, luminous pill controls, and yellow-lime primary actions. Avoid flat opaque gray cards. Use the shared material and neon tokens across every existing screen and future page. Keep current component layouts. A static lightweight SVG supplies ambient light; no animation or extra model calls. Keep text sharp and do not apply backdrop filters to the WebGL viewer ancestor.
+Current direction: follow the user's latest Control Center screenshot for the glass material. Use neutral charcoal translucent fills, 22 px panel blur, 12 px control blur, translucent gradients, soft inner bevels and thin white rim reflections. Controls are rounded capsules; larger panels use soft 28–34 px corners. Keep the black background with subdued ambient light, minimal layouts and Ventus neon-lime primary actions. Avoid green-filled glass, sharp thin card outlines, or hover fill changes. Text stays crisp; do not apply backdrop filters to the WebGL viewer ancestor.
 
 Primary reference: [Ventus on Dribbble](https://dribbble.com/shots/27550490-Ventus-AI-Workspace-Landing-Page), especially the user's supplied crop of the prompt panel, connected workflow nodes, lime buttons, and translucent analytics cards. Match the surface treatment and component proportions closely, using original Roometry content and implementation.
 
@@ -25,7 +25,7 @@ Pole Position sets the black background and glass material. Ventus sets the lime
 
 ## UX rules
 
-- One dominant action per screen or panel. Use lime for the action that advances the current task.
+- One dominant action per screen or panel. Use stable lime for primary actions, including hover; show errors in contextual alerts rather than changing the action color.
 - Show the current task, its state, and the next action without explanatory paragraphs.
 - Keep visible helper copy to one short sentence per section. Put evidence, assumptions, scoring explanations, and technical checks behind a contextual `Details` disclosure.
 - Keep consequential information visible: partial scene, unplaced major items, failed operation, approximate measurements, or rejected edit. Summarize it plainly; detailed diagnostics can expand.
@@ -41,23 +41,23 @@ Starting values to tune against the reference in the browser:
 
 | Token | Starting value / treatment |
 | --- | --- |
-| Page | `#080B09`, black with localized emerald and lime light |
-| Solid panel fallback | `#1C2920`, smoked glass fallback |
-| Glass panel | `rgba(24, 43, 28, .3)`, layered highlights, 24 px backdrop blur and 170% saturation |
-| Panel border | `rgba(229, 250, 209, .18)`, masked specular rim and inset edge highlights |
-| Primary lime | `#D6FF4B`, yellow-lime gradient, dark text, luminous edge and neon halo |
+| Page | `#080A0A`, black with subdued ambient light |
+| Solid panel fallback | `#292C2C`, neutral charcoal fallback |
+| Glass panel | `rgba(42, 47, 53, .32)`, transparent cool-neutral gradients, 22 px backdrop blur and 135% saturation |
+| Panel border | `rgba(226, 235, 229, .19)`, white specular rim and soft, thicker inner bevels |
+| Primary lime | `#CCFF32`, saturated neon-lime gradient, dark text, luminous edge and a soft halo |
 | Secondary lime | `#ADDF1E`, with bright lime icons and selected states on smoked glass |
-| Main text | `#F4F3EF`, soft white |
-| Secondary text | `#B7C2B1`, soft pale green-gray; verify actual contrast on every backdrop |
+| Main text | `#F5F6F5`, soft white |
+| Secondary text | `#B9BFBC`, neutral muted text; verify actual contrast on every backdrop |
 | Warning / error | Distinct amber / soft red with icon and text |
-| Shape | Panels 20–24 px radius; pill buttons; smaller fields and cards 12–16 px |
+| Shape | Panels 28–34 px radius; capsule buttons and single-line fields; smaller cards 26–28 px |
 | Typography | Clean sans-serif, strong short headings, readable 14–16 px body; no decorative type inside controls |
 | Spacing | Consistent 4 px scale; generous panel padding, compact related controls |
 | Motion | Brief 150–220 ms state changes; gentle active-stage glow; respect reduced motion |
 
-Glass should visibly transmit the ambient light behind it, with soft tint, reflective rounded edges, a brighter upper-left glint and a faint lower rim. Keep the text sharp. Primary buttons use dark text, a bright yellow-lime fill and a visible neon halo, with clear hover, focus, pressed, loading, and disabled states. Secondary buttons use smoked translucent glass, lime icons, soft white text, and a beveled border.
+Glass should transmit muted ambient light through a neutral smoky surface, with soft white reflections around rounded lens-like edges and a broader inner bevel. Keep the text sharp. Primary buttons use dark text, a bright yellow-lime fill and a visible neon halo, with clear hover, focus, pressed, loading, and disabled states. Secondary buttons use smoked translucent glass, lime icons, soft white text, and a beveled border.
 
-Use static emerald and lime light ribbons behind the panels; the overall page stays black. Keep the 3D canvas on a quiet dark backdrop so furniture colors and room finishes remain readable. Apply glass to the toolbar, chat, and overlays rather than blurring the scene itself. UI theme colors must never recolor scene objects, doors, or finishes.
+Use subdued static ambient light behind the panels; the overall page stays black. Keep the 3D canvas on a quiet dark backdrop so furniture colors and room finishes remain readable. Apply glass to the toolbar, chat, and overlays rather than blurring the scene itself. UI theme colors must never recolor scene objects, doors, or finishes.
 
 Keep large animated effects and stacked backdrop filters away from the WebGL canvas. Provide an opaque fallback and verify text contrast, keyboard focus, touch targets of at least 44 px, and responsive behavior. Do not add heavy graphics dependencies for these effects.
 
@@ -89,7 +89,7 @@ The diagram shows the user's path. On screen, the progress component follows act
 
 ### 1. Start: photos and essential details
 
-- Header: Roometry wordmark and a quiet connection indicator. `Retry` appears only when needed. Do not feature a permanent service-status explanation or `Check again` button.
+- Header: Roometry wordmark, Explore, My rooms, and Sign in. No Connected label, duplicate creation CTA, setup counter, or footer tagline. Connectivity errors belong beside the failed operation.
 - Short heading: **See your room differently.**
 - Central glass panel: photo picker, removable thumbnails, room type, optional description, width / length / height with unit labels.
 - Keep all room details in one compact group; dimensions can remain blank.
@@ -219,3 +219,26 @@ Design continuity only; these are not implementation requirements for the curren
 - Refinement and manual edits keep the last valid scene on rejection.
 - Routine screens contain short labels and brief helpers; important limitations remain discoverable and meaningful failures stay visible.
 - Authentication and sharing are represented only when their real features exist.
+
+## UX audit — October 25
+
+- Removed repeated setup headings, decorative badges, connection status, and footer copy.
+- Native selects retain keyboard/menu behavior with a custom chevron inset 16 px and 48 px trailing padding.
+- Create room remains lime; empty-photo submission focuses actionable validation without uploading. Busy/recovery locks remain enforced.
+- Ratings retain scores and recommendations; detailed explanations are collapsed, with manual-edit scope preserved in About.
+- Header navigation keeps the guest form and active run mounted. Home navigation must not refresh or discard photos.
+- Sign-in and registration designs use username/password only. Native dialogs trap focus, close with Escape, restore focus, and prevent background scrolling. Credentials are not submitted or persisted.
+- My rooms and Explore have truthful empty/unavailable states. No fake saved projects or public entries.
+- Viewer Save opens the account design; Share opens a private sharing draft with explicit, unchecked consent. Publishing is disabled; photos/chat are never selected implicitly.
+- Account, persistence, and public-feed backends remain future milestones. Do not report these frontend designs as working authentication or storage.
+- Streaming/chat integration and server-reported quota states remain in their planned steps; do not invent progress or remaining-generation counts.
+
+## Material refinement — latest Control Center reference
+
+The newest screenshot supersedes the earlier green-tinted glass treatment. Use translucent charcoal panels, a soft top and bottom rim, rounded capsules, and layered inset highlights. Keep Ventus lime for primary actions, while secondary control icons are mostly white. White circular utility icons may echo the reference without changing component layouts. Background blur affects only the backdrop; no text distortion, moving refraction, animated filters, or new graphics dependency.
+
+Lime refinement: primary actions use a slightly more saturated `#CCFF32` with a restrained static halo; the headline accent has a faint glow. Hover keeps the same fill and glow to avoid flashing. Smoked glass colors are unchanged.
+
+Transparency refinement: panels use 32% base opacity, secondary controls 22%, and dialogs 45%. A cool-neutral translucent gradient and localized backdrop blur retain visible background light and detail. Keep the neon-lime fill stable and fully readable; never apply a backdrop filter to the live WebGL ancestor.
+
+Brand mark: a clean perspective room/box outline with neon-lime AI inside its front face. Use a pale outline and subtle translucent top/side faces; no separate 3D lettering. Keep the Roometry name, accessible home label, and matching favicon. Scale the mark to 42 px desktop and 38 px mobile.

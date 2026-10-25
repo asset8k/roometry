@@ -1,66 +1,58 @@
-import { useCallback, useEffect, useState } from 'react'
-import { fetchHealth } from './lib/api'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import RoomInputWorkspace from './components/room-input/RoomInputWorkspace'
-import { Button, Icon } from './components/ui/primitives'
+import { Button } from './components/ui/primitives'
+import BrandMark from './components/ui/BrandMark'
+import AccountDialog from './components/site/AccountDialog'
+import ShareDialog from './components/site/ShareDialog'
+import { Explore, MyRooms } from './components/site/LibraryPages'
+import { SiteActions } from './components/site/SiteActions'
+import type { RoomScene } from './lib/scene.generated'
 
-type ServiceStatus = 'checking' | 'online' | 'offline'
-
-const statusLabels: Record<ServiceStatus, string> = {
-  checking: 'Connecting',
-  online: 'Connected',
-  offline: 'Offline',
-}
+type Page = 'create' | 'explore' | 'my-rooms'
+const pageFromHash = (): Page => typeof window !== 'undefined' && window.location.hash === '#explore' ? 'explore' : typeof window !== 'undefined' && window.location.hash === '#my-rooms' ? 'my-rooms' : 'create'
 
 export default function App() {
-  const [status, setStatus] = useState<ServiceStatus>('checking')
-  const [attempt, setAttempt] = useState(0)
-  const onConnectionChange = useCallback((online: boolean) => setStatus(online ? 'online' : 'offline'), [])
-
+  const [page, setPage] = useState<Page>(pageFromHash)
+  const [account, setAccount] = useState<'signin' | 'save' | null>(null)
+  const [sharing, setSharing] = useState<RoomScene | null>(null)
+  const main = useRef<HTMLElement>(null)
+  const previousPage = useRef(page)
+  // Connectivity errors remain at the operation that failed, rather than in global chrome.
+  const onConnectionChange = useCallback((_online: boolean) => {}, [])
+  const openAccount = useCallback((intent: 'signin' | 'save' = 'signin') => { setSharing(null); setAccount(intent) }, [])
+  const openShare = useCallback((scene: RoomScene) => { setAccount(null); setSharing(scene) }, [])
   useEffect(() => {
-    const controller = new AbortController()
-    setStatus('checking')
-
-    fetchHealth(controller.signal)
-      .then(() => {
-        if (!controller.signal.aborted) setStatus('online')
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) setStatus('offline')
-      })
-
-    return () => controller.abort()
-  }, [attempt])
-
-  return (
+    const change = () => setPage(pageFromHash())
+    window.addEventListener('hashchange', change)
+    return () => window.removeEventListener('hashchange', change)
+  }, [])
+  useEffect(() => {
+    if (previousPage.current !== page) main.current?.focus({ preventScroll: true })
+    previousPage.current = page
+  }, [page])
+  const goCreate = () => { window.location.hash = ''; setPage('create') }
+  return <SiteActions.Provider value={{ account: openAccount, share: openShare }}>
     <div className="app-shell">
+      <a className="skip-link" href="#main-content" onClick={event => { event.preventDefault(); main.current?.focus() }}>Skip to content</a>
       <header className="app-header">
-        <a className="wordmark" href="/" aria-label="Roometry home">
-          <span className="brand-mark"><Icon name="room" /></span>
-          Roometry
-        </a>
-        <a className="header-workspace-link" href="#room-input"><span className="status-dot" aria-hidden="true" />Create a room</a>
-        <div className="header-status">
-          <p className={`connection-status ${status}`} role="status" aria-live="polite">
-            <span className="status-dot" aria-hidden="true" />
-            {statusLabels[status]}
-          </p>
-          {status === 'offline' && <Button variant="quiet" onClick={() => setAttempt(value => value + 1)}><Icon name="refresh" />Retry</Button>}
-        </div>
+        <a className="wordmark" href="#" aria-label="Roometry home"><BrandMark/>Roometry</a>
+        <nav className="site-nav" aria-label="Main navigation">
+          <a href="#explore" aria-current={page === 'explore' ? 'page' : undefined}>Explore</a>
+          <a href="#my-rooms" aria-current={page === 'my-rooms' ? 'page' : undefined}>My rooms</a>
+          <Button onClick={() => openAccount()}>Sign in</Button>
+        </nav>
       </header>
-
-      <main>
-        <div className="workspace-heading">
-          <div>
-            <p className="eyebrow"><Icon name="spark" />A little room for possibility</p>
-            <h1>See your room<span> differently.</span></h1>
-            <p className="workspace-subtitle">Your photos. Your space. A fresh perspective.</p>
-          </div>
+      <main ref={main} id="main-content" tabIndex={-1}>
+        {/* Keep the live workspace mounted across navigation, preserving guest files and runs. */}
+        <div hidden={page !== 'create'}>
+          <div className="workspace-heading"><div><h1 id="page-heading" tabIndex={-1}>See your room<span> differently.</span></h1><p className="workspace-subtitle">A few photos. A new perspective.</p></div></div>
+          <section aria-label="Your room"><RoomInputWorkspace onConnectionChange={onConnectionChange} /></section>
         </div>
-
-        <section aria-label="Your room"><RoomInputWorkspace onConnectionChange={onConnectionChange} /></section>
+        {page === 'my-rooms' && <MyRooms onSignIn={() => openAccount()} onCreate={goCreate}/>}
+        {page === 'explore' && <Explore onCreate={goCreate}/>}
       </main>
-
-      <footer><span>Roometry</span><span>Made for your space.</span></footer>
     </div>
-  )
+    {account && <AccountDialog intent={account} onClose={() => setAccount(null)} onGuest={() => { setAccount(null); goCreate() }}/>}
+    {sharing && <ShareDialog scene={sharing} onClose={() => setSharing(null)} onSignIn={() => openAccount()}/>}
+  </SiteActions.Provider>
 }

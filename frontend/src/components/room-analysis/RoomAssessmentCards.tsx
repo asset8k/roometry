@@ -14,9 +14,8 @@ export default function RoomAssessmentCards({ assessment, onImprove, disabled = 
   assessment: Assessment | null; onImprove?: (focus: Focus) => void; disabled?: boolean
 }) {
   return <section className="room-assessment" aria-labelledby="assessment-heading">
-    <span className="section-label">Understand your space</span>
     <h2 id="assessment-heading">Your room at a glance</h2>
-    <p>Estimated ratings of your original reconstruction. Manual edits are not included in these ratings.</p>
+    <p>Estimates of your original room.</p>
     {!assessment ? <p role="status">Room ratings are unavailable for this run. Your reconstructed room is still available below.</p> : <>
       <div className="assessment-grid">{categories.map(({ key, label, action }) => {
         const card = assessment[key]
@@ -29,13 +28,12 @@ export default function RoomAssessmentCards({ assessment, onImprove, disabled = 
               : <>{score}<span> / 10</span></>}
           </p>
           {card.status === 'rated' && <span className="assessment-confidence">{card.confidence === 'low' ? 'Limited evidence' : card.source === 'photos' ? 'Photo-based estimate' : 'Model-based estimate'}</span>}
-          <p className="assessment-explanation">{card.explanation}</p>
-          {key === 'aesthetics' && <AestheticBreakdown metrics={card.metrics ?? []} />}
+          <details className="assessment-explanation"><summary>Why this rating?</summary><p>{card.explanation}</p>{key === 'aesthetics' && <AestheticBreakdown metrics={card.metrics ?? []} />}</details>
           <button type="button" disabled={disabled || !onImprove} onClick={() => onImprove?.(key)} aria-describedby="assessment-actions-note">{key === 'workspace' && card.status === 'not_applicable' ? 'Create a workspace' : action}</button>
         </article>
       })}</div>
-      <p id="assessment-actions-note" className="input-help">{onImprove ? 'Choose any focus to prepare an improvement request. Recommendations are optional. Requests use the original reconstruction; manual edits are not included.' : 'Improvement actions are unavailable for this run. You can explore and edit your room below.'}</p>
-      <details className="assessment-notes"><summary>About these ratings</summary><ul>{assessment.notes.map((note, i) => <li key={i}>{note}</li>)}
+      <p id="assessment-actions-note" className="input-help">{onImprove ? 'Choose an area to improve.' : 'Improvement actions are unavailable for this run. You can explore and edit your room below.'}</p>
+      <details className="assessment-notes"><summary>About these ratings</summary><p>Recommendations are optional. Ratings and improvement requests use the original reconstruction. Manual edits are not included.</p><ul>{assessment.notes.map((note, i) => <li key={i}>{note}</li>)}
         <li>Aesthetics uses a subjective five-part rubric for harmony, materials, balance, visual order and lighting.</li>
         <li>A low rating highlights a possible opportunity, not an instruction to change your room.</li>
       </ul></details>

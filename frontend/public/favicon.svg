@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none">
+  <title>Roometry</title>
+  <rect width="48" height="48" rx="11" fill="#101414"/>
+  <path d="m5 14 10-9h28v28L33 43H5V14Z" fill="#f5f6f5" fill-opacity=".035"/>
+  <path d="m5 14 10-9h28L33 14H5Z" fill="#f5f6f5" fill-opacity=".075"/>
+  <path d="m33 14 10-9v28L33 43V14Z" fill="#f5f6f5" fill-opacity=".025"/>
+  <g stroke="#edf1ef" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m5 14 10-9h28v28L33 43H5V14Z"/>
+    <path d="M5 14h28v29m0-29L43 5"/>
+  </g>
+  <g fill="#ccff32">
+    <path fill-rule="evenodd" d="m10 34 4-12h2.6l4 12H18l-.7-2.4h-4.1l-.7 2.4H10Zm3.9-4.6h2.7l-1.3-4.6-1.4 4.6Z" clip-rule="evenodd"/>
+    <path d="M23 22h2.7v12H23z"/>
+  </g>
+</svg>

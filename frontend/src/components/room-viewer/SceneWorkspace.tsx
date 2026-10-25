@@ -9,6 +9,8 @@ import ImprovementComparison from '../room-analysis/ImprovementComparison'
 import LayoutAssessment from './LayoutAssessment'
 import type { ScoreLayoutRequest } from '../../lib/layout-scoring'
 import ObjectList from './ObjectList'
+import { useSiteActions } from '../site/SiteActions'
+import { Button, Icon } from '../ui/primitives'
 import ObjectInspector from './ObjectInspector'
 
 const RoomViewer = lazy(() => import('./RoomViewer'))
@@ -40,6 +42,7 @@ export default function SceneWorkspace({ initialScene, onConnectionChange, goals
   const views = useSyncExternalStore(comparison.subscribe, comparison.getSnapshot, comparison.getSnapshot)
   const editor = views.editor
   const state = useSyncExternalStore(editor.subscribe, editor.getSnapshot, editor.getSnapshot)
+  const siteActions = useSiteActions()
   const [detailsView, setDetailsView] = useState<'room' | 'objects'>('room')
   const previewColors = views.colors
   const readOnly = state.view === 'before'
@@ -129,7 +132,7 @@ export default function SceneWorkspace({ initialScene, onConnectionChange, goals
       </aside>
 
       <section className="viewer-card" aria-label="3D room viewer">
-        <div className="viewer-heading"><h2>Room overview</h2><span>{scene.objects.length} objects</span></div>
+        <div className="viewer-heading"><h2>Room overview</h2><div className="viewer-actions"><span>{scene.objects.length} objects</span>{siteActions && <><Button onClick={() => siteActions.account('save')}><Icon name="save"/>Save</Button><Button onClick={() => siteActions.share(scene)}><Icon name="share"/>Share</Button></>}</div></div>
         <ComparisonControls comparison={comparison} views={views} />
         {improvement && selectedImprovement && improvement.run_id !== selectedImprovement.run_id && <p className="comparison-history-note" role="status">
           {['prepared', 'running'].includes(improvement.status) ? 'A new improvement is in progress.' : 'This request produced no new retained candidate.'} The comparison still shows your earlier {improvementLabels[selectedImprovement.focus].toLowerCase()} candidate.

@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useSyncExternalStore } from 'react'
+import { useEffect, useId, useMemo, useRef, useSyncExternalStore } from 'react'
 import RoomGenerationWorkspace from '../room-analysis/RoomGenerationWorkspace'
 import { Button, Icon } from '../ui/primitives'
 import { RoomGenerationController } from '../../lib/room-generation-controller'
@@ -41,16 +41,18 @@ export function RoomInputForm({ state, controller, onGenerate, onCancel, onClear
 }) {
   const { limits, draft, photos, busy, accepted } = state
   const photoInput = useId()
-  const total = photos.reduce((bytes, photo) => bytes + photo.file.size, 0)
+  const errorSummary = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (state.notice?.kind === 'error' && state.notice.text) {
+      errorSummary.current?.focus({ preventScroll: true })
+      errorSummary.current?.scrollIntoView({ block: 'nearest' })
+    }
+  }, [state.notice])
   const set = controller.change
   const acceptedOptions = accepted?.options
   return <div className="input-workspace" id="room-input">
     <form className="room-input-form glass-panel" aria-label="Create your room" onSubmit={event => { event.preventDefault(); void onGenerate() }}>
       <fieldset className="input-edit-lock" disabled={locked}>
-        <div className="input-form-heading">
-          <div className="input-title"><span className="panel-symbol"><Icon name="room" /></span><div><h2>Your room starts here</h2><p>Reconstruct your current space from photos.</p></div></div>
-          <span className="setup-badge">01 <span>/</span> SETUP</span>
-        </div>
         <div className="input-columns">
           <section className="photo-section" aria-labelledby={`${photoInput}-heading`}>
             <div className="input-section-heading"><h3 id={`${photoInput}-heading`}>Room photos</h3><span>{photos.length}{limits ? ` / ${limits.max_images}` : ''}</span></div>
@@ -58,8 +60,7 @@ export function RoomInputForm({ state, controller, onGenerate, onCancel, onClear
             {state.policyError && <div className="input-notice error" role="alert"><p>{state.policyError}</p><Button onClick={() => void controller.loadLimits()}>Retry connection</Button></div>}
             <div className={`photo-picker${photos.length ? ' has-photos' : ''}`}>
               <span className="upload-symbol"><Icon name="upload" /></span>
-              <strong>{photos.length ? 'Another angle?' : 'Bring your room into view'}</strong>
-              <p>Different angles. One room.</p>
+              <strong>{photos.length ? 'Add another angle' : `${limits?.min_images ?? 1}–${limits?.max_images ?? 10} photos of the same room`}</strong>
               <label className="photo-picker-control" htmlFor={photoInput}>
                 <Icon name="upload" /><span>{photos.length ? 'Add photos' : 'Choose photos'}</span>
                 <input id={photoInput} className="visually-hidden" type="file" multiple aria-label="Choose room photos" disabled={!limits || Boolean(busy) || state.policyLoading}
@@ -77,7 +78,6 @@ export function RoomInputForm({ state, controller, onGenerate, onCancel, onClear
                 <div className="photo-caption"><strong title={photo.file.name}>{photo.file.name}</strong><span>{formatBytes(photo.file.size)}</span></div>
                 {photo.resolutionIssue && <p className="photo-issue">{photo.resolutionIssue}</p>}
               </li>)}</ul>
-              <p className="photo-total">{photos.length} photo{photos.length === 1 ? '' : 's'} · {formatBytes(total)}</p>
             </>}
             {limits && <details className="photo-requirements"><summary>Photo requirements</summary><p>JPEG, PNG, WebP, HEIC, HEIF or AVIF · Up to {formatBytes(limits.max_file_bytes)} each.</p><p>{limits.min_edge_px}–{limits.max_edge_px.toLocaleString()} px per edge · Up to {Math.floor(limits.max_pixels / 1000000)} MP · {formatBytes(limits.max_total_file_bytes)} total.</p></details>}
           </section>
@@ -97,7 +97,7 @@ export function RoomInputForm({ state, controller, onGenerate, onCancel, onClear
           </fieldset>
         </div>
       </fieldset>
-      {state.notice?.text && !(state.notice.kind === 'success' && (generating || generated)) && <div className={`input-notice ${state.notice.kind}`} role={state.notice.kind === 'error' ? 'alert' : 'status'}>
+      {state.notice?.text && !(state.notice.kind === 'success' && (generating || generated)) && <div ref={state.notice.kind === 'error' ? errorSummary : undefined} tabIndex={state.notice.kind === 'error' ? -1 : undefined} className={`input-notice ${state.notice.kind}`} role={state.notice.kind === 'error' ? 'alert' : 'status'}>
         <p>{state.notice.text}</p>{!!state.notice.issues?.length && <ul>{state.notice.issues.map((issue, index) => <li key={index}>{issue.file_index != null ? `${photos[issue.file_index]?.file.name ?? `Photo ${issue.file_index + 1}`}: ` : ''}{issue.message}</li>)}</ul>}
       </div>}
       {busy && <div className="upload-progress" role="status"><progress aria-label={generating ? 'Generating room' : busy === 'upload' ? 'Preparing room photos' : 'Clearing room inputs'} /><span>{generating ? 'Generating your room…' : busy === 'upload' ? 'Preparing your photos…' : 'Clearing your room inputs…'}</span></div>}
@@ -110,9 +110,9 @@ export function RoomInputForm({ state, controller, onGenerate, onCancel, onClear
       <div className="input-form-footer">
         <details className="privacy-note"><summary><Icon name="lock" />Private photos · Temporary session</summary><p>Refresh clears this form. Uploaded copies expire automatically. Nothing is shared publicly.</p></details>
         <div className="input-actions">
-          {busy || generating || locked ? <Button onClick={onCancel}>Cancel</Button> : <Button variant="quiet" onClick={onClear ?? (() => void controller.discard())} disabled={!photos.length && !accepted && !state.dirty && !state.uncertain}>Clear</Button>}
+          {busy || generating || locked ? <Button onClick={onCancel}>Cancel</Button> : (photos.length > 0 || accepted || state.dirty || state.uncertain) && <Button variant="quiet" onClick={onClear ?? (() => void controller.discard())} disabled={!photos.length && !accepted && !state.dirty && !state.uncertain}>Clear</Button>}
           {recovering && <Button onClick={onClear}>Discard &amp; clear inputs</Button>}
-          <Button variant="primary" type="submit" disabled={Boolean(busy) || locked || !limits || state.policyLoading || !photos.length || (generated && !state.dirty && !state.uncertain)}>
+          <Button variant="primary" type="submit" disabled={Boolean(busy) || locked || !limits || state.policyLoading || (generated && !state.dirty && !state.uncertain)}>
             {generating ? 'Creating room…' : busy === 'upload' ? 'Preparing photos…' : generated && !state.dirty && !state.uncertain ? 'Room created' : 'Create room'}<Icon name={generated && !state.dirty && !state.uncertain ? 'check' : 'arrow'} />
           </Button>
         </div>
