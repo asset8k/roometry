@@ -18,6 +18,7 @@ from roometry.optimization.provider import OptimizationProvider
 from roometry.optimization.policy import evaluate
 from roometry.optimization.schemas import CandidateProposal, CandidateReview, OptimizationAttempt, OptimizationRun
 from roometry.scenes.mutations import EditRejected
+from roometry.optimization.context import refinement_message
 
 
 class GraphState(TypedDict, total=False):
@@ -37,6 +38,8 @@ class OptimizationContext:
 
 
 def saved(run, context, **updates):
+    if run.instruction and "message" in updates:
+        updates["message"] = refinement_message(updates["message"])
     data = run.model_dump()
     data.update(updates, usage=context.budget.usage.model_dump())
     return {"run": OptimizationRun.model_validate(data).model_dump()}
@@ -100,7 +103,7 @@ async def validate(state, runtime: Runtime[OptimizationContext]):
         return {**saved(run, context, stage="proposing", attempts=attempt(run, proposal, outcome="rejected", issues=[message])), "candidate": None}
     await context.authorize()
     if context.cancelled(): return await stopped(run, context)
-    gain = run.focus == "aesthetics" or (evaluation.before_score is not None and evaluation.after_score is not None and evaluation.after_score >= evaluation.before_score + .2 - 1e-8)
+    gain = run.instruction is not None or run.focus == "aesthetics" or (evaluation.before_score is not None and evaluation.after_score is not None and evaluation.after_score >= evaluation.before_score + .2 - 1e-8)
     if evaluation.issues or not evaluation.changed or not gain:
         return {**saved(run, context, stage="proposing", attempts=attempt(run, proposal,
             outcome="rejected" if evaluation.issues else "no_gain",

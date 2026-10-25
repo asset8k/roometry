@@ -20,7 +20,7 @@ describe('room assessment cards', () => {
   it('shows all four categories, estimates, explanations and one recommended improvement', () => {
     const html = renderToStaticMarkup(<RoomAssessmentCards assessment={assessment()} />)
     for (const label of ['Space &amp; movement', 'Storage &amp; organization', 'Workspace', 'Aesthetics &amp; cohesion',
-      '5.2 out of 10', 'Recommended', 'The main usable space is divided by furniture.', 'Photo-based estimate', 'Manual edits are not included']) expect(html).toContain(label)
+      '5.2 out of 10', 'Recommended', 'The main usable space is divided by furniture.', 'Photo-based estimate', 'including submitted edits']) expect(html).toContain(label)
     expect(html.match(/class="assessment-recommendation"/g)).toHaveLength(1)
     expect(html.match(/disabled=""/g)).toHaveLength(4)
     expect(html).toContain('Improvement actions are unavailable for this run')

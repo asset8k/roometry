@@ -439,6 +439,8 @@ export type Amount = number;
 export type Currency = string;
 export type Style = string | null;
 export type Constraints = string | null;
+export type Instruction = string | null;
+export type ParentRunId = string | null;
 export type CreatedAt = string;
 export type ExpiresAt = string;
 export type Status1 =
@@ -578,6 +580,8 @@ export interface OptimizationRun {
   baseline_assessment: RoomAssessment | null;
   focus: Focus;
   preferences: OptimizationPreferences;
+  instruction: Instruction;
+  parent_run_id: ParentRunId;
   created_at: CreatedAt;
   expires_at: ExpiresAt;
   status: Status1;

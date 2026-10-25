@@ -7,6 +7,7 @@ import type { Focus, ImprovementDraft, OptimizationClient, OptimizationRun, Star
 
 export interface ImprovementState {
   focus: Focus | null
+  instruction?: string | null
   draft: ImprovementDraft
   phase: 'idle' | 'editing' | 'preparing' | 'prepared' | 'running' | 'completed' | 'no_improvement' | 'failed' | 'budget_exhausted' | 'cancelling' | 'cancelled' | 'error' | 'expired'
   result: OptimizationRun | null
@@ -32,6 +33,8 @@ export class OptimizationController {
   private stopWatching: (() => void) | null = null
   private refreshQueued = false
   private source: AgentState
+  private context: StartOptimizationRequest['context'] = null
+  private instruction: string | null = null
   constructor(source: AgentState, private client: OptimizationClient = optimizationClient, private now = Date.now, private observe: ProgressObserver | undefined = client === optimizationClient ? observeProgress : undefined) { this.source = structuredClone(source) }
   getSnapshot = () => this.state
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener) } }
@@ -44,9 +47,21 @@ export class OptimizationController {
     this.stopPolling(); this.reading?.abort(); this.reading = null; this.active?.abort(); this.active = null
     this.stopStream()
     this.pending = null; this.executionRequested = false; this.cancelRequested = false
-    this.update({ focus, phase: 'editing', error: null, result: null, progress: undefined, streamMode: undefined })
+    this.context = null; this.instruction = null
+    this.update({ focus, instruction: null, phase: 'editing', error: null, result: null, progress: undefined, streamMode: undefined })
   }
   change = (draft: Partial<ImprovementDraft>) => { if (!this.locked()) this.update({ draft: { ...this.state.draft, ...draft }, error: null }) }
+  /** Capture once; retries reuse this exact snapshot, never a newer browser scene. */
+  setContext = (context: NonNullable<StartOptimizationRequest['context']>) => { if (!this.locked()) this.context = structuredClone(context) }
+  refine = async (instruction: string, context: NonNullable<StartOptimizationRequest['context']>) => {
+    if (this.locked()) return
+    if (!instruction.trim() || instruction.trim().length > 1000) { this.update({ error: 'Write a request of up to 1,000 characters.' }); return }
+    this.select('aesthetics')
+    if (!this.available()) return
+    this.context = structuredClone(context); this.instruction = instruction.trim()
+    this.update({ instruction: this.instruction, draft: { budget: '', currency: 'USD', style: '', constraints: '' } })
+    await this.start()
+  }
   close = () => { if (!this.locked()) this.update({ focus: null, phase: 'idle', error: null }) }
   connect = () => {
     this.connected = true
@@ -64,7 +79,8 @@ export class OptimizationController {
     if (this.locked() || !this.state.focus) return
     if (!this.available()) { this.update({ phase: 'expired', error: 'This temporary reconstruction has expired.' }); return }
     try {
-      this.pending = { request_id: crypto.randomUUID(), focus: this.state.focus, preferences: improvementPreferences(this.state.draft) }
+      this.pending = { request_id: crypto.randomUUID(), focus: this.state.focus, preferences: improvementPreferences(this.state.draft),
+        ...(this.context ? { context: structuredClone(this.context) } : {}), ...(this.instruction ? { instruction: this.instruction } : {}) }
     } catch (error) { this.update({ error: (error as Error).message }); return }
     await this.submit()
   }

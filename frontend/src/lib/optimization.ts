@@ -16,6 +16,7 @@ const ajv = new Ajv2020({ strict: true, allErrors: true }); addFormats(ajv)
 const valid = ajv.compile<OptimizationRun>(schema)
 const validRequest = ajv.compile<StartOptimizationRequest>(requestSchema)
 export function parseOptimization(data: unknown): OptimizationRun {
+  if (data && typeof data === 'object') data = { instruction: null, parent_run_id: null, ...data }
   // Historical review responses predate the optional rendered rubric. Normalize
   // only that absent field before enforcing the complete serialized contract.
   if (data && typeof data === 'object' && Array.isArray((data as { attempts?: unknown }).attempts)) {
@@ -52,9 +53,10 @@ export function checkOptimization(run: OptimizationRun, source: AgentState, requ
     && (run.preferences.budget?.currency ?? null) === (preferences?.budget?.currency ?? null)
   if (run.source_run_id !== source.run_id || run.input_id !== source.input_id || run.focus !== request.focus
     || !samePreferences
-    || JSON.stringify(run.source_scene) !== JSON.stringify(source.working_scene)
+    || (run.instruction ?? null) !== (request.instruction ?? null) || (run.parent_run_id ?? null) !== (request.context?.parent_run_id ?? null)
+    || JSON.stringify(run.source_scene) !== JSON.stringify(request.context?.scene ?? source.working_scene)
     || Date.parse(run.expires_at) > Date.parse(source.expires_at)
-    || (source.room_assessment && source.room_assessment.scene_hash !== run.source_scene_hash)) {
+    || (!request.context && source.room_assessment && source.room_assessment.scene_hash !== run.source_scene_hash)) {
     throw new AgentRunError('This improvement request does not match your original room and chosen preferences.')
   }
 }

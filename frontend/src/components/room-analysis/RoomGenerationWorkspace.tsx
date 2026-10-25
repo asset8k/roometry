@@ -39,9 +39,11 @@ export default function RoomGenerationWorkspace({ state, controller, onConnectio
   state: GenerationState; controller: RoomGenerationController; onConnectionChange: (online: boolean) => void
 }) {
   const run = state.run
-  const card = useRef<HTMLHeadingElement>(null)
+  const card = useRef<HTMLElement>(null)
   useEffect(() => {
-    if (state.phase === 'awaiting_answer' || state.phase === 'completed' || state.phase === 'partial') {
+    // Move attention once per phase, including the first live progress and errors.
+    // Progress ticks keep the same phase and never steal focus while typing.
+    if (state.phase !== 'idle' && state.phase !== 'uploading') {
       card.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' })
       card.current?.focus({ preventScroll: true })
     }
@@ -57,10 +59,9 @@ export default function RoomGenerationWorkspace({ state, controller, onConnectio
   const objects = run?.analysis?.observations.objects ?? []
   const entityName = (id: string) => displayText(objects.find(obj => obj.id === id)?.label ?? run?.analysis?.observations.walls.find(wall => wall.id === id)?.label ?? id)
   const estimated = run?.proposal?.estimated_axes ?? []
-  return <section className="analysis-workspace generation-workspace" aria-label="Room generation">
-    <GlassPanel className={`analysis-card${state.phase === 'awaiting_answer' ? ' clarification-card' : ''}`}>
+  const report = <GlassPanel className={`analysis-card${state.phase === 'awaiting_answer' ? ' clarification-card' : ''}`}>
       <span className="section-label"><Icon name="spark" />From photos to your room</span>
-      <h2 ref={card} tabIndex={-1} aria-live="polite">{state.phase === 'awaiting_answer' ? 'One quick question' : needsDimensions ? 'Room measurements are still needed' : needsWall ? 'Room orientation still needs identifying' : preview ? 'Your reconstruction preview' : titles[state.phase] ?? 'Creating your room'}</h2>
+      <h2 aria-live="polite">{state.phase === 'awaiting_answer' ? 'One quick question' : needsDimensions ? 'Room measurements are still needed' : needsWall ? 'Room orientation still needs identifying' : preview ? 'Your reconstruction preview' : titles[state.phase] ?? 'Creating your room'}</h2>
       {!terminal && <RunWorkflow kind="reconstruction" run={run} progress={state.progress} streamMode={state.streamMode}
         paused={state.phase === 'awaiting_answer'} message={generationProgress(state)}/>}
       {state.phase === 'completed' && <p>Your approximate reconstruction is ready to explore and edit. This shows your current room; you can try your own arrangement in the editor.</p>}
@@ -122,9 +123,13 @@ export default function RoomGenerationWorkspace({ state, controller, onConnectio
         <details className="analysis-notes"><summary>Scene estimates, assumptions, and cautions</summary><ul>{[...scene.assumptions, ...scene.warnings].map((note, index) => <li key={index}>{note}</li>)}</ul></details>
       </>}
     </GlassPanel>
+  return <section ref={card} tabIndex={-1} className="analysis-workspace generation-workspace" aria-label="Room generation">
     {scene && run?.base_scene && <section className="reconstructed-room" aria-label="Your reconstructed room">
+      {partial && <p className="workspace-status" role="status">Partial reconstruction · {omittedCount > 0 ? `${omittedCount} ${omittedCount === 1 ? 'observation' : 'observations'} unresolved` : 'Some room details remain approximate'}</p>}
       <RoomImprovementWorkspace key={run.run_id} run={run} onConnectionChange={onConnectionChange} />
     </section>}
+    {scene ? <details className="reconstruction-details"><summary>Reconstruction details{partial ? ' · Partial scene' : ''}</summary>{report}</details>
+      : <div className={terminal ? undefined : 'generation-studio'}>{report}{!terminal && <div className="viewer-placeholder glass-panel" aria-label="Room preview pending"><Icon name="room"/><p>Your room will appear here.</p></div>}</div>}
   </section>
 }
 

@@ -14,11 +14,348 @@ export type Amount = number;
 export type Currency = string;
 export type Style = string | null;
 export type Constraints = string | null;
+export type SchemaVersion = 1;
+export type RoomType =
+  "bedroom" | "living_room" | "kitchen" | "bathroom" | "office" | "dining_room" | "entryway" | "laundry_room" | "other";
+export type WidthM = number;
+export type LengthM = number;
+export type HeightM = number;
+export type MeasurementsSource = "user_confirmed" | "estimated";
+export type FloorColor = string | null;
+export type WallColor = string | null;
+export type FloorPattern = ("wood" | "tile" | "plain") | null;
+/**
+ * @maxItems 4
+ */
+export type WallAxisBindings =
+  | []
+  | [WallAxisBinding]
+  | [WallAxisBinding, WallAxisBinding]
+  | [WallAxisBinding, WallAxisBinding, WallAxisBinding]
+  | [WallAxisBinding, WallAxisBinding, WallAxisBinding, WallAxisBinding];
+export type ObservationId = string;
+export type Axis = "width_m" | "length_m";
+export type Source = "photo" | "user" | "estimated";
+/**
+ * @maxItems 4
+ */
+export type WallMapping =
+  | []
+  | [WallReference]
+  | [WallReference, WallReference]
+  | [WallReference, WallReference, WallReference]
+  | [WallReference, WallReference, WallReference, WallReference];
+export type ObservationId1 = string;
+export type Wall = "north" | "south" | "west" | "east";
+export type EntityId = string;
+export type Field = "width" | "depth" | "height" | "width_m" | "height_m" | "sill_height_m";
+export type PreviousM = number;
+export type RevisedM = number;
+export type Reason = string;
+/**
+ * @minItems 1
+ * @maxItems 10
+ */
+export type SourceImageIds =
+  | [string]
+  | [string, string]
+  | [string, string, string]
+  | [string, string, string, string]
+  | [string, string, string, string, string]
+  | [string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string, string];
+/**
+ * @maxItems 200
+ */
+export type EstimateCorrections = EstimateCorrection[];
+export type EntityId1 = string;
+export type Field1 = "type" | "placement" | "support_object_id";
+export type PreviousValue = string | null;
+export type RevisedValue = string | null;
+export type Reason1 = string;
+/**
+ * @minItems 1
+ * @maxItems 10
+ */
+export type SourceImageIds1 =
+  | [string]
+  | [string, string]
+  | [string, string, string]
+  | [string, string, string, string]
+  | [string, string, string, string, string]
+  | [string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string, string];
+/**
+ * @maxItems 200
+ */
+export type InterpretationCorrections = InterpretationCorrection[];
+export type EntityId2 = string | null;
+export type Field2 =
+  "color" | "wood" | "metal" | "linen" | "inset" | "rubber" | "enamel" | "floor_color" | "wall_color" | "floor_pattern";
+export type PreviousValue1 = string | null;
+export type RevisedValue1 = string;
+export type Reason2 = string;
+/**
+ * @minItems 1
+ * @maxItems 10
+ */
+export type SourceImageIds2 =
+  | [string]
+  | [string, string]
+  | [string, string, string]
+  | [string, string, string, string]
+  | [string, string, string, string, string]
+  | [string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string, string, string];
+/**
+ * @maxItems 200
+ */
+export type AppearanceCorrections = AppearanceCorrection[];
+export type Id = string;
+export type Type = "door" | "window";
+export type Wall1 = "north" | "south" | "west" | "east";
+export type OffsetM = number;
+export type WidthM1 = number;
+export type HeightM1 = number;
+export type SillHeightM = number;
+export type Swing = "inward" | "outward" | "none" | "unknown";
+export type Hinge = ("min_offset" | "max_offset" | "unknown") | null;
+export type Provenance = "photo_observed" | "user_added";
+export type MeasurementsSource1 = "user_confirmed" | "estimated";
+/**
+ * @maxItems 32
+ */
+export type Openings = Opening[];
+export type Id1 = string;
+export type Type1 =
+  | "bed"
+  | "sofa"
+  | "armchair"
+  | "chair"
+  | "stool"
+  | "bench"
+  | "ottoman"
+  | "desk"
+  | "table"
+  | "coffee_table"
+  | "side_table"
+  | "nightstand"
+  | "wardrobe"
+  | "dresser"
+  | "shelf"
+  | "tv_stand"
+  | "shoe_rack"
+  | "sideboard"
+  | "wall_shelf"
+  | "storage_box"
+  | "basket"
+  | "bin"
+  | "computer"
+  | "laptop"
+  | "monitor"
+  | "printer"
+  | "game_console"
+  | "speaker"
+  | "tv"
+  | "projector"
+  | "rug"
+  | "picture"
+  | "clock"
+  | "window_covering"
+  | "souvenir"
+  | "vase"
+  | "book_stack"
+  | "household_accessory"
+  | "mirror"
+  | "plant"
+  | "floor_lamp"
+  | "table_lamp"
+  | "chandelier"
+  | "ceiling_light"
+  | "ceiling_fan"
+  | "radiator"
+  | "air_conditioner"
+  | "fan"
+  | "kitchen_cabinet"
+  | "kitchen_counter"
+  | "wall_cabinet"
+  | "extractor_hood"
+  | "refrigerator"
+  | "cooker"
+  | "dishwasher"
+  | "washing_machine"
+  | "dryer"
+  | "microwave"
+  | "kettle"
+  | "toaster"
+  | "sink"
+  | "toilet"
+  | "bathtub"
+  | "shower"
+  | "vanity"
+  | "towel_rack"
+  | "water_heater"
+  | "drying_rack";
+export type AssetId =
+  | "bed_standard_01"
+  | "sofa_standard_01"
+  | "armchair_standard_01"
+  | "chair_standard_01"
+  | "stool_standard_01"
+  | "bench_standard_01"
+  | "ottoman_standard_01"
+  | "desk_standard_01"
+  | "table_standard_01"
+  | "coffee_table_standard_01"
+  | "side_table_standard_01"
+  | "nightstand_standard_01"
+  | "wardrobe_standard_01"
+  | "dresser_standard_01"
+  | "shelf_standard_01"
+  | "tv_stand_standard_01"
+  | "shoe_rack_standard_01"
+  | "sideboard_standard_01"
+  | "wall_shelf_standard_01"
+  | "storage_box_standard_01"
+  | "basket_standard_01"
+  | "bin_standard_01"
+  | "computer_standard_01"
+  | "laptop_standard_01"
+  | "monitor_standard_01"
+  | "printer_standard_01"
+  | "game_console_standard_01"
+  | "speaker_standard_01"
+  | "tv_standard_01"
+  | "projector_standard_01"
+  | "rug_standard_01"
+  | "picture_standard_01"
+  | "clock_standard_01"
+  | "window_covering_standard_01"
+  | "souvenir_standard_01"
+  | "vase_standard_01"
+  | "book_stack_standard_01"
+  | "household_accessory_standard_01"
+  | "mirror_standard_01"
+  | "plant_standard_01"
+  | "floor_lamp_standard_01"
+  | "table_lamp_standard_01"
+  | "chandelier_standard_01"
+  | "ceiling_light_standard_01"
+  | "ceiling_fan_standard_01"
+  | "radiator_standard_01"
+  | "air_conditioner_standard_01"
+  | "fan_standard_01"
+  | "kitchen_cabinet_standard_01"
+  | "kitchen_counter_standard_01"
+  | "wall_cabinet_standard_01"
+  | "extractor_hood_standard_01"
+  | "refrigerator_standard_01"
+  | "cooker_standard_01"
+  | "dishwasher_standard_01"
+  | "washing_machine_standard_01"
+  | "dryer_standard_01"
+  | "microwave_standard_01"
+  | "kettle_standard_01"
+  | "toaster_standard_01"
+  | "sink_standard_01"
+  | "toilet_standard_01"
+  | "bathtub_standard_01"
+  | "shower_standard_01"
+  | "vanity_standard_01"
+  | "towel_rack_standard_01"
+  | "water_heater_standard_01"
+  | "drying_rack_standard_01"
+  | "bed_futon_01"
+  | "sofa_sleeper_01"
+  | "chair_office_01"
+  | "shelf_metal_01"
+  | "desk_shelved_01"
+  | "ceiling_light_track_01"
+  | "bed_crib_01"
+  | "sofa_sectional_left_01"
+  | "sofa_sectional_right_01"
+  | "picture_square_01"
+  | "picture_rectangular_01"
+  | "picture_triptych_01"
+  | "rug_round_01"
+  | "mirror_arch_01"
+  | "plant_palm_01"
+  | "vase_cylinder_01"
+  | "book_stack_upright_01"
+  | "clock_square_01"
+  | "souvenir_figurine_01"
+  | "souvenir_ornament_01"
+  | "souvenir_trophy_01"
+  | "shelf_coat_rack_01"
+  | "storage_box_chest_01"
+  | "basket_laundry_01"
+  | "kitchen_counter_island_01"
+  | "kitchen_counter_sink_01"
+  | "kitchen_counter_hob_01"
+  | "kitchen_cabinet_oven_01"
+  | "washing_machine_stack_01"
+  | "window_covering_curtain_01"
+  | "window_covering_blind_01"
+  | "household_accessory_bowl_01"
+  | "household_accessory_utensil_holder_01"
+  | "household_accessory_soap_dispenser_01"
+  | "household_accessory_toothbrush_cup_01"
+  | "household_accessory_caddy_01"
+  | "household_accessory_toilet_brush_01"
+  | "household_accessory_toilet_paper_holder_01";
+export type X = number;
+export type Y = number;
+export type Z = number;
+export type RotationYRad = number;
+export type Width = number;
+export type Depth = number;
+export type Height = number;
+export type Color = string;
+export type Wood = string | null;
+export type Metal = string | null;
+export type Linen = string | null;
+export type Inset = string | null;
+export type Rubber = string | null;
+export type Enamel = string | null;
+export type Placement = "floor" | "surface" | "wall" | "ceiling";
+export type SupportObjectId = string | null;
+export type SupportSurfaceId = string | null;
+export type Wall2 = ("north" | "south" | "west" | "east") | null;
+export type OpeningId = string | null;
+export type Fixed = boolean;
+export type Locked = boolean;
+export type Provenance1 = "photo_observed" | "user_added" | "agent_added";
+export type MeasurementsSource2 = "user_confirmed" | "catalog" | "estimated";
+/**
+ * @maxItems 200
+ */
+export type Objects = SceneObject[];
+/**
+ * @maxItems 50
+ */
+export type Assumptions = string[];
+/**
+ * @maxItems 50
+ */
+export type Warnings = string[];
+export type ParentRunId = string | null;
+export type Instruction = string | null;
 
 export interface StartOptimizationRequest {
   request_id: RequestId;
   focus: Focus;
   preferences?: OptimizationPreferences;
+  context?: SceneContext | null;
+  instruction?: Instruction;
 }
 export interface OptimizationPreferences {
   budget?: InputBudget | null;
@@ -28,4 +365,129 @@ export interface OptimizationPreferences {
 export interface InputBudget {
   amount: Amount;
   currency: Currency;
+}
+export interface SceneContext {
+  scene: RoomScene;
+  parent_run_id?: ParentRunId;
+}
+export interface RoomScene {
+  schema_version: SchemaVersion;
+  room: RoomDimensions;
+  finishes?: RoomFinishes | null;
+  wall_axis_bindings?: WallAxisBindings;
+  wall_mapping?: WallMapping;
+  estimate_corrections?: EstimateCorrections;
+  interpretation_corrections?: InterpretationCorrections;
+  appearance_corrections?: AppearanceCorrections;
+  openings: Openings;
+  objects: Objects;
+  assumptions: Assumptions;
+  warnings: Warnings;
+}
+export interface RoomDimensions {
+  room_type: RoomType;
+  width_m: WidthM;
+  length_m: LengthM;
+  height_m: HeightM;
+  measurements_source: MeasurementsSource;
+}
+export interface RoomFinishes {
+  floor_color?: FloorColor;
+  wall_color?: WallColor;
+  floor_pattern?: FloorPattern;
+}
+export interface WallAxisBinding {
+  observation_id: ObservationId;
+  axis: Axis;
+  source: Source;
+}
+export interface WallReference {
+  observation_id: ObservationId1;
+  wall: Wall;
+}
+/**
+ * Auditable revision of a photo size hypothesis, never a user measurement.
+ */
+export interface EstimateCorrection {
+  entity_id: EntityId;
+  field: Field;
+  previous_m: PreviousM;
+  revised_m: RevisedM;
+  reason: Reason;
+  source_image_ids: SourceImageIds;
+}
+/**
+ * Photo-backed revision of a classification/attachment hypothesis.
+ */
+export interface InterpretationCorrection {
+  entity_id: EntityId1;
+  field: Field1;
+  previous_value: PreviousValue;
+  revised_value: RevisedValue;
+  reason: Reason1;
+  source_image_ids: SourceImageIds1;
+}
+export interface AppearanceCorrection {
+  entity_id: EntityId2;
+  field: Field2;
+  previous_value: PreviousValue1;
+  revised_value: RevisedValue1;
+  reason: Reason2;
+  source_image_ids: SourceImageIds2;
+}
+export interface Opening {
+  id: Id;
+  type: Type;
+  wall: Wall1;
+  offset_m: OffsetM;
+  width_m: WidthM1;
+  height_m: HeightM1;
+  sill_height_m: SillHeightM;
+  swing: Swing;
+  hinge: Hinge;
+  provenance: Provenance;
+  measurements_source: MeasurementsSource1;
+}
+export interface SceneObject {
+  id: Id1;
+  type: Type1;
+  asset_id: AssetId;
+  position: Position;
+  rotation_y_rad: RotationYRad;
+  dimensions_m: ObjectDimensions;
+  color: Color;
+  material_colors?: MaterialColors | null;
+  placement: Placement;
+  support_object_id: SupportObjectId;
+  support_surface_id?: SupportSurfaceId;
+  wall: Wall2;
+  opening_id: OpeningId;
+  fixed: Fixed;
+  locked: Locked;
+  provenance: Provenance1;
+  measurements_source: MeasurementsSource2;
+}
+/**
+ * World-space bottom center, in meters; room containment is checked later.
+ */
+export interface Position {
+  x: X;
+  y: Y;
+  z: Z;
+}
+export interface ObjectDimensions {
+  width: Width;
+  depth: Depth;
+  height: Height;
+}
+/**
+ * Small, fixed palette of visible material roles; null keeps model defaults.
+ */
+export interface MaterialColors {
+  wood?: Wood;
+  metal?: Metal;
+  linen?: Linen;
+  inset?: Inset;
+  rubber?: Rubber;
+  enamel?: Enamel;
 }

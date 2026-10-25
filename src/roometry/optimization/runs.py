@@ -20,6 +20,7 @@ from roometry.vision.errors import AnalysisFailure
 from roometry.scenes.hashing import scene_hash
 from roometry.scenes.validation import validate_geometry
 from roometry.progress import ProgressLog
+from roometry.optimization.context import InvalidSceneContext, refinement_message, validate_context
 
 
 class OptimizationConflict(Exception):
@@ -89,15 +90,34 @@ class OptimizationRuns:
                 raise ReconstructionRequired()
             # Reauthorize after geometry work; revoked/expired photos cannot seed new work.
             await self.reconstructions.read(source_run_id, owner)
+            parent_id = request.context.parent_run_id if request.context else None
+            base = source.working_scene
+            if parent_id:
+                parent = await self.read(parent_id, owner)
+                if (parent.source_run_id != source_run_id or parent.status in {"prepared", "running"}
+                    or parent.result_scene is None or not any(a.outcome == "accepted" for a in parent.attempts)):
+                    raise InvalidSceneContext("Choose a retained candidate from this room as the starting scene.")
+                base = parent.result_scene
+            starting = base
+            if request.context:
+                try:
+                    starting = await anyio.to_thread.run_sync(lambda: validate_context(base, request.context.scene))
+                except ValueError as error:
+                    raise InvalidSceneContext(str(error)) from None
+            if request.instruction and sum(e.result.source_run_id == source_run_id and e.request.instruction is not None for e in self._runs.values()) >= 5:
+                raise InvalidSceneContext("This temporary room has reached its five chat refinements. Your scenes remain available.")
+            await self.reconstructions.read(source_run_id, owner)
             if len(self._runs) >= self.max_runs:
                 raise RunCapacityReached()
             result = OptimizationRun(
                 run_id=new_run_id(), source_run_id=source_run_id, input_id=source.input_id,
-                source_scene_hash=scene_hash(source.working_scene), source_scene=source.working_scene.model_copy(deep=True),
-                source_status=source.status, baseline_assessment=source.room_assessment,
+                source_scene_hash=scene_hash(starting), source_scene=starting.model_copy(deep=True),
+                source_status=source.status, baseline_assessment=source.room_assessment if starting == source.working_scene else None,
                 focus=request.focus, preferences=request.preferences,
+                instruction=request.instruction, parent_run_id=parent_id,
                 created_at=self.reconstructions.now(), expires_at=source.expires_at,
-                max_candidates=self.max_candidates, limits=self.limits,
+                max_candidates=min(self.max_candidates, 2) if request.instruction else self.max_candidates,
+                limits=self.limits.model_copy(update={"max_model_calls": min(self.limits.max_model_calls, 4)}) if request.instruction else self.limits,
             )
             self._runs[result.run_id] = ImprovementEntry(owner, request, source.model_copy(deep=True), result)
             self._runs[result.run_id].progress.publish(result)
@@ -179,6 +199,7 @@ class OptimizationRuns:
         return current
 
     async def _finish_error(self, entry, owner, status, message):
+        if entry.result.instruction: message = refinement_message(message)
         try:
             current = await self.read(entry.result.run_id, owner)
             entry.result = current.model_copy(update={"status": status, "stage": "finished", "message": message})
@@ -195,7 +216,8 @@ class OptimizationRuns:
             entry.progress.publish(current, cancelling=True)
             return current
         if entry.finished: return await self.read(run_id, owner)
-        entry.result = entry.result.model_copy(update={"status": "cancelled", "stage": "finished"})
+        entry.result = entry.result.model_copy(update={"status": "cancelled", "stage": "finished",
+            "message": "Refinement cancelled; your starting layout is retained." if entry.result.instruction else entry.result.message})
         entry.finished = True
         entry.progress.publish(entry.result, force=True)
         return entry.result.model_copy(deep=True)

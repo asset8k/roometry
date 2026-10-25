@@ -35,7 +35,7 @@ describe('saved improvement comparison', () => {
     run.focus = 'aesthetics'
     const html = renderToStaticMarkup(<ImprovementComparison run={run} labels={labels} />)
     for (const text of ['Space &amp; movement', 'Storage &amp; organization', 'Workspace', 'Aesthetics &amp; cohesion',
-      '6 / 10', '8 / 10', '+2', 'Selected focus', 'Reviewed qualitatively', 'No new numerical taste rating', 'Manual edits and color previews are not included']) expect(html).toContain(text)
+      '6 / 10', '8 / 10', '+2', 'Selected focus', 'Reviewed qualitatively', 'No new numerical taste rating', 'Later manual edits are not included']) expect(html).toContain(text)
     expect(html).not.toContain('NaN')
     expect(html.match(/scope="row"/g)).toHaveLength(4)
   })

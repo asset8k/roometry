@@ -159,8 +159,8 @@ describe('improvement selection and linked request', () => {
     const { controller } = setup()
     controller.select('workspace')
     const html = renderToStaticMarkup(createElement(ImprovementForm, { state: controller.getSnapshot(), controller, partial: true }))
-    expect(html).toContain('Missing or uncertain items remain limitations')
-    expect(html).toContain('measurements, and fixed or locked objects are preserved')
+    expect(html).toContain('Some items remain unresolved')
+    expect(html).toContain('Starts from the visible layout')
   })
 
   it('validates the HTTP contracts and maps owned errors without trusting returned data', async () => {

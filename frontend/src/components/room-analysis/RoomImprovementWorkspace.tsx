@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { AgentState } from '../../lib/agent-run'
 import { OptimizationController } from '../../lib/optimization-controller'
 import type { ImprovementState } from '../../lib/optimization-controller'
@@ -7,37 +7,88 @@ import RunWorkflow from './RunWorkflow'
 import { progressLabels } from '../../lib/run-progress'
 import RoomAssessmentCards from './RoomAssessmentCards'
 import SceneWorkspace from '../room-viewer/SceneWorkspace'
+import { SceneComparison } from '../../lib/scene-comparison'
+import { retainedImprovement } from '../../lib/scene-comparison'
+import { Button, Icon } from '../ui/primitives'
 
 export default function RoomImprovementWorkspace({ run, onConnectionChange }: { run: AgentState; onConnectionChange: (online: boolean) => void }) {
   const [controller] = useState(() => new OptimizationController(run))
+  const [comparison] = useState(() => new SceneComparison(run.working_scene!))
+  const [messages, setMessages] = useState<{ id: string; role: 'user' | 'assistant'; text: string }[]>([])
+  const [draft, setDraft] = useState('')
+  const recorded = useRef(new Set<string>())
+  const transcript = useRef<HTMLDivElement>(null)
   useEffect(() => controller.connect(), [controller])
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot)
-  return <>
-    <RoomAssessmentCards assessment={run.room_assessment ?? null} onImprove={controller.available() ? controller.select : undefined} disabled={controller.locked()} />
-    <ImprovementForm state={state} controller={controller} partial={run.status === 'partial'} />
-    {run.working_scene && <SceneWorkspace goals={run.input_options.goals} initialScene={run.working_scene}
-      improvement={state.result} objectLabels={Object.fromEntries((run.analysis?.observations.objects ?? []).map(object => [object.id, object.label]))}
-      onConnectionChange={onConnectionChange} />}
+  const views = useSyncExternalStore(comparison.subscribe, comparison.getSnapshot, comparison.getSnapshot)
+  const editor = useSyncExternalStore(views.editor.subscribe, views.editor.getSnapshot, views.editor.getSnapshot)
+  useEffect(() => {
+    if (state.result) comparison.offer(state.result, state.result.source_scene)
+    const result = state.result
+    if (!result?.instruction || ['prepared', 'running'].includes(result.status) || recorded.current.has(result.run_id)) return
+    recorded.current.add(result.run_id)
+    const accepted = [...result.attempts].reverse().find(attempt => attempt.outcome === 'accepted')
+    setMessages(history => [...history, { id: result.run_id, role: 'assistant', text: retainedImprovement(result)
+      ? `${accepted?.summary ?? 'A validated refinement is available.'} Compare it with Original or edit a copy.`
+      : `${result.message} ${result.suggestions[0] ?? 'Your previous layout is kept.'}` }])
+  }, [state.result, comparison])
+  useEffect(() => { transcript.current?.scrollTo({ top: transcript.current.scrollHeight, behavior: 'auto' }) }, [messages.length])
+  const busy = controller.locked() || editor.busy || editor.dragging
+  const overview = <>
+    <RoomAssessmentCards assessment={run.room_assessment ?? null} onImprove={controller.available() ? controller.select : undefined} disabled={busy} />
+    {!state.instruction && <ImprovementForm state={state} controller={controller} partial={run.status === 'partial'}
+      beforeStart={() => controller.setContext(comparison.currentContext())} />}
   </>
+  const chat = <section className="scene-chat" aria-label="Room chat">
+    <h3>Refine your room</h3><p className="input-help">Starts from the visible layout, including edits and locks. Up to five requests per room.</p>
+    <div ref={transcript} className="chat-transcript" role="log" aria-label="Refinement conversation" aria-relevant="additions text">
+      {messages.length === 0 && <p className="chat-empty">Try “Move the desk closer to the window” or “Use warmer colors”.</p>}
+      {messages.map(message => <article key={message.id} className={`chat-message chat-message--${message.role}`}><span>{message.role === 'user' ? 'You' : 'Roometry'}</span><p>{message.text}</p></article>)}
+    </div>
+    {state.instruction && <ImprovementForm state={state} controller={controller} partial={run.status === 'partial'} compact />}
+    {state.error && !state.instruction && <p className="input-notice error" role="alert">{state.error}</p>}
+    <form className="chat-composer" onSubmit={event => {
+      event.preventDefault()
+      if (busy || !draft.trim() || !controller.available()) return
+      const instruction = draft.trim(), context = comparison.currentContext()
+      setMessages(history => [...history, { id: crypto.randomUUID(), role: 'user', text: instruction }])
+      setDraft('')
+      void controller.refine(instruction, context)
+    }}>
+      <label htmlFor="room-refinement">Your request</label>
+      <textarea id="room-refinement" value={draft} maxLength={1000} rows={3} disabled={busy || !controller.available()}
+        placeholder="What would you like to change?" onChange={event => setDraft(event.target.value)} />
+      <Button variant="primary" type="submit" disabled={busy || !draft.trim() || !controller.available()}>Refine room<Icon name="arrow"/></Button>
+    </form>
+  </section>
+  return run.working_scene && <SceneWorkspace goals={run.input_options.goals} initialScene={run.working_scene}
+    comparison={comparison} overview={overview} chat={chat} improvement={state.result}
+    objectLabels={Object.fromEntries((run.analysis?.observations.objects ?? []).map(object => [object.id, object.label]))}
+    onConnectionChange={onConnectionChange} />
 }
 
-export function ImprovementForm({ state, controller, partial }: {
-  state: ImprovementState; controller: OptimizationController; partial: boolean
+export function ImprovementForm({ state, controller, partial, beforeStart, compact = false }: {
+  state: ImprovementState; controller: OptimizationController; partial: boolean; beforeStart?: () => void; compact?: boolean
 }) {
+  const form = useRef<HTMLElement>(null)
+  useEffect(() => {
+    if (state.phase === 'editing') {
+      form.current?.scrollIntoView({ block: 'nearest' })
+      form.current?.focus({ preventScroll: true })
+    }
+  }, [state.focus, state.phase])
   if (!state.focus) return state.error ? <p className="input-notice error" role="alert">{state.error}</p> : null
   const ready = state.result?.status === 'prepared'
-  return <section className="improvement-request" aria-labelledby="improvement-heading">
-    <span className="section-label">Your improvement request</span>
-    <h2 id="improvement-heading">{improvementLabels[state.focus]}</h2>
-    {partial && <p className="analysis-caution">This starts from a partial reconstruction. Missing or uncertain items remain limitations.</p>}
-    {!state.result && state.phase !== 'expired' && <form onSubmit={event => { event.preventDefault(); void controller.start() }}>
-      <p>Tell us what matters for this improvement. All fields are optional; blank preferences add no spending limit or new style requirement.</p>
-      <p>Your original room, measurements, and fixed or locked objects are preserved.</p>
+  return <section ref={form} tabIndex={-1} className="improvement-request" aria-labelledby={compact ? undefined : 'improvement-heading'} aria-label={compact ? 'Refinement status' : undefined}>
+    {!compact && <h2 id="improvement-heading">{state.instruction ? 'Room refinement' : improvementLabels[state.focus]}</h2>}
+    {partial && <p className="analysis-caution">Partial reconstruction · Some items remain unresolved.</p>}
+    {!compact && !state.result && state.phase !== 'expired' && <form onSubmit={event => { event.preventDefault(); beforeStart?.(); void controller.start() }}>
+      <p className="input-help">Starts from the visible layout. Preferences are optional.</p>
       <fieldset disabled={controller.locked()}>
         <legend>Optional improvement preferences</legend>
         <div className="improvement-budget"><label>Budget (optional)<input type="number" min="0" max="1000000" step="any" placeholder="Not specified" value={state.draft.budget} onChange={event => controller.change({ budget: event.target.value })} /></label>
           <label>Currency<input type="text" maxLength={3} value={state.draft.currency} onChange={event => controller.change({ currency: event.target.value })} disabled={!state.draft.budget.trim()} /></label></div>
-        <p className="input-help">A budget of 0 means no new purchases. Prices and availability are not verified yet.</p>
+        <p className="input-help">0 = no purchases. Catalog prices are unverified.</p>
         <label>Style preference (optional)<input maxLength={100} placeholder="For example, warm and minimal" value={state.draft.style} onChange={event => controller.change({ style: event.target.value })} /></label>
         <label>What should we keep or consider? (optional)<textarea maxLength={1000} placeholder="For example, keep the desk near the window" value={state.draft.constraints} onChange={event => controller.change({ constraints: event.target.value })} /></label>
         <div className="input-actions"><button className="primary-action" type="submit">Improve room</button><button type="button" onClick={controller.close}>Back to ratings</button></div>
@@ -53,21 +104,21 @@ export function ImprovementForm({ state, controller, partial }: {
       <button type="button" onClick={() => void controller.cancel()}>Cancel improvement request</button>
     </div>}
     {(state.phase === 'running' || state.phase === 'cancelling') && state.result && <div role="status">
-      <RunWorkflow kind="optimization" run={state.result} progress={state.progress} streamMode={state.streamMode} message={state.phase === 'cancelling' ? 'Stopping further improvement work…' : state.progress && state.streamMode === 'streaming' ? progressLabels[state.progress.stage] : state.result.stage === 'reviewing' ? 'Reviewing the proposed layout and your preferences…' : state.result.stage === 'validating' ? 'Checking placement, walking space and goal scores…' : 'Exploring a better arrangement for your chosen focus…'}/>
+      <RunWorkflow kind="optimization" run={state.result} progress={state.progress} streamMode={state.streamMode} message={state.phase === 'cancelling' ? 'Stopping further improvement work…' : state.progress && state.streamMode === 'streaming' ? progressLabels[state.progress.stage] : state.result.stage === 'reviewing' ? 'Reviewing the proposed layout and your preferences…' : state.result.stage === 'validating' ? 'Checking placement, walking space and goal scores…' : compact ? 'Working on your request…' : 'Exploring a better arrangement for your chosen focus…'}/>
       <p>{state.result.attempts.length} candidates checked · up to {state.result.max_candidates} candidates.</p>
-      <button type="button" disabled={state.phase === 'cancelling'} onClick={() => void controller.cancel()}>Cancel improvement</button>
+      <button type="button" disabled={state.phase === 'cancelling'} onClick={() => void controller.cancel()}>{compact ? 'Cancel refinement' : 'Cancel improvement'}</button>
     </div>}
     {state.result && !['prepared', 'running', 'cancelled'].includes(state.result.status) && <div className="improvement-outcome" role="status">
-      <h3>{state.result.result_scene ? 'A validated candidate was retained' : 'Your original room is retained'}</h3>
-      <p>{state.result.message}</p>
-      <p>{state.result.usage.model_calls} model calls · {state.result.attempts.length} candidates checked.</p>
-      {state.result.result_scene && <p>Compare Original and Improved below. Edit a copy to try your own changes; both saved scenes stay read-only.</p>}
-      {state.result.suggestions.length > 0 && <><h4>Suggestions to consider</h4><ul>{state.result.suggestions.map((note, i) => <li key={i}>{note}</li>)}</ul></>}
-      <details><summary>Improvement checks and limitations</summary><ul>{state.result.attempts.map(attempt => <li key={attempt.number}>
+      {!compact && <h3>{state.result.result_scene ? 'Candidate ready' : 'Previous layout kept'}</h3>}
+      {!compact && <p>{state.result.message}</p>}
+
+
+      {!compact && state.result.suggestions.length > 0 && <><h4>Suggestions to consider</h4><ul>{state.result.suggestions.map((note, i) => <li key={i}>{note}</li>)}</ul></>}
+      <details><summary>Checks and limitations</summary><p>{state.result.usage.model_calls} model calls · {state.result.attempts.length} candidates checked.</p><ul>{state.result.attempts.map(attempt => <li key={attempt.number}>
         Candidate {attempt.number}: {attempt.outcome === 'accepted' ? 'retained' : 'not applied'}. {attempt.before_score !== null && attempt.after_score !== null && <>Focus estimate: {attempt.before_score} → {attempt.after_score} / 10. </>}
         {attempt.review?.explanation} {attempt.issues.join(' ')}
       </li>)}</ul><ul>{state.result.limitations.map((note, i) => <li key={i}>{note}</li>)}</ul></details>
     </div>}
-    {state.phase === 'cancelled' && <p role="status">Improvement request cancelled. You can choose another focus above.</p>}
+    {state.phase === 'cancelled' && <p role="status">{compact ? 'Refinement cancelled. Your previous layout is kept.' : 'Improvement request cancelled. You can choose another focus above.'}</p>}
   </section>
 }

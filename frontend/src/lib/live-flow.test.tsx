@@ -1,7 +1,7 @@
 /** Opt-in contract/UI verification of saved live output; never calls a provider.
  * ROOMETRY_LIVE_ARTIFACTS=/absolute/path/to/private/artifacts npm test -- src/lib/live-flow.test.tsx
  */
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -50,5 +50,29 @@ it.skipIf(!directory)('opens saved live results and preserves independent origin
     expect(comparison.getSnapshot().editor.getSnapshot().scene).toEqual(source.working_scene)
   }
   expect(JSON.stringify({ source, run })).toBe(snapshots)
+  expect(network).not.toHaveBeenCalled()
+})
+
+it.skipIf(!directory || !existsSync(join(directory ?? '', 'refinement-run.json')))('opens the live refinement from its edited, locked parent snapshot without provider calls', () => {
+  const read = (name: string) => JSON.parse(readFileSync(join(directory!, name), 'utf8'))
+  const source = parseAgentRun(read('run.json'))
+  const parent = parseOptimization(read('optimization-run.json'))
+  const refined = parseOptimization(read('refinement-run.json'))
+  const request = read('refinement-request.json') as StartOptimizationRequest
+  checkOptimization(refined, source, request)
+  expect(refined.parent_run_id).toBe(parent.run_id)
+  expect(refined.source_scene).toEqual(request.context!.scene)
+  const network = vi.fn(), comparison = new SceneComparison(source.working_scene!, network)
+  comparison.offer(parent, parent.source_scene)
+  expect(comparison.offer(refined, refined.source_scene)).toBe(retainedImprovement(refined))
+  if (retainedImprovement(refined)) {
+    comparison.selectImprovement(refined.run_id)
+    expect(comparison.getSnapshot().editor.getSnapshot().scene).toEqual(refined.result_scene)
+    for (const object of refined.source_scene.objects.filter(object => object.locked || object.fixed)) {
+      expect(refined.result_scene.objects.find(item => item.id === object.id)).toEqual(object)
+    }
+  }
+  comparison.show('original')
+  expect(comparison.getSnapshot().editor.getSnapshot().scene).toEqual(source.working_scene)
   expect(network).not.toHaveBeenCalled()
 })

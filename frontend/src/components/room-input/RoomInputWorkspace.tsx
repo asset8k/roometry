@@ -30,8 +30,10 @@ export default function RoomInputWorkspace({ onConnectionChange, inputController
   useEffect(() => {
     if (generationState.connection !== undefined) onConnectionChange(generationState.connection)
   }, [generationState.connection, onConnectionChange])
+  const form = <RoomInputForm state={state} controller={controller} locked={generation.locked()} generating={['starting', 'running', 'awaiting_answer'].includes(generationState.phase)} generated={['completed', 'partial'].includes(generationState.phase)} recovering={generationState.recovery} onGenerate={generation.generate} onCancel={() => void generation.cancel()} onClear={() => void generation.discard()} />
   return <>
-    <RoomInputForm state={state} controller={controller} locked={generation.locked()} generating={['starting', 'running', 'awaiting_answer'].includes(generationState.phase)} generated={['completed', 'partial'].includes(generationState.phase)} recovering={generationState.recovery} onGenerate={generation.generate} onCancel={() => void generation.cancel()} onClear={() => void generation.discard()} />
+    {generationState.run?.working_scene && !['starting', 'running', 'awaiting_answer'].includes(generationState.phase)
+      ? <details className="source-inputs"><summary>Room photos &amp; details</summary>{form}</details> : form}
     <RoomGenerationWorkspace state={generationState} controller={generation} onConnectionChange={onConnectionChange} />
   </>
 }

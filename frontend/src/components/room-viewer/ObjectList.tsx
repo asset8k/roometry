@@ -38,6 +38,7 @@ export default function ObjectList({ scene, hasColorPreviews, onColorChange, onR
                 title={readOnly ? 'This layout is read-only' : object.locked ? 'This object is locked' : `Preview ${label} color`}
                 value={object.color}
                 disabled={readOnly || object.locked}
+                onInput={event => onColorChange(object.id, event.currentTarget.value)}
                 onChange={event => onColorChange(object.id, event.target.value)}
               />
             </li>

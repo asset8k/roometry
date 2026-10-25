@@ -7,6 +7,8 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from roometry.vision.errors import AnalysisFailure
 
+SCENE_CONTEXT_MAX_BYTES = 512 * 1024
+
 ANALYSIS_PATH = "/api/rooms/analyze"
 ANALYSIS_PATHS = {ANALYSIS_PATH, "/api/rooms/propose-scene"}
 
@@ -31,6 +33,9 @@ class AnalysisRequestLimitMiddleware:
         ):
             await self.app(scope, receive, send)
             return
+        # Only scene-bearing preparation requests receive the larger, still bounded allowance.
+        path = scope["path"]
+        limit = SCENE_CONTEXT_MAX_BYTES if path.endswith("/optimizations") and len(path.split("/")) == 5 else self.max_bytes
         lengths = [
             value for key, value in scope["headers"] if key.lower() == b"content-length"
         ]
@@ -38,7 +43,7 @@ class AnalysisRequestLimitMiddleware:
         try:
             if len(lengths) > 1 or (lengths and not lengths[0].isdigit()):
                 raise ValueError
-            if lengths and int(lengths[0]) > self.max_bytes:
+            if lengths and int(lengths[0]) > limit:
                 failure = AnalysisFailure(
                     413, "request_too_large", "The analysis request is too large."
                 )
@@ -74,7 +79,7 @@ class AnalysisRequestLimitMiddleware:
                 )
                 break
             chunk = message.get("body", b"")
-            if len(body) + len(chunk) > self.max_bytes:
+            if len(body) + len(chunk) > limit:
                 failure = AnalysisFailure(
                     413, "request_too_large", "The analysis request is too large."
                 )

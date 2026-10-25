@@ -33,6 +33,7 @@ describe('guided generation workspace', () => {
   it('opens partial scenes with named unresolved observations and editable controls', () => {
     const html = render({ phase: 'partial', run: finishedRun(input, true) })
     expect(html).toContain('Your partial reconstruction')
+    expect(html).toContain('Partial reconstruction · 1 observation unresolved')
     expect(html).toContain('Bed')
     expect(html).toContain('unresolved and absent from the 3D scene')
     expect(html).toContain('3D room viewer')

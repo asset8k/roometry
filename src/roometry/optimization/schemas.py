@@ -24,10 +24,28 @@ class OptimizationPreferences(RunModel):
         return (value.strip() or None) if isinstance(value, str) else value
 
 
+class SceneContext(RunModel):
+    scene: RoomScene
+    parent_run_id: OpaqueId | None = None
+
+
 class StartOptimizationRequest(RunModel):
     request_id: OpaqueId = Field(description="Reuse this ID and the identical request when retrying.")
     focus: Criterion
     preferences: OptimizationPreferences = Field(default_factory=OptimizationPreferences)
+    context: SceneContext | None = None
+    instruction: Annotated[str, Field(min_length=1, max_length=1000)] | None = None
+
+    @field_validator("instruction", mode="before")
+    @classmethod
+    def trim_instruction(cls, value):
+        return value.strip() if isinstance(value, str) else value
+
+    @model_validator(mode="after")
+    def refinement_context(self) -> Self:
+        if self.instruction is not None and self.context is None:
+            raise ValueError("A refinement needs the current scene snapshot.")
+        return self
 
 
 class ObjectChange(RunModel):
@@ -74,6 +92,8 @@ class OptimizationRun(RunModel):
     baseline_assessment: RoomAssessment | None
     focus: Criterion
     preferences: OptimizationPreferences
+    instruction: Annotated[str, Field(min_length=1, max_length=1000)] | None = None
+    parent_run_id: OpaqueId | None = None
     created_at: AwareDatetime
     expires_at: AwareDatetime
     status: Literal["prepared", "running", "completed", "no_improvement", "cancelled", "failed", "budget_exhausted"] = "prepared"

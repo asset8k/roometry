@@ -33,7 +33,7 @@ export default function RoomAssessmentCards({ assessment, onImprove, disabled = 
         </article>
       })}</div>
       <p id="assessment-actions-note" className="input-help">{onImprove ? 'Choose an area to improve.' : 'Improvement actions are unavailable for this run. You can explore and edit your room below.'}</p>
-      <details className="assessment-notes"><summary>About these ratings</summary><p>Recommendations are optional. Ratings and improvement requests use the original reconstruction. Manual edits are not included.</p><ul>{assessment.notes.map((note, i) => <li key={i}>{note}</li>)}
+      <details className="assessment-notes"><summary>About these ratings</summary><p>Recommendations are optional. Ratings describe the original reconstruction. New requests start from the visible layout, including submitted edits.</p><ul>{assessment.notes.map((note, i) => <li key={i}>{note}</li>)}
         <li>Aesthetics uses a subjective five-part rubric for harmony, materials, balance, visual order and lighting.</li>
         <li>A low rating highlights a possible opportunity, not an instruction to change your room.</li>
       </ul></details>

@@ -3,8 +3,9 @@ import type { RoomScene, SceneObject } from '../../lib/scene.generated'
 import { editRestriction, objectLabel } from '../../lib/scene-edits'
 import type { SceneEditor, EditorState } from '../../lib/scene-editor'
 
-export default function ObjectInspector({ scene, object, editor, state }: {
+export default function ObjectInspector({ scene, object, editor, state, onToggleLock }: {
   scene: RoomScene; object: SceneObject; editor: SceneEditor; state: EditorState
+  onToggleLock?: () => void
 }) {
   const [x, setX] = useState(String(object.position.x))
   const [z, setZ] = useState(String(object.position.z))
@@ -22,6 +23,7 @@ export default function ObjectInspector({ scene, object, editor, state }: {
   return (
     <section className="object-inspector" id="object-inspector" tabIndex={-1} aria-label="Selected object">
       <div className="inspector-heading"><h3>{objectLabel(object)}</h3><button type="button" disabled={state.busy || state.dragging} onClick={() => editor.select(null)}>Clear</button></div>
+      <button type="button" className="object-lock" aria-pressed={object.locked} disabled={!editor.canToggleLock(object.id)} onClick={onToggleLock ?? (() => editor.toggleLock(object.id))}>{object.locked ? 'Unlock object' : 'Lock object'}</button>
       {restriction ? <p className="edit-restriction">{restriction}</p> : (
         <p className="inspector-help">Drag the handles or enter values. Supporting furniture carries its objects along.</p>
       )}

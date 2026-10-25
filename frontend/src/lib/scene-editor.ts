@@ -84,6 +84,14 @@ export class SceneEditor {
   setMode = (mode: EditMode) => {
     if (this.state.view === 'after' && !this.state.busy && !this.state.dragging) this.update({ mode })
   }
+  canToggleLock = (id: string) => this.state.view === 'after' && !this.state.busy && !this.state.dragging
+    && this.afterBaseline.objects.some(object => object.id === id && !object.fixed && !object.locked)
+  toggleLock = (id: string, previewColor?: string) => {
+    if (!this.canToggleLock(id)) return
+    this.afterScene = { ...this.afterScene, objects: this.afterScene.objects.map(object => object.id === id
+      ? { ...object, ...(!object.locked && previewColor && /^#[0-9a-fA-F]{6}$/.test(previewColor) ? { color: previewColor.toUpperCase() } : {}), locked: !object.locked } : object) }
+    this.update({ scene: this.afterScene, notice: null })
+  }
   private allowed(edit?: SceneEdit) {
     if (this.state.view === 'before') return false
     const object = this.state.scene.objects.find(item => item.id === this.state.selectedId)

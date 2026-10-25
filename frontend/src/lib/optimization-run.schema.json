@@ -1708,6 +1708,33 @@
     "preferences": {
       "$ref": "#/$defs/OptimizationPreferences"
     },
+    "instruction": {
+      "anyOf": [
+        {
+          "maxLength": 1000,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Instruction"
+    },
+    "parent_run_id": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Parent Run Id"
+    },
     "created_at": {
       "format": "date-time",
       "title": "Created At",
@@ -1821,6 +1848,8 @@
     "baseline_assessment",
     "focus",
     "preferences",
+    "instruction",
+    "parent_run_id",
     "created_at",
     "expires_at",
     "status",

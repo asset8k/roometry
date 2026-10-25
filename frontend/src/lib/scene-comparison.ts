@@ -42,16 +42,28 @@ export class SceneComparison {
     copy.editor.switchView(view === 'editing' ? 'after' : 'before')
     this.update({ view, editor: copy.editor, colors: copy.colors })
   }
-  offer = (run: OptimizationRun | null) => {
+  offer = (run: OptimizationRun | null, requestScene?: RoomScene) => {
     if (!retainedImprovement(run) || this.copies.has(run.run_id)
-      || JSON.stringify(run.source_scene) !== JSON.stringify(this.original)) return false
+      || JSON.stringify(run.source_scene) !== JSON.stringify(requestScene ?? this.original)) return false
     const saved = structuredClone(run)
     this.copies.set(saved.run_id, { editor: new SceneEditor(saved.result_scene!, this.client, saved.result_scene!), colors: {} })
     const editing = this.state.editor.getSnapshot()
-    this.update({ improvements: [...this.state.improvements, saved], selectedImprovementId: saved.run_id })
     // Do not interrupt a drag or an in-flight manual edit when a result arrives.
-    if (!editing.busy && !editing.dragging) this.activate('improved', saved.run_id)
+    // Do not replace newer manual edits made while a candidate was being checked.
+    const current = this.currentContext().scene
+    const activate = !editing.busy && !editing.dragging && (!requestScene || JSON.stringify(current) === JSON.stringify(requestScene))
+    this.update({ improvements: [...this.state.improvements, saved],
+      ...(activate || this.state.view !== 'improved' ? { selectedImprovementId: saved.run_id } : {}) })
+    if (activate) this.activate('improved', saved.run_id)
     return true
+  }
+  currentContext = () => {
+    const state = this.state, editor = state.editor.getSnapshot()
+    const raw = editor.scene
+    const colors = state.view === 'editing' ? state.colors : {}
+    const scene = { ...raw, objects: raw.objects.map(object => object.locked || !colors[object.id] ? object : { ...object, color: colors[object.id].toUpperCase() }) }
+    const parent = state.view === 'original' ? 'original' : state.view === 'improved' ? state.selectedImprovementId : state.editingId
+    return { scene: structuredClone(scene), parent_run_id: parent === 'original' ? null : parent }
   }
   show = (view: ComparisonView) => {
     const id = view === 'original' ? 'original' : view === 'editing' ? this.state.editingId : this.state.selectedImprovementId
@@ -70,11 +82,12 @@ export class SceneComparison {
     this.activate('editing', id)
   }
   setColor = (id: string, color: string) => {
-    if (this.state.view !== 'editing') return
+    if (this.state.view !== 'editing' || this.state.colors[id] === color) return
     const copy = this.copies.get(this.state.editingId)!
     copy.colors = { ...copy.colors, [id]: color }
     this.update({ colors: copy.colors })
   }
+  toggleLock = (id: string) => this.state.editor.toggleLock(id, this.state.colors[id])
   resetColors = () => {
     if (this.state.view !== 'editing') return
     this.copies.get(this.state.editingId)!.colors = {}

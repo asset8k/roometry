@@ -8,6 +8,7 @@ from roometry.agents.checkpointing import RunUnavailable
 from roometry.agents.router import EmptyRequest, RunFailure, access, result
 from roometry.optimization.runs import OptimizationConflict, OptimizationRuns, ReconstructionRequired
 from roometry.optimization.schemas import OptimizationRun, StartOptimizationRequest
+from roometry.optimization.context import InvalidSceneContext
 from roometry.uploads.schemas import OpaqueId
 
 router = APIRouter(prefix="/api/agent-runs", tags=["room improvements"])
@@ -20,6 +21,8 @@ async def improvement_result(operation):
         raise RunFailure(409, "optimization_conflict", "This request ID already identifies a different improvement request.") from None
     except ReconstructionRequired:
         raise RunFailure(409, "reconstruction_required", "Finish a complete or partial room reconstruction before requesting an improvement.") from None
+    except InvalidSceneContext as error:
+        raise RunFailure(409, "invalid_scene_context", str(error)) from None
 
 
 @router.post("/{source_run_id}/optimizations", response_model=OptimizationRun,

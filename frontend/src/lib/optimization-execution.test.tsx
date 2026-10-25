@@ -59,9 +59,9 @@ it('submits preferences and executes the same linked run over the real HTTP clie
 it('shows a retained outcome, actual counters and limitations while the original viewer remains separate', async () => {
   const { controller, render } = setup()
   controller.select('aesthetics'); await controller.start()
-  expect(render()).toContain('A validated candidate was retained')
+  expect(render()).toContain('Candidate ready')
   expect(render()).toContain('2 model calls')
-  expect(render()).toContain('Compare Original and Improved below')
+  expect(render()).toContain('Checks and limitations')
   expect(render()).toContain('The materials are more cohesive')
   controller.select('storage')
   expect(controller.getSnapshot().phase).toBe('editing')
