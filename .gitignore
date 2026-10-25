@@ -33,4 +33,5 @@ artifacts/*
 
 # Local uploads and OS files
 /uploads/
+/.local/
 .DS_Store

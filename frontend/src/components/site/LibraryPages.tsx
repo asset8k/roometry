@@ -1,9 +1,10 @@
 import { Button, GlassPanel, Icon } from '../ui/primitives'
+import type { AccountUser } from '../../lib/auth'
 
-export function MyRooms({ onSignIn, onCreate }: { onSignIn: () => void; onCreate: () => void }) {
+export function MyRooms({ onSignIn, onCreate, user }: { onSignIn: () => void; onCreate: () => void; user?: AccountUser | null }) {
   return <section className="library-page" aria-labelledby="my-rooms-title">
     <div className="page-heading"><div><h1 id="my-rooms-title">My rooms</h1><p>A place for your saved designs.</p></div><Button onClick={onCreate}>New room<Icon name="arrow"/></Button></div>
-    <GlassPanel className="library-empty"><span className="empty-symbol"><Icon name="folder"/></span><h2>Keep the rooms you create.</h2><p>Sign in to save and reopen your designs.</p><Button variant="primary" onClick={onSignIn}>Sign in<Icon name="arrow"/></Button><span className="availability-note">Saved rooms are coming with accounts.</span></GlassPanel>
+    <GlassPanel className="library-empty"><span className="empty-symbol"><Icon name="folder"/></span><h2>{user ? 'You’re signed in.' : 'Keep the rooms you create.'}</h2><p>{user ? 'Room saving and reopening come next.' : 'Sign in to your Roometry account.'}</p><Button variant="primary" onClick={user ? onCreate : onSignIn}>{user ? 'Create a room' : 'Sign in'}<Icon name="arrow"/></Button><span className="availability-note">Saved rooms are the next step.</span></GlassPanel>
   </section>
 }
 

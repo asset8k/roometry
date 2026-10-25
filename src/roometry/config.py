@@ -18,6 +18,37 @@ class Settings(BaseSettings):
 
     app_environment: Literal["development", "test", "production"] = "development"
     cors_origins: list[str] = Field(default_factory=list)
+    database_url: SecretStr | None = None
+    jwt_secret_key: SecretStr | None = None
+    jwt_algorithm: Literal["HS256"] = "HS256"
+    access_token_expire_minutes: int = Field(default=60, ge=1, le=10080)
+    auth_cookie_secure: bool = False
+    auth_cookie_samesite: Literal["lax", "none", "strict"] = "lax"
+    auth_attempts_per_minute: int = Field(default=10, ge=1, le=120)
+
+    @field_validator("database_url", "jwt_secret_key", mode="before")
+    @classmethod
+    def blank_auth_setting(cls, value):
+        return None if isinstance(value, str) and not value.strip() else value
+
+    @model_validator(mode="after")
+    def auth_configuration(self):
+        if self.jwt_secret_key and len(
+            self.jwt_secret_key.get_secret_value().encode()
+        ) < 32:
+            raise ValueError("JWT_SECRET_KEY must contain at least 32 bytes.")
+        if self.auth_cookie_samesite == "none" and not self.auth_cookie_secure:
+            raise ValueError("Cross-site authentication cookies require Secure.")
+        if (
+            self.app_environment == "production"
+            and self.database_url
+            and self.jwt_secret_key
+            and not self.auth_cookie_secure
+        ):
+            raise ValueError("Production authentication requires secure cookies.")
+        if self.database_url and self.jwt_secret_key and "*" in self.cors_origins:
+            raise ValueError("Authentication requires explicit CORS origins.")
+        return self
 
     # Limits apply to original uploads and normalized private derivatives.
     max_images_per_request: int = Field(default=MAX_IMAGES, ge=1, le=MAX_IMAGES)

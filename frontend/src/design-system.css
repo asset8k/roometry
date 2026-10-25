@@ -344,6 +344,9 @@ select option { color: var(--text); background: var(--surface); }
 .site-nav > a { display: grid; align-items: center; min-height: 44px; color: var(--muted); font-size: 13px; }
 .site-nav > a:hover, .site-nav > a[aria-current='page'] { color: var(--lime); }
 .site-nav .ui-button { min-height: 44px; padding: 10px 22px; }
+.account-name { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--muted); }
+.auth-session-error { color: var(--error); font-size: 13px; }
+@media (max-width: 600px) { .account-name { display: none; } }
 .workspace-heading { margin-top: 46px; }
 .room-input-form .input-columns { padding-top: 0; }
 .photo-picker > strong { margin-bottom: 20px; text-align: center; line-height: 1.6; }

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { AuthController } from './lib/auth'
 import RoomInputWorkspace from './components/room-input/RoomInputWorkspace'
 import { Button } from './components/ui/primitives'
 import BrandMark from './components/ui/BrandMark'
@@ -12,6 +13,9 @@ type Page = 'create' | 'explore' | 'my-rooms'
 const pageFromHash = (): Page => typeof window !== 'undefined' && window.location.hash === '#explore' ? 'explore' : typeof window !== 'undefined' && window.location.hash === '#my-rooms' ? 'my-rooms' : 'create'
 
 export default function App() {
+  const [auth] = useState(() => new AuthController())
+  const session = useSyncExternalStore(auth.subscribe, auth.getSnapshot, auth.getSnapshot)
+  useEffect(auth.connect, [auth])
   const [page, setPage] = useState<Page>(pageFromHash)
   const [account, setAccount] = useState<'signin' | 'save' | null>(null)
   const [sharing, setSharing] = useState<RoomScene | null>(null)
@@ -39,20 +43,22 @@ export default function App() {
         <nav className="site-nav" aria-label="Main navigation">
           <a href="#explore" aria-current={page === 'explore' ? 'page' : undefined}>Explore</a>
           <a href="#my-rooms" aria-current={page === 'my-rooms' ? 'page' : undefined}>My rooms</a>
-          <Button onClick={() => openAccount()}>Sign in</Button>
+          {session.user ? <><span className="account-name" title={session.user.username}>{session.user.username}</span><Button disabled={session.pending} onClick={() => void auth.logout()}>Sign out</Button></>
+            : <Button onClick={() => { auth.clearError(); openAccount() }}>Sign in</Button>}
         </nav>
       </header>
+      {session.user && session.error && <p className="auth-session-error" role="alert">{session.error}</p>}
       <main ref={main} id="main-content" tabIndex={-1}>
         {/* Keep the live workspace mounted across navigation, preserving guest files and runs. */}
         <div hidden={page !== 'create'}>
           <div className="workspace-heading"><div><h1 id="page-heading" tabIndex={-1}>See your room<span> differently.</span></h1><p className="workspace-subtitle">A few photos. A new perspective.</p></div></div>
           <section aria-label="Your room"><RoomInputWorkspace onConnectionChange={onConnectionChange} /></section>
         </div>
-        {page === 'my-rooms' && <MyRooms onSignIn={() => openAccount()} onCreate={goCreate}/>}
+        {page === 'my-rooms' && <MyRooms user={session.user} onSignIn={() => openAccount()} onCreate={goCreate}/>}
         {page === 'explore' && <Explore onCreate={goCreate}/>}
       </main>
     </div>
-    {account && <AccountDialog intent={account} onClose={() => setAccount(null)} onGuest={() => { setAccount(null); goCreate() }}/>}
-    {sharing && <ShareDialog scene={sharing} onClose={() => setSharing(null)} onSignIn={() => openAccount()}/>}
+    {account && <AccountDialog controller={auth} intent={account} onClose={() => setAccount(null)} onGuest={() => { setAccount(null); goCreate() }}/>}
+    {sharing && <ShareDialog signedIn={!!session.user} scene={sharing} onClose={() => setSharing(null)} onSignIn={() => openAccount()}/>}
   </SiteActions.Provider>
 }

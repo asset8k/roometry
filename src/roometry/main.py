@@ -19,7 +19,13 @@ from roometry.agents.router import router as agent_router
 from roometry.agents.runs import AgentRuns
 from roometry.agents.state import RunLimits
 from roometry.agents.tools import SceneTools
+from roometry.auth.errors import AuthFailure
+from roometry.auth.middleware import AuthBodyLimitMiddleware
+from roometry.auth.router import AuthAttempts, clear_cookie
+from roometry.auth.router import router as auth_router
+from roometry.auth.service import AuthService
 from roometry.config import Settings, get_settings
+from roometry.database import Database
 from roometry.mcp.furniture_client import FurnitureCatalogClient
 from roometry.optimization.router import router as optimization_router
 from roometry.optimization.runs import OptimizationRuns
@@ -46,6 +52,10 @@ def create_app(
     settings: Settings | None = None, *, analysis_client: AsyncOpenAI | None = None
 ) -> FastAPI:
     settings = settings if settings is not None else get_settings()
+    database = (
+        Database(settings.database_url.get_secret_value())
+        if settings.database_url else None
+    )
     service = UploadService(
         settings.public_upload_limits(), LocalInputStorage(settings.upload_storage_dir)
     )
@@ -107,9 +117,15 @@ def create_app(
                 tasks.cancel_scope.cancel()
                 with anyio.CancelScope(shield=True):
                     await analyzer.close()
+                    if database:
+                        await anyio.to_thread.run_sync(database.close)
 
     application = FastAPI(title="Roometry API", version="0.1.0", lifespan=lifespan)
     application.state.settings = settings
+    application.state.database = database
+    application.state.auth_service = AuthService(database, settings)
+    application.state.auth_hash_limiter = anyio.CapacityLimiter(2)
+    application.state.auth_attempts = AuthAttempts(settings.auth_attempts_per_minute)
     application.state.upload_service = service
     application.state.analysis_service = analysis_service
     application.state.agent_runs = agent_runs
@@ -120,6 +136,7 @@ def create_app(
     application.add_middleware(
         AnalysisRequestLimitMiddleware, max_bytes=settings.analysis_max_body_bytes
     )
+    application.add_middleware(AuthBodyLimitMiddleware)
 
     if settings.cors_origins:
         application.add_middleware(
@@ -131,10 +148,23 @@ def create_app(
         )
 
     application.include_router(scenes_router)
+    application.include_router(auth_router)
     application.include_router(uploads_router)
     application.include_router(analysis_router)
     application.include_router(agent_router)
     application.include_router(optimization_router)
+
+    @application.exception_handler(AuthFailure)
+    async def auth_error(_request: Request, error: AuthFailure) -> JSONResponse:
+        response = JSONResponse(
+            error.response(), status_code=error.status,
+            headers={"Cache-Control": "no-store"},
+        )
+        if error.code == "invalid_session":
+            clear_cookie(response, settings)
+        if error.status == 429:
+            response.headers["Retry-After"] = "60"
+        return response
 
     @application.exception_handler(RunFailure)
     async def run_error(_request: Request, error: RunFailure) -> JSONResponse:
@@ -165,6 +195,15 @@ def create_app(
         _request: Request,
         error: RequestValidationError,
     ) -> JSONResponse:
+        if _request.url.path.startswith("/api/auth/"):
+            return await auth_error(
+                _request,
+                AuthFailure(
+                    422, "invalid_request",
+                    "Use a username of 3–32 letters, numbers or underscores "
+                    "and a password of 12–128 characters.",
+                ),
+            )
         if _request.url.path == "/api/agent-runs" or _request.url.path.startswith(
             "/api/agent-runs/"
         ):

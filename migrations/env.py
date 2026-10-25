@@ -1,0 +1,36 @@
+"""Use the private DATABASE_URL setting; never copy credentials into alembic.ini."""
+
+from alembic import context
+from sqlalchemy import create_engine, pool
+
+from roometry.config import Settings
+from roometry.database import Base, database_url
+from roometry.users.model import AuthSession, User  # noqa: F401 - register model metadata.
+
+config = context.config
+raw = config.attributes.get("database_url") or Settings().database_url
+if raw is None:
+    raise RuntimeError("Configure DATABASE_URL before running migrations.")
+url = database_url(raw.get_secret_value() if hasattr(raw, "get_secret_value") else raw)
+metadata = Base.metadata
+
+if context.is_offline_mode():
+    context.configure(
+        url=url,
+        target_metadata=metadata,
+        literal_binds=True,
+        dialect_opts={"paramstyle": "named"},
+    )
+    with context.begin_transaction():
+        context.run_migrations()
+else:
+    engine = create_engine(url, poolclass=pool.NullPool, hide_parameters=True)
+    try:
+        with engine.connect() as connection:
+            context.configure(
+                connection=connection, target_metadata=metadata, compare_type=True
+            )
+            with context.begin_transaction():
+                context.run_migrations()
+    finally:
+        engine.dispose()
