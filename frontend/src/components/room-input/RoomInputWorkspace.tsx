@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useSyncExternalStore } from 'react'
 import RoomGenerationWorkspace from '../room-analysis/RoomGenerationWorkspace'
 import { Button, Icon } from '../ui/primitives'
+import GlassSelect from '../ui/GlassSelect'
 import { RoomGenerationController } from '../../lib/room-generation-controller'
 import { RoomInputController } from '../../lib/room-input-controller'
 import type { RoomInputState } from '../../lib/room-input-controller'
@@ -83,9 +84,8 @@ export function RoomInputForm({ state, controller, onGenerate, onCancel, onClear
           </section>
           <fieldset className="room-preferences" disabled={Boolean(busy)}>
             <legend>Room details</legend>
-            <label>Room type<select value={draft.roomType ?? ''} onChange={event => set({ roomType: event.target.value as typeof draft.roomType })}>
-              <option value="">Choose a room</option>{roomTypes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-            </select></label>
+            <GlassSelect label="Room type" value={draft.roomType ?? ''} disabled={locked || Boolean(busy)} placeholder="Choose a room"
+              options={roomTypes.map(([value, label]) => ({ value, label }))} onChange={value => set({ roomType: value as typeof draft.roomType })} />
             <div className="dimension-heading">Measurements <span className="optional">Optional</span></div>
             <div className="dimension-inputs">
               <label>Width (m)<input type="number" step="any" min="0" max={limits?.max_room_side_m} inputMode="decimal" placeholder="—" value={draft.width} onChange={event => set({ width: event.target.value })} /></label>

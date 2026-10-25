@@ -13,6 +13,7 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 
 from roometry.agents.state import AgentState, ClarificationAnswer
+from roometry.progress import ProgressLog
 
 
 class RunUnavailable(Exception):
@@ -40,6 +41,7 @@ class CheckpointRun:
     cancel_requested: bool = False
     answer_in_flight: ClarificationAnswer | None = None
     request_id: str | None = None
+    progress: ProgressLog = field(default_factory=ProgressLog)
 
 
 class TemporaryCheckpoints:

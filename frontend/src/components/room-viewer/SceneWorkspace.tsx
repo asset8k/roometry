@@ -12,6 +12,7 @@ import ObjectList from './ObjectList'
 import { useSiteActions } from '../site/SiteActions'
 import { Button, Icon } from '../ui/primitives'
 import ObjectInspector from './ObjectInspector'
+import GlassSelect from '../ui/GlassSelect'
 
 const RoomViewer = lazy(() => import('./RoomViewer'))
 
@@ -27,9 +28,9 @@ export function ComparisonControls({ comparison, views }: { comparison: SceneCom
     </div>
     {views.view !== 'editing' && <button className="edit-copy" type="button" onClick={comparison.editCopy}>Edit {views.view === 'improved' ? 'improved' : 'original'} copy</button>}
     <button className="reset-layout" type="button" disabled={views.view !== 'editing'} onClick={views.editor.resetLayout}>Reset layout</button>
-    {views.improvements.length > 1 && <label className="improvement-version">Improvement<select value={views.selectedImprovementId ?? ''} onChange={event => comparison.selectImprovement(event.target.value)}>
-      {views.improvements.map((run, i) => <option key={run.run_id} value={run.run_id}>{i + 1}. {improvementLabels[run.focus]}{run.status !== 'completed' ? ' (run stopped early)' : ''}</option>)}
-    </select></label>}
+    {views.improvements.length > 1 && <GlassSelect className="improvement-version" label="Improvement" value={views.selectedImprovementId ?? ''}
+      onChange={comparison.selectImprovement} options={views.improvements.map((run, i) => ({ value: run.run_id,
+        label: `${i + 1}. ${improvementLabels[run.focus]}${run.status !== 'completed' ? ' (run stopped early)' : ''}` }))} />}
     <p>{views.view !== 'editing' ? 'Compare the saved scenes, or edit a separate copy. Manual edits stay when you switch.' : `Editing a copy of ${label}. Reset layout restores that copy’s starting arrangement and keeps your color previews.`}</p>
   </div>
 }

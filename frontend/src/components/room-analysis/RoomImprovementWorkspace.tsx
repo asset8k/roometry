@@ -3,6 +3,8 @@ import type { AgentState } from '../../lib/agent-run'
 import { OptimizationController } from '../../lib/optimization-controller'
 import type { ImprovementState } from '../../lib/optimization-controller'
 import { improvementLabels } from '../../lib/optimization'
+import RunWorkflow from './RunWorkflow'
+import { progressLabels } from '../../lib/run-progress'
 import RoomAssessmentCards from './RoomAssessmentCards'
 import SceneWorkspace from '../room-viewer/SceneWorkspace'
 
@@ -51,7 +53,7 @@ export function ImprovementForm({ state, controller, partial }: {
       <button type="button" onClick={() => void controller.cancel()}>Cancel improvement request</button>
     </div>}
     {(state.phase === 'running' || state.phase === 'cancelling') && state.result && <div role="status">
-      <p>{state.phase === 'cancelling' ? 'Stopping further improvement work…' : state.result.stage === 'reviewing' ? 'Reviewing the proposed layout and your preferences…' : state.result.stage === 'validating' ? 'Checking placement, walking space and goal scores…' : 'Exploring a better arrangement for your chosen focus…'}</p>
+      <RunWorkflow kind="optimization" run={state.result} progress={state.progress} streamMode={state.streamMode} message={state.phase === 'cancelling' ? 'Stopping further improvement work…' : state.progress && state.streamMode === 'streaming' ? progressLabels[state.progress.stage] : state.result.stage === 'reviewing' ? 'Reviewing the proposed layout and your preferences…' : state.result.stage === 'validating' ? 'Checking placement, walking space and goal scores…' : 'Exploring a better arrangement for your chosen focus…'}/>
       <p>{state.result.attempts.length} candidates checked · up to {state.result.max_candidates} candidates.</p>
       <button type="button" disabled={state.phase === 'cancelling'} onClick={() => void controller.cancel()}>Cancel improvement</button>
     </div>}

@@ -125,8 +125,8 @@ describe('saved improvement comparison', () => {
     const comparison = new SceneComparison(first.source_scene)
     comparison.offer(first); comparison.offer(second)
     const html = renderToStaticMarkup(<ComparisonControls comparison={comparison} views={comparison.getSnapshot()} />)
-    expect(html).toContain('<select')
-    expect(html).toContain('1. Workspace')
+    expect(html).toContain('role="combobox"')
+    expect(html).not.toContain('<select')
     expect(html).toContain('2. Storage &amp; organization (run stopped early)')
   })
 

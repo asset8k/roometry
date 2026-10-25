@@ -1,3 +1,5 @@
+import { observeProgress, optimizationEvents } from './run-progress'
+import type { ProgressObserver, RunProgress, StreamMode } from './run-progress'
 import { AgentRunError } from './agent-run'
 import type { AgentState } from './agent-run'
 import { checkOptimization, improvementPreferences, optimizationClient } from './optimization'
@@ -10,6 +12,8 @@ export interface ImprovementState {
   result: OptimizationRun | null
   error: string | null
   recovery: boolean
+  progress?: RunProgress
+  streamMode?: StreamMode
 }
 
 /** A second user action prepares a linked request; it never reruns reconstruction. */
@@ -23,8 +27,12 @@ export class OptimizationController {
   private connected = false
   private pollTimer: ReturnType<typeof setTimeout> | null = null
   private reading: AbortController | null = null
+  private streamEpoch = 0
+  private streamId: string | null = null
+  private stopWatching: (() => void) | null = null
+  private refreshQueued = false
   private source: AgentState
-  constructor(source: AgentState, private client: OptimizationClient = optimizationClient, private now = Date.now) { this.source = structuredClone(source) }
+  constructor(source: AgentState, private client: OptimizationClient = optimizationClient, private now = Date.now, private observe: ProgressObserver | undefined = client === optimizationClient ? observeProgress : undefined) { this.source = structuredClone(source) }
   getSnapshot = () => this.state
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener) } }
   private update(patch: Partial<ImprovementState>) { this.state = { ...this.state, ...patch }; this.listeners.forEach(listener => listener()) }
@@ -34,16 +42,18 @@ export class OptimizationController {
     if (this.locked()) return
     if (!this.available()) { this.update({ phase: 'expired', error: 'This reconstruction is no longer available for improvements.' }); return }
     this.stopPolling(); this.reading?.abort(); this.reading = null; this.active?.abort(); this.active = null
+    this.stopStream()
     this.pending = null; this.executionRequested = false; this.cancelRequested = false
-    this.update({ focus, phase: 'editing', error: null, result: null })
+    this.update({ focus, phase: 'editing', error: null, result: null, progress: undefined, streamMode: undefined })
   }
   change = (draft: Partial<ImprovementDraft>) => { if (!this.locked()) this.update({ draft: { ...this.state.draft, ...draft }, error: null }) }
   close = () => { if (!this.locked()) this.update({ focus: null, phase: 'idle', error: null }) }
   connect = () => {
     this.connected = true
-    const timer = setTimeout(() => { this.stopPolling(); this.reading?.abort(); this.reading = null; this.active?.abort(); this.active = null; this.update({ phase: 'expired', recovery: false, error: 'This temporary reconstruction has expired. Generate again to request improvements.' }) }, Math.max(0, Date.parse(this.source.expires_at) - this.now()))
+    this.schedule()
+    const timer = setTimeout(() => { this.stopStream(); this.stopPolling(); this.reading?.abort(); this.reading = null; this.active?.abort(); this.active = null; this.update({ phase: 'expired', recovery: false, error: 'This temporary reconstruction has expired. Generate again to request improvements.' }) }, Math.max(0, Date.parse(this.source.expires_at) - this.now()))
     return () => {
-      clearTimeout(timer); this.connected = false; this.stopPolling(); this.reading?.abort(); this.reading = null
+      clearTimeout(timer); this.connected = false; this.stopStream(); this.stopPolling(); this.reading?.abort(); this.reading = null
       this.active?.abort(); this.active = null
       if (this.state.result && (this.state.result.status === 'running' || (this.executionRequested && this.state.result.status === 'prepared'))) {
         void this.client.cancel(this.source.run_id, this.state.result.run_id, AbortSignal.timeout(10000)).catch(() => {})
@@ -82,9 +92,27 @@ export class OptimizationController {
     } finally { if (this.active === abort) this.active = null }
   }
   private stopPolling() { if (this.pollTimer) clearTimeout(this.pollTimer); this.pollTimer = null }
+  private stopStream() { this.streamEpoch++; this.streamId = null; this.stopWatching?.(); this.stopWatching = null }
+  private ensureStream() {
+    const run = this.state.result
+    const wanted = this.connected && this.state.phase !== 'expired' && run && (run.status === 'running' || (run.status === 'prepared' && this.executionRequested) || this.cancelRequested)
+    if (!wanted) { this.stopStream(); return }
+    if (!this.observe || this.streamId === run.run_id) return
+    this.stopStream()
+    const id = this.streamId = run.run_id, epoch = this.streamEpoch
+    const current = () => this.streamEpoch === epoch && this.connected && this.streamId === id && this.state.result?.run_id === id
+    const stop = this.observe(optimizationEvents(this.source.run_id, id), id, 'optimization', {
+      event: event => { if (current()) { this.update({ progress: event }); this.refreshQueued = true; void this.poll() } },
+      mode: mode => { if (current() && mode !== this.state.streamMode) { this.update({ streamMode: mode }); this.schedule() } },
+      unavailable: () => { if (current()) { this.stopStream(); this.refreshQueued = true; void this.poll() } },
+    })
+    if (current()) this.stopWatching = stop
+    else stop()
+  }
   private schedule() {
     this.stopPolling()
-    if (this.connected && this.state.result && (this.state.result.status === 'running' || this.state.phase === 'cancelling')) this.pollTimer = setTimeout(() => { void this.poll() }, 1200)
+    this.ensureStream()
+    if (this.connected && this.state.streamMode !== 'streaming' && this.state.result && (this.state.result.status === 'running' || this.state.phase === 'cancelling')) this.pollTimer = setTimeout(() => { void this.poll() }, 1200)
   }
   private accept(result: OptimizationRun) {
     if (!this.pending) return
@@ -117,7 +145,7 @@ export class OptimizationController {
     const abort = new AbortController(); this.active = abort
     this.update({ phase: 'running', recovery: false, error: null })
     // A read can display progress while the execute request awaits completion.
-    if (this.connected) this.pollTimer = setTimeout(() => { void this.poll() }, 1200)
+    this.schedule()
     try {
       const result = await this.client.execute(this.source.run_id, this.state.result.run_id, abort.signal)
       if (!abort.signal.aborted) this.accept(result)
@@ -135,11 +163,15 @@ export class OptimizationController {
   poll = async () => {
     if (!this.state.result || this.reading) return
     const abort = this.reading = new AbortController()
+    this.refreshQueued = false
     try {
       const result = await this.client.read(this.source.run_id, this.state.result.run_id, abort.signal)
       if (!abort.signal.aborted) this.accept(result)
     } catch (error) { if (!abort.signal.aborted) this.executionFailure(error) }
-    finally { if (this.reading === abort) this.reading = null }
+    finally {
+      if (this.reading === abort) this.reading = null
+      if (this.refreshQueued && this.connected) { this.refreshQueued = false; void this.poll() }
+    }
   }
   retry = async () => {
     if (this.cancelRequested) { await this.submit(); return }

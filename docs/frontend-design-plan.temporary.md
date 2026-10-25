@@ -1,6 +1,6 @@
 # Roometry frontend — temporary design and flow plan
 
-Status: step 1 implemented — shared glass/lime styles, app shell, room input, and clarification cards. Streaming and the unified viewer/chat workspace remain for steps 2–3. Keep this reference through final verification and review.
+Status: steps 1–2 implemented — shared visual foundation, input/questions, private SSE for reconstruction and optimization, connected workflow stages, reconnect/snapshot recovery, and polling fallback. Step 3 (unified viewer/chat and contextual refinement) and step 4 (complete experience verification/cleanup) remain. Keep this reference through final user review.
 
 Delete this file after the frontend is implemented, visually reviewed, and verified. Keep durable behavior and setup notes in the existing project documentation; do not remove generated schemas or useful tests as part of this cleanup.
 
@@ -189,7 +189,7 @@ Design continuity only; these are not implementation requirements for the curren
 ## Implementation sequence
 
 1. **Visual foundation and input screen:** introduce shared tokens and glass/pill/input components in the existing frontend; restyle the header, photo form, and question cards. Establish the reference match at desktop and mobile widths before extending it everywhere.
-2. **Real streaming:** add scoped SSE for generation and optimization, connect it to existing controllers and run state, and render the stage flow. Current generation uses polling; styling alone cannot provide streaming. Reconnect to the same run, order/deduplicate events, recover missed updates from authoritative snapshots, stop subscriptions on cancellation/unmount, and keep polling as a bounded fallback. Streams only observe work and must never trigger model calls.
+2. **Real streaming — implemented:** private scoped SSE for generation and optimization feeds existing controllers and the connected stage flow. Healthy streams replace routine polling; authorized snapshot reads recover full state. Reconnect to the same run, order/deduplicate events, recover missed updates from authoritative snapshots, stop subscriptions on cancellation/unmount, and keep polling as a bounded fallback. Streams only observe work and must never trigger model calls.
 3. **Workspace and refinement:** put the viewer first; integrate concise ratings, questions, improvement preferences, Original/Improved comparison, object editing, and bounded chat refinement. Preserve backend safeguards and existing scene/edit behavior while replacing repetitive prose and duplicate actions.
 4. **Verify and clean up:** check input → interruption → resume → reconstruction → ratings → improvement → comparison/refinement with mocked responses, including reconnects, cancellations, partial results, rejected candidates, and error isolation. Visually inspect supported desktop/mobile widths and reduced motion. Run appropriate frontend checks/build and tests for changed streaming endpoints. Delete this temporary plan after implementation and user review.
 
@@ -242,3 +242,7 @@ Lime refinement: primary actions use a slightly more saturated `#CCFF32` with a 
 Transparency refinement: panels use 32% base opacity, secondary controls 22%, and dialogs 45%. A cool-neutral translucent gradient and localized backdrop blur retain visible background light and detail. Keep the neon-lime fill stable and fully readable; never apply a backdrop filter to the live WebGL ancestor.
 
 Brand mark: a clean perspective room/box outline with neon-lime AI inside its front face. Use a pale outline and subtle translucent top/side faces; no separate 3D lettering. Keep the Roometry name, accessible home label, and matching favicon. Scale the mark to 42 px desktop and 38 px mobile.
+
+Step 2 verification: deterministic real-browser run covered reconstruction → question → resume → completed scene → improvement → comparison → cancellation with an earlier candidate retained. Short test-only stream lifetimes exercised reconnection. A held construction also exercised the configured timeout without repeating analysis/construction; inputs stayed available. No OpenAI calls. Shared graph/lifecycle tests, SSE privacy/replay/revocation tests, client race/fallback tests, frontend suite, and production build passed. The temporary plan remains until step 4 review.
+
+Selector refinement: all room-type, wall-visibility, and improvement-version dropdowns share a portaled liquid-glass listbox with keyboard navigation, type-ahead, selection checks, outside dismissal, and viewport-aware placement. Workflow labels use explicit two-word stage names. Verified pointer/keyboard selection and mobile layout without horizontal overflow.

@@ -84,7 +84,7 @@ class AgentRuns:
             and dimensions.measurements_source == "user_confirmed"
             else None,
         )
-        self.checkpoints.add(owner, state, now)
+        self.checkpoints.add(owner, state, now).progress.publish(state)
         return state.model_copy(deep=True)
 
     async def _owned(self, run_id: str, owner: str) -> CheckpointRun:
@@ -123,6 +123,12 @@ class AgentRuns:
         )
         await self._owned(run_id, owner)
         return result.model_copy(deep=True)
+
+    async def observe(self, run_id: str, owner: str):
+        entry = await self._owned(run_id, owner)
+        state = await self.read(run_id, owner)
+        if not entry.progress.events: entry.progress.publish(state)
+        return state, entry.progress
 
     async def execute(self, run_id: str, owner: str) -> AgentState:
         return await self._drive(run_id, owner)
@@ -248,12 +254,16 @@ class AgentRuns:
                 if snapshot.values
                 else entry.initial.model_dump()
             )
-            await graph.ainvoke(
-                graph_input,
-                config,
-                context=context,
-            )
-            return await self.read(run_id, owner)
+            # Only this original mutation drives the graph. SSE merely observes
+            # bounded public events; disconnecting a subscriber cannot replay work.
+            async for values in graph.astream(graph_input, config, context=context, stream_mode="values"):
+                if "run_id" in values:
+                    state = AgentState.model_validate({k: v for k, v in values.items() if k != "__interrupt__"})
+                    if state.status in {"queued", "running", "awaiting_answer"}:
+                        entry.progress.publish(state, cancelling=entry.cancel_requested)
+            current = await self.read(run_id, owner)
+            entry.progress.publish(current, force=True)  # Checkpoint is now authoritative.
+            return current
         except anyio.get_cancelled_exc_class():
             # A cancelled execution may have an ambiguous in-flight side effect.
             # Do not silently replay that task on the next execute() call.
@@ -288,7 +298,9 @@ class AgentRuns:
         entry = await self._owned(run_id, owner)
         entry.cancel_requested = True
         if entry.busy:
-            return await self.read(run_id, owner)
+            current = await self.read(run_id, owner)
+            entry.progress.publish(current, cancelling=True)
+            return current
         graph, config = build_graph(entry.saver), self._config(entry)
         snapshot = await graph.aget_state(config)
         current = (
@@ -318,7 +330,9 @@ class AgentRuns:
             },
             as_node="finalize",
         )
-        return await self.read(run_id, owner)
+        current = await self.read(run_id, owner)
+        entry.progress.publish(current, force=True)
+        return current
 
     async def cleanup(self) -> None:
         self.checkpoints.cleanup(self.now())

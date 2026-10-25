@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import RunWorkflow from './RunWorkflow'
 import RoomImprovementWorkspace from './RoomImprovementWorkspace'
 import { dimensionLabels } from '../../lib/room-analysis'
 import type { DimensionAxis } from '../../lib/room-analysis'
@@ -60,10 +61,8 @@ export default function RoomGenerationWorkspace({ state, controller, onConnectio
     <GlassPanel className={`analysis-card${state.phase === 'awaiting_answer' ? ' clarification-card' : ''}`}>
       <span className="section-label"><Icon name="spark" />From photos to your room</span>
       <h2 ref={card} tabIndex={-1} aria-live="polite">{state.phase === 'awaiting_answer' ? 'One quick question' : needsDimensions ? 'Room measurements are still needed' : needsWall ? 'Room orientation still needs identifying' : preview ? 'Your reconstruction preview' : titles[state.phase] ?? 'Creating your room'}</h2>
-      {!terminal && state.phase !== 'awaiting_answer' && <div className="upload-progress" role="status">
-        <progress aria-label="Room generation progress" />
-        <span>{generationProgress(state)}</span>
-      </div>}
+      {!terminal && <RunWorkflow kind="reconstruction" run={run} progress={state.progress} streamMode={state.streamMode}
+        paused={state.phase === 'awaiting_answer'} message={generationProgress(state)}/>}
       {state.phase === 'completed' && <p>Your approximate reconstruction is ready to explore and edit. This shows your current room; you can try your own arrangement in the editor.</p>}
       {run?.catalog_reads.some(read => read.outcome === 'error') && <p className="analysis-caution">Furniture catalog checks were unavailable during this generation. Any validated reconstruction remains available below; catalog details were not verified.</p>}
       {run?.stop_reason === 'budget_limit' && ['completed', 'partial'].includes(state.phase) && <p className="input-help">Your validated reconstruction is available. Additional checks stopped at the run limit.</p>}

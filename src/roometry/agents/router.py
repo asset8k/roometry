@@ -3,7 +3,9 @@
 from collections.abc import Awaitable
 from typing import cast
 
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Request, Response, Header, Query
+from starlette.responses import StreamingResponse
+from roometry.progress import progress_response
 from pydantic import Field
 
 from roometry.agents.checkpointing import RunBusy, RunCapacityReached, RunUnavailable
@@ -111,6 +113,16 @@ async def read_started_run(request_id: OpaqueId, request: Request, response: Res
 async def read_run(run_id: OpaqueId, request: Request, response: Response) -> AgentState:
     runs, owner = access(request, response)
     return await result(runs.read(run_id, owner))
+
+
+@router.get("/{run_id}/events", response_class=StreamingResponse,
+            summary="Observe owned reconstruction progress; never starts or resumes work")
+async def stream_run(run_id: OpaqueId, request: Request, response: Response,
+                     last_event_id: str | None = Header(default=None, max_length=80),
+                     after: str | None = Query(default=None, max_length=80)):
+    runs, owner = access(request, response)
+    _, log = await result(runs.observe(run_id, owner))
+    return progress_response(request, log, lambda: runs.read(run_id, owner), cursor=last_event_id or after)
 
 
 @router.post(

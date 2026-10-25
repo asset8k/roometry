@@ -19,6 +19,7 @@ from roometry.mcp.furniture_client import CatalogFailure
 from roometry.vision.errors import AnalysisFailure
 from roometry.scenes.hashing import scene_hash
 from roometry.scenes.validation import validate_geometry
+from roometry.progress import ProgressLog
 
 
 class OptimizationConflict(Exception):
@@ -41,6 +42,7 @@ class ImprovementEntry:
     finished: bool = False
     cancel_requested: bool = False
     budget: RunBudget | None = None
+    progress: ProgressLog = field(default_factory=ProgressLog)
 
 
 class OptimizationRuns:
@@ -98,6 +100,7 @@ class OptimizationRuns:
                 max_candidates=self.max_candidates, limits=self.limits,
             )
             self._runs[result.run_id] = ImprovementEntry(owner, request, source.model_copy(deep=True), result)
+            self._runs[result.run_id].progress.publish(result)
             return result.model_copy(deep=True)
 
     async def read(self, run_id: str, owner: str) -> OptimizationRun:
@@ -109,6 +112,12 @@ class OptimizationRuns:
         if entry.budget: result = result.model_copy(update={"usage": entry.budget.usage})
         await self._owned(run_id, owner)
         return result.model_copy(deep=True)
+
+    async def observe(self, run_id: str, owner: str):
+        entry = await self._owned(run_id, owner)
+        state = await self.read(run_id, owner)
+        if not entry.progress.events: entry.progress.publish(state)
+        return state, entry.progress
 
     @staticmethod
     def _config(entry):
@@ -122,6 +131,7 @@ class OptimizationRuns:
             return await self.read(run_id, owner)
         entry.execution_started, entry.busy = True, True
         entry.result = entry.result.model_copy(update={"status": "running", "stage": "proposing"})
+        entry.progress.publish(entry.result)
         async def authorize(): await self._owned(run_id, owner)
         budget = entry.budget = RunBudget(entry.result.limits, entry.result.usage, authorize,
             lambda: entry.cancel_requested, run_id=run_id)
@@ -138,7 +148,14 @@ class OptimizationRuns:
                     catalog = {"unavailable": True, "message": "Continue using existing items. Catalog purchases and prices are unavailable."}
             await authorize()
             context = OptimizationContext(entry.source, authorize, lambda: entry.cancel_requested, budget, self.provider, catalog)
-            await build_graph(entry.saver).ainvoke({"run": entry.result.model_dump(), "proposal": None, "candidate": None}, self._config(entry), context=context)
+            async for values in build_graph(entry.saver).astream(
+                {"run": entry.result.model_dump(), "proposal": None, "candidate": None},
+                self._config(entry), context=context, stream_mode="values",
+            ):
+                if "run" in values:
+                    state = OptimizationRun.model_validate(values["run"])
+                    if state.status in {"prepared", "running"}:
+                        entry.progress.publish(state, cancelling=entry.cancel_requested)
             entry.result = await self.read(run_id, owner)
             entry.finished = True
         except anyio.get_cancelled_exc_class():
@@ -157,23 +174,30 @@ class OptimizationRuns:
             await self._finish_error(entry, owner, status, message)
         finally:
             entry.busy = False
-        return await self.read(run_id, owner)
+        current = await self.read(run_id, owner)
+        entry.progress.publish(current, force=True)
+        return current
 
     async def _finish_error(self, entry, owner, status, message):
         try:
             current = await self.read(entry.result.run_id, owner)
             entry.result = current.model_copy(update={"status": status, "stage": "finished", "message": message})
             entry.finished = True
+            entry.progress.publish(entry.result, force=True)
         except RunUnavailable:
             pass
 
     async def cancel(self, run_id: str, owner: str) -> OptimizationRun:
         entry = await self._owned(run_id, owner)
         entry.cancel_requested = True
-        if entry.busy: return await self.read(run_id, owner)
+        if entry.busy:
+            current = await self.read(run_id, owner)
+            entry.progress.publish(current, cancelling=True)
+            return current
         if entry.finished: return await self.read(run_id, owner)
         entry.result = entry.result.model_copy(update={"status": "cancelled", "stage": "finished"})
         entry.finished = True
+        entry.progress.publish(entry.result, force=True)
         return entry.result.model_copy(deep=True)
 
     async def cleanup(self) -> None:

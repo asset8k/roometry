@@ -11,6 +11,7 @@ import type { WallMode } from './view-settings'
 import { editRestriction, objectLabel } from '../../lib/scene-edits'
 import type { EditorState, SceneEditor } from '../../lib/scene-editor'
 import TransformGizmo from './TransformGizmo'
+import GlassSelect from '../ui/GlassSelect'
 
 function ViewerUnavailable({ onRetry }: { onRetry: () => void }) {
   return (
@@ -81,13 +82,9 @@ export default function RoomViewer({ scene, editor, state, onSelect }: {
           <button type="button" disabled={state.dragging} aria-label="Zoom out" onClick={() => zoomBy(1.25)}>−</button>
           <button type="button" disabled={state.dragging} onClick={() => setView(command.mode)}>Reset view</button>
         </div>
-        <label className="wall-control">Walls
-          <select disabled={state.dragging} value={wallMode} onChange={event => setWallMode(event.target.value as WallMode)}>
-            <option value="cutaway">Cutaway</option>
-            <option value="transparent">Transparent</option>
-            <option value="hidden">Hidden</option>
-          </select>
-        </label>
+        <GlassSelect className="wall-control" label="Walls" disabled={state.dragging} value={wallMode}
+          options={[{ value: 'cutaway', label: 'Cutaway' }, { value: 'transparent', label: 'Transparent' }, { value: 'hidden', label: 'Hidden' }]}
+          onChange={value => setWallMode(value as WallMode)} />
       </div>
       <p className="view-hint" role="status">
         {command.mode === 'top' ? 'North ↑ · Overhead perspective · Drag with two fingers to pan.' : 'Drag to orbit · Pinch or scroll to zoom · Right-drag to pan.'}

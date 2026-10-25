@@ -1,6 +1,9 @@
 """Use the same session, origin and body limits as reconstruction runs."""
 
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Request, Response, Header, Query
+from starlette.responses import StreamingResponse
+from roometry.progress import progress_response
+from roometry.agents.checkpointing import RunUnavailable
 
 from roometry.agents.router import EmptyRequest, RunFailure, access, result
 from roometry.optimization.runs import OptimizationConflict, OptimizationRuns, ReconstructionRequired
@@ -37,6 +40,23 @@ async def read_improvement(source_run_id: OpaqueId, run_id: OpaqueId,
     if found.source_run_id != source_run_id:
         raise RunFailure(404, "run_not_found", "This run is unavailable or has expired.")
     return found
+
+
+@router.get("/{source_run_id}/optimizations/{run_id}/events", response_class=StreamingResponse,
+            summary="Observe owned improvement progress; never executes a candidate")
+async def stream_improvement(source_run_id: OpaqueId, run_id: OpaqueId, request: Request, response: Response,
+                             last_event_id: str | None = Header(default=None, max_length=80),
+                             after: str | None = Query(default=None, max_length=80)):
+    _, owner = access(request, response)
+    runs: OptimizationRuns = request.app.state.optimization_runs
+    found, log = await improvement_result(runs.observe(run_id, owner))
+    if found.source_run_id != source_run_id:
+        raise RunFailure(404, "run_not_found", "This run is unavailable or has expired.")
+    async def read():
+        current = await runs.read(run_id, owner)
+        if current.source_run_id != source_run_id: raise RunUnavailable()
+        return current
+    return progress_response(request, log, read, cursor=last_event_id or after)
 
 
 @router.post("/{source_run_id}/optimizations/{run_id}/execute", response_model=OptimizationRun,
