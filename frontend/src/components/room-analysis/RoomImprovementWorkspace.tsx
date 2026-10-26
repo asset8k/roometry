@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { OpenedProject } from '../../lib/projects'
+import { savedWorkspaceSignature } from '../../lib/projects'
+import { useWorkspaceGuard } from '../site/WorkspaceNavigation'
 import type { AgentState } from '../../lib/agent-run'
 import { OptimizationController } from '../../lib/optimization-controller'
 import type { ImprovementState } from '../../lib/optimization-controller'
@@ -17,6 +19,7 @@ export default function RoomImprovementWorkspace({ run, onConnectionChange, rest
   const [controller] = useState(() => new OptimizationController(run))
   const [comparison] = useState(() => restored ? SceneComparison.restore(restored) : new SceneComparison(run.working_scene!))
   const [messages, setMessages] = useState<{ id: string; role: 'user' | 'assistant'; text: string }[]>(restored?.project.snapshot.messages ?? [])
+  const [savedSignature, setSavedSignature] = useState(() => restored ? savedWorkspaceSignature(run.run_id, comparison.snapshotForSave(), restored.project.snapshot.messages) : null)
   const [draft, setDraft] = useState('')
   const recorded = useRef(new Set<string>())
   const transcript = useRef<HTMLDivElement>(null)
@@ -36,6 +39,12 @@ export default function RoomImprovementWorkspace({ run, onConnectionChange, rest
   }, [state.result, comparison])
   useEffect(() => { transcript.current?.scrollTo({ top: transcript.current.scrollHeight, behavior: 'auto' }) }, [messages.length])
   const busy = controller.locked() || editor.busy || editor.dragging
+  let signature: string | null = null
+  try { signature = savedWorkspaceSignature(run.run_id, comparison.snapshotForSave(), messages) } catch { /* Unfinished edits are dirty until accepted or cancelled. */ }
+  const active = ['preparing', 'prepared', 'running', 'cancelling'].includes(state.phase) || state.recovery || !!state.result && ['prepared', 'running'].includes(state.result.status)
+  const unsentPreferences = state.phase === 'editing' && (!!state.draft.style.trim() || !!state.draft.constraints.trim() || !!state.draft.budget.trim())
+  useWorkspaceGuard({ dirty: !savedSignature || signature !== savedSignature || !!draft.trim() || unsentPreferences || editor.busy || editor.dragging,
+    active, hasWork: true, priority: 10, leave: controller.leaveWorkspace })
   const overview = <>
     <RoomAssessmentCards assessment={run.room_assessment ?? null} onImprove={controller.available() ? controller.select : undefined} disabled={busy} />
     {!state.instruction && <ImprovementForm state={state} controller={controller} partial={run.status === 'partial'}
@@ -65,7 +74,7 @@ export default function RoomImprovementWorkspace({ run, onConnectionChange, rest
   </section>
   return run.working_scene && <SceneWorkspace goals={run.input_options.goals} initialScene={run.working_scene}
     comparison={comparison} saveAction={<SaveRoomControl run={run} comparison={comparison} messages={messages} initial={restored ? { id: restored.project.id, title: restored.project.title, revision: restored.project.revision,
-      image_count: restored.project.images.length, version_count: restored.project.versions.length, visibility: 'private', saved_at: run.created_at } : undefined} disabled={editor.busy || editor.dragging || ['preparing', 'prepared', 'running', 'cancelling'].includes(state.phase) || state.recovery} />} overview={overview} chat={chat} improvement={state.result}
+      image_count: restored.project.images.length, version_count: restored.project.versions.length, visibility: 'private', saved_at: run.created_at } : undefined} onSaved={setSavedSignature} disabled={editor.busy || editor.dragging || ['preparing', 'prepared', 'running', 'cancelling'].includes(state.phase) || state.recovery} />} overview={overview} chat={chat} improvement={state.result}
     objectLabels={Object.fromEntries((run.analysis?.observations.objects ?? []).map(object => [object.id, object.label]))}
     onConnectionChange={onConnectionChange} />
 }

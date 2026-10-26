@@ -270,6 +270,19 @@ export class RoomGenerationController {
       this.update({ run: null, phase: 'idle', cancelling: false, recovery: false, answering: false, notice: null })
     }
   }
+  /** Explicit in-app departure, including registered runs that survive refresh. */
+  leaveWorkspace = async () => {
+    if (this.inputs.getSnapshot().busy === 'upload' || this.state.phase === 'uploading') {
+      this.inputs.cancel(); this.revision++; this.update({ phase: 'cancelled', recovery: false })
+      return
+    }
+    if (this.locked() || this.pendingAnswer) {
+      await this.cancel()
+      if (this.state.recovery || (!this.state.run && this.state.phase === 'starting')) {
+        throw new Error('Couldn’t confirm the generation stopped. Retry leaving, or keep this room and check its status.')
+      }
+    }
+  }
   private releaseRun() {
     const request = this.startRequest, run = this.state.run
     const shouldCancel = request && this.locked() && run?.persistence !== 'account'

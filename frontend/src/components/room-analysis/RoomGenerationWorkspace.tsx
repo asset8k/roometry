@@ -24,6 +24,7 @@ function displayText(value: string): string {
 function failureMessage(run: AgentState | null): string {
   const feedback = run ? [...run.tool_feedback].reverse().find(item => item.outcome === 'error') : undefined
   switch (feedback?.details.code) {
+    case 'analysis_unavailable': return 'Room generation is not configured. Start the backend with analysis enabled and an API key configured.'
     case 'invalid_analysis': return feedback?.name === 'analyze_photos' ? 'Photo analysis returned inconsistent observations, so scene construction could not start. Please try generating again.' : 'The model returned inconsistent room data. Please try generating again.'
     case 'analysis_incomplete': return 'The model did not finish its response within the output limit. Please try generating again.'
     case 'analysis_timeout': return 'The model took too long to respond. Please try generating again.'
@@ -79,6 +80,7 @@ export default function RoomGenerationWorkspace({ state, controller, onConnectio
         disabled={state.answering || state.cancelling || state.recovery} onAnswer={controller.answer} />}
       {terminal && run?.proposal?.status === 'incomplete' && <details className="analysis-notes"><summary>Construction details</summary><ul>{run.proposal.issues.map((issue, index) => <li key={index}>{issue.entity_ids.length > 0 && <strong>{issue.entity_ids.map(entityName).join(', ')}: </strong>}{issue.message}</li>)}</ul></details>}
       {terminal && estimated.length > 0 && <p className="analysis-caution">Estimated room dimensions: {estimated.map(axis => dimensionLabels[axis].toLowerCase()).join(', ')}. These have not been supplied by you.</p>}
+      {terminal && !!run?.proposal?.assumed_axes?.length && <p className="analysis-caution">Some dimensions use an assumed starting size because photo scale was unclear. Check the room measurements before planning changes.</p>}
       {run?.analysis && <details className="analysis-notes"><summary>Photo observations and uncertainties</summary>
         <ul>{objects.map(obj => <li key={obj.id}><strong>{displayText(obj.label)}</strong>{obj.relative_location ? ` · ${obj.relative_location}` : ''}</li>)}</ul>
         <ul>{run.analysis.observations.unknowns.map((note, index) => <li key={index}>{note}</li>)}</ul>
@@ -125,6 +127,7 @@ export default function RoomGenerationWorkspace({ state, controller, onConnectio
     </GlassPanel>
   return <section ref={card} tabIndex={-1} className="analysis-workspace generation-workspace" aria-label="Room generation">
     {scene && run?.base_scene && <section className="reconstructed-room" aria-label="Your reconstructed room">
+      {estimated.length > 0 && <p className="workspace-status" role="status">Approximate dimensions · {scene.room.width_m} × {scene.room.length_m} × {scene.room.height_m} m{run.proposal?.assumed_axes?.length ? ' · Includes assumed sizes' : ''}</p>}
       {partial && <p className="workspace-status" role="status">Partial reconstruction · {omittedCount > 0 ? `${omittedCount} ${omittedCount === 1 ? 'observation' : 'observations'} unresolved` : 'Some room details remain approximate'}</p>}
       <RoomImprovementWorkspace key={run.run_id} run={run} onConnectionChange={onConnectionChange} />
     </section>}
@@ -160,8 +163,9 @@ export function ClarificationForm({ run, disabled, onAnswer }: {
   return <form className="clarification-form" onSubmit={event => { event.preventDefault(); submit() }}>
     <fieldset disabled={disabled}>
       <legend><span className="section-label">Question {run.questions.length} of up to 3</span><strong>{displayText(question.question)}</strong></legend>
+      {question.kind === 'room_dimensions' && <p className="input-help">Use photo estimates, or an assumed 4 × 4 × 2.6 m starting size where scale is unclear. Any measurements you enter take priority.</p>}
       <div className="clarification-choices">{question.choices.map(option => <label key={option.id}>
-        <input type="radio" name={`answer-${question.id}`} value={option.id} checked={choice === option.id} onChange={() => setChoice(option.id)} required /><span>{displayText(option.label)}</span><Icon name="check" className="choice-check" />
+        <input type="radio" name={`answer-${question.id}`} value={option.id} checked={choice === option.id} onChange={() => setChoice(option.id)} required /><span>{displayText(question.kind === 'room_dimensions' && option.id === 'leave_unknown' ? 'Use estimated dimensions' : option.label)}</span><Icon name="check" className="choice-check" />
       </label>)}</div>
       {choice === 'enter_measurements' && <div className="room-preferences"><div className="dimension-inputs">{question.dimension_axes.map(axis => <label key={axis}>
         {dimensionLabels[axis]} (m)<input type="number" inputMode="decimal" min="0" max={axis === 'height_m' ? 10 : 30} step="any" value={values[axis] ?? ''}

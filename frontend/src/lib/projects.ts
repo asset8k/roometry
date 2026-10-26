@@ -1,4 +1,5 @@
 import type { RoomScene } from './scene.generated'
+import { canonicalJson } from './canonical-json'
 
 export interface SavedMessage { id: string; role: 'user' | 'assistant'; text: string }
 export interface SaveSnapshot {
@@ -43,7 +44,11 @@ export async function saveProject(body: SaveProjectRequest, signal: AbortSignal)
 }
 
 interface SaveState { owner: string | null; saved: SavedProject | null; pending: boolean; retry: boolean; error: string | null }
-interface Entry { saved: SavedProject | null; request: SaveProjectRequest | null }
+interface Entry { saved: SavedProject | null; request: SaveProjectRequest | null; signature?: string }
+export function savedWorkspaceSignature(sourceRunId: string, snapshot: SaveSnapshot, messages: SavedMessage[]) {
+  return canonicalJson({ source_run_id: sourceRunId, manual_copies: snapshot.manual_copies, improvement_run_ids: snapshot.improvement_run_ids,
+    view: snapshot.view, editing_parent_run_id: snapshot.editing_parent_run_id, selected_improvement_id: snapshot.selected_improvement_id, messages })
+}
 /** Per-account save receipts; retries use a frozen request and never regenerate a room. */
 export class ProjectSaveController {
   private entries = new Map<string, Entry>()
@@ -53,6 +58,7 @@ export class ProjectSaveController {
   constructor(private client = saveProject) {}
   getSnapshot = () => this.state
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener) } }
+  confirmedSignature = () => this.state.owner ? this.entries.get(this.state.owner)?.signature : undefined
   private update(patch: Partial<SaveState>) { this.state = { ...this.state, ...patch }; this.listeners.forEach(listener => listener()) }
   restoreSaved = (owner: string, saved: SavedProject) => {
     if (!this.entries.has(owner)) this.entries.set(owner, { saved, request: null })
@@ -77,6 +83,7 @@ export class ProjectSaveController {
     try {
       const saved = await this.client(entry.request, abort.signal)
       if (abort.signal.aborted || this.state.owner !== owner) return false
+      entry.signature = savedWorkspaceSignature(entry.request.source_run_id, entry.request, entry.request.messages)
       entry.saved = saved; entry.request = null
       this.update({ saved, pending: false, retry: false }); return true
     } catch (error) {

@@ -1,6 +1,6 @@
 """Pure measurement resolution and authoritative scene assembly."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from pydantic import ValidationError
 
@@ -30,17 +30,34 @@ class Measurements:
     dimensions: InputDimensions
     to_confirm: list[DimensionName]
     estimated: list[DimensionName]
+    assumed: list[DimensionName] = field(default_factory=list)
+
+    @property
+    def assumption_notes(self) -> list[str]:
+        return [
+            f"Assumed room {axis.removesuffix('_m')}: {getattr(self.dimensions, axis):g} m. "
+            "The photos do not establish this size; it is a planning starting size, not a photo measurement."
+            for axis in self.assumed
+        ]
+
+
+# Explicitly disclosed when the user chooses estimates. Never treated as photo
+# evidence, saved user measurements, or permission to override a known axis.
+ASSUMED_ROOM_DIMENSIONS = {"width_m": 4., "length_m": 4., "height_m": 2.6}
 
 
 def resolve_measurements(
     analysis: RoomAnalysisResponse,
     confirmed: dict[DimensionName, float],
     allow_estimates: bool,
+    *,
+    assume_missing: bool = False,
 ) -> Measurements:
     original = analysis.input_options.dimensions
     estimates = analysis.observations.estimated_dimensions
     values: dict[str, object] = {}
     trusted: set[DimensionName] = set()
+    assumed: list[DimensionName] = []
     for axis in AXES:
         value = getattr(original, axis, None)
         if (
@@ -54,6 +71,9 @@ def resolve_measurements(
             trusted.add(axis)
         if value is None:
             value = getattr(estimates, axis, None)
+        if value is None and allow_estimates and assume_missing:
+            value = ASSUMED_ROOM_DIMENSIONS[axis]
+            assumed.append(axis)
         values[axis] = value
     estimated: list[DimensionName] = [
         axis for axis in AXES if values[axis] is not None and axis not in trusted
@@ -66,7 +86,7 @@ def resolve_measurements(
     values["measurements_source"] = (
         "estimated" if estimated or not trusted else "user_confirmed"
     )
-    return Measurements(InputDimensions.model_validate(values), pending, estimated)
+    return Measurements(InputDimensions.model_validate(values), pending, estimated, assumed)
 
 
 def issue(code: str, message: str, *ids: str) -> ProposalIssue:
@@ -276,6 +296,7 @@ def assemble(
     if issues:
         return None, None, issues[:50]
     assumptions = [
+        *measurements.assumption_notes,
         "Positions, orientations, and opening geometry are approximate photo estimates. Object sizes use recorded estimates, supported model estimates, or catalog defaults."
     ]
     if anchored_objects != bound.objects:

@@ -455,6 +455,7 @@ class AnalysisService:
         *,
         isolated_dimensions: bool = False,
         allow_ambiguous_axes: bool = False,
+        assume_missing_dimensions: bool = False,
     ) -> SceneProposalResponse:
         try:
             self._capacity.acquire_nowait()
@@ -468,7 +469,8 @@ class AnalysisService:
             # the repair's entire time budget. The total remains bounded.
             with anyio.fail_after(2 * self.settings.analysis_timeout_seconds):
                 return await self._propose(
-                    request, owner, isolated_dimensions=isolated_dimensions, allow_ambiguous_axes=allow_ambiguous_axes
+                    request, owner, isolated_dimensions=isolated_dimensions, allow_ambiguous_axes=allow_ambiguous_axes,
+                    assume_missing_dimensions=assume_missing_dimensions,
                 )
         except TimeoutError:
             raise AnalysisFailure(
@@ -486,6 +488,7 @@ class AnalysisService:
         *,
         isolated_dimensions: bool = False,
         allow_ambiguous_axes: bool = False,
+        assume_missing_dimensions: bool = False,
     ) -> SceneProposalResponse:
         state = await self._owned_analysis(request.analysis_id, owner)
         analysis = state.result
@@ -503,7 +506,8 @@ class AnalysisService:
                 if value is not None:
                     confirmed_dimensions[axis] = value
         measurements = resolve_measurements(
-            analysis, confirmed_dimensions, request.allow_estimated_dimensions
+            analysis, confirmed_dimensions, request.allow_estimated_dimensions,
+            assume_missing=assume_missing_dimensions,
         )
         base = {
             "analysis_id": analysis.analysis_id,
@@ -511,9 +515,11 @@ class AnalysisService:
             "dimensions": measurements.dimensions,
             "dimensions_to_confirm": measurements.to_confirm,
             "estimated_axes": measurements.estimated,
+            "assumed_axes": measurements.assumed,
             "expires_at": analysis.expires_at,
             "warnings": [
-                "This is an approximate base scene; review estimated sizes, layout, and uncertain identities."
+                "This is an approximate base scene; review estimated sizes, layout, and uncertain identities.",
+                *measurements.assumption_notes,
             ],
         }
         if measurements.to_confirm:
@@ -560,6 +566,7 @@ class AnalysisService:
             {
                 "dimensions": measurements.dimensions.model_dump(),
                 "estimated": measurements.estimated,
+                "assumed": measurements.assumed,
                 "constraints": request.constraints.model_dump(),
                 "wall_axis_status": analysis.wall_axes.status,
             },

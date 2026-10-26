@@ -6,18 +6,21 @@ import type { SavedMessage, SavedProject } from '../../lib/projects'
 import Dialog from '../ui/Dialog'
 import { Button, Icon } from '../ui/primitives'
 import { useSiteActions } from './SiteActions'
+import { useWorkspaceGuard } from './WorkspaceNavigation'
 
-export default function SaveRoomControl({ run, comparison, messages, disabled, initial }: {
-  run: AgentState; comparison: SceneComparison; messages: SavedMessage[]; disabled: boolean; initial?: SavedProject
+export default function SaveRoomControl({ run, comparison, messages, disabled, initial, onSaved }: {
+  run: AgentState; comparison: SceneComparison; messages: SavedMessage[]; disabled: boolean; initial?: SavedProject; onSaved?: (signature: string) => void
 }) {
   const actions = useSiteActions(), owner = actions?.userId ?? null
   const [controller] = useState(() => new ProjectSaveController())
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot)
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState(initial?.title ?? `Your ${run.working_scene!.room.room_type.replaceAll('_', ' ')}`)
-  useEffect(() => { if (owner && initial) controller.restoreSaved(owner, initial); controller.setOwner(owner); setOpen(false) }, [controller, owner, initial])
+  useEffect(() => { if (owner && initial) controller.restoreSaved(owner, initial); controller.setOwner(owner); setOpen(false) }, [controller, owner, initial?.id, initial?.revision])
   useEffect(() => controller.release, [controller])
   const own = state.owner === owner
+  useWorkspaceGuard({ dirty: state.retry || (open && title.trim() !== (state.saved?.title ?? initial?.title ?? `Your ${run.working_scene!.room.room_type.replaceAll('_', ' ')}`)),
+    saving: own && state.pending, hasWork: false })
   return <>
     <Button disabled={disabled || (own && state.pending)} onClick={() => {
       if (!owner) { actions?.account('signin'); return }
@@ -25,7 +28,10 @@ export default function SaveRoomControl({ run, comparison, messages, disabled, i
     }}><Icon name="save"/>{own && state.saved ? 'Save changes' : 'Save'}</Button>
     {open && owner && own && <Dialog title={state.saved ? 'Save room changes' : 'Save your room'} onClose={() => { if (!state.pending) setOpen(false) }}>
       <p className="dialog-description">Photos, chat and layouts stay private. Saving doesn’t generate a new room.</p>
-      <form className="account-form" onSubmit={event => { event.preventDefault(); void controller.save(run.run_id, title, comparison.snapshotForSave, messages) }}>
+      <form className="account-form" onSubmit={event => { event.preventDefault(); void controller.save(run.run_id, title, comparison.snapshotForSave, messages).then(saved => {
+        const signature = controller.confirmedSignature()
+        if (saved && signature) onSaved?.(signature)
+      }) }}>
         <label>Room name<input data-initial-focus value={title} onChange={event => setTitle(event.target.value)} minLength={1} maxLength={120} required disabled={state.pending || state.retry} /></label>
         {state.error && <p className="input-notice error" role="alert">{state.error}</p>}
         {state.retry && <p className="input-help">Retry checks the same snapshot. It won’t create a duplicate room.</p>}

@@ -63,8 +63,9 @@ async def paused(app, client, actions):
     return response.json(), owner, request
 
 
+@pytest.mark.parametrize('use_estimates', [False, True])
 async def test_registered_interrupt_and_photos_survive_fresh_app_without_replaying_analysis(
-    harness, tmp_path
+    harness, tmp_path, use_estimates
 ):
     app, settings, sdk, calls, actions = await setup(harness, tmp_path)
     async with (
@@ -108,16 +109,18 @@ async def test_registered_interrupt_and_photos_survive_fresh_app_without_replayi
             actions.extend(
                 [decision("propose_scene"), scene_action(), decision("finish")]
             )
+            answer = {'question_id': 'q1', 'choice_id': 'leave_unknown'} if use_estimates else measurements()
             result = await again.post(
-                f"/api/agent-runs/{state['run_id']}/answer", json=measurements()
+                f"/api/agent-runs/{state['run_id']}/answer", json=answer
             )
             assert result.status_code == 200, result.text
             assert result.json()["status"] == "completed", result.text
             assert result.json()["analysis"] == state["analysis"]
             assert len(calls) == 6
+            assert result.json()['proposal']['assumed_axes'] == (['length_m', 'height_m'] if use_estimates else [])
             assert (
                 await again.post(
-                    f"/api/agent-runs/{state['run_id']}/answer", json=measurements()
+                    f"/api/agent-runs/{state['run_id']}/answer", json=answer
                 )
             ).json() == result.json()
             assert len(calls) == 6

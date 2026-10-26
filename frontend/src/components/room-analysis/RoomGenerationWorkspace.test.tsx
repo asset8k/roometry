@@ -93,6 +93,35 @@ describe('guided generation workspace', () => {
     expect(html).not.toContain('PRIVATE_PROVIDER_DETAIL')
     expect(html).not.toContain('3D room viewer')
   })
+  it('explains missing backend configuration without suggesting repeated model retries', () => {
+    const run = agentRun(input, { status: 'failed', last_error: 'decision_failed',
+      tool_feedback: [{ name: null, outcome: 'error', message: 'PRIVATE_CONFIG_DETAIL', details: { code: 'analysis_unavailable' } }] })
+    const html = render({ phase: 'failed', run })
+    expect(html).toContain('Room generation is not configured')
+    expect(html).toContain('analysis enabled and an API key configured')
+    expect(html).not.toContain('Please try generating again')
+    expect(html).not.toContain('PRIVATE_CONFIG_DETAIL')
+  })
+  it('discloses fallback dimensions and relabels old checkpointed unknown choices', () => {
+    const run = waitingRun(input)
+    run.pending_question!.kind = 'room_dimensions'
+    run.pending_question!.choices[1] = { id: 'leave_unknown', label: "I don't know — finish without a complete scene" }
+    const html = render({ phase: 'awaiting_answer', run })
+    expect(html).toContain('Use estimated dimensions')
+    expect(html).toContain('assumed 4 × 4 × 2.6 m starting size')
+    expect(html).toContain('measurements you enter take priority')
+    expect(html).not.toContain('finish without a complete scene')
+    expect(html.match(/type="radio"/g)).toHaveLength(3)
+  })
+  it('shows estimated and assumed sizes next to the viewer rather than only inside details', () => {
+    const run = finishedRun(input)
+    run.proposal!.estimated_axes = ['length_m', 'height_m']
+    run.proposal!.assumed_axes = ['height_m']
+    const html = render({ phase: 'completed', run })
+    expect(html).toContain('Approximate dimensions')
+    expect(html).toContain('Includes assumed sizes')
+    expect(html).toContain('photo scale was unclear')
+  })
   it('shows a usable partial scene and an honest limit notice after free finalization', () => {
     const run = { ...finishedRun(input, true), stop_reason: 'budget_limit' as const }
     const html = render({ phase: 'partial', run })

@@ -10,10 +10,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from roometry.uploads.schemas import MAX_IMAGES, MIB, UploadLimits
 from roometry.model_calls import ModelOperation, ModelRoute, ReasoningEffort
 
+PROJECT_ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+        env_file=PROJECT_ENV_FILE, env_file_encoding="utf-8", extra="ignore"
     )
 
     app_environment: Literal["development", "test", "production"] = "development"

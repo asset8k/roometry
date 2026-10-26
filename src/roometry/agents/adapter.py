@@ -67,7 +67,9 @@ class RoomAgent:
             # cancellation and budget guards. Redesign has its own bounded graph.
             if state.analysis is None:
                 return RunStep(action="continue", pending_tool=ToolCall(call_id=str(uuid4()), name="analyze_photos", arguments={}))
-            if state.working_scene is None and state.proposal is None:
+            if state.working_scene is None and (
+                state.proposal is None or state.proposal.status in {"needs_dimensions", "needs_wall_assignment"}
+            ):
                 questions = clarification_candidates(state, reserve_decision=False)
                 if questions:
                     return RunStep(action="continue", pending_question=questions[0], feedback=ToolFeedback(

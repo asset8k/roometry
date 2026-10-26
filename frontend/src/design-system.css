@@ -437,7 +437,8 @@ select option { color: var(--text); background: var(--surface); }
 .sharing-privacy .ui-icon { width: 14px; height: 14px; }
 .dialog-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
 @media (max-width: 700px) {
-  .site-nav { gap: 16px; }
+  .app-header { flex-wrap: wrap; }
+  .site-nav { gap: 16px; flex-wrap: wrap; max-width: 100%; margin-left: auto; }
   .site-nav > a { font-size: 12px; }
   .site-nav .ui-button { padding: 10px 16px; font-size: 12px; }
   .workspace-heading { margin-top: 34px; }

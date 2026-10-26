@@ -68,7 +68,7 @@ def question_for(
                     {"id": "enter_measurements", "label": "Enter the measurements"},
                     {
                         "id": "leave_unknown",
-                        "label": "I don't know — finish without a complete scene",
+                        "label": "Use estimated dimensions",
                     },
                     {"id": "cancel_run", "label": "Cancel this run"},
                 ],
@@ -272,16 +272,15 @@ def answer_updates(state: AgentState, answer: ClarificationAnswer) -> dict[str, 
                 values
             ).model_dump()
             message = "User-supplied measurements are now authoritative; reuse cached photo observations."
-        else:
-            result.update(
-                status="cancelled"
-                if answer.choice_id == "cancel_run"
-                else "incomplete",
-                continue_run=False,
-            )
+        elif answer.choice_id == "leave_unknown":
             message = (
-                "Measurements remain unknown; no complete reconstruction is claimed."
+                "Continue with photo estimates; for missing sizes use the disclosed "
+                "4 × 4 × 2.6 m starting size only on unknown axes. Keep supplied "
+                "measurements authoritative, all other axes estimated, and reuse cached photo observations."
             )
+        else:
+            result.update(status="cancelled", continue_run=False)
+            message = "Reconstruction cancelled; measurements were not invented."
     elif question.kind == "room_wall_axis":
         constraints = state.reconstruction_constraints.model_copy(deep=True)
         axis = question.dimension_axes[0]

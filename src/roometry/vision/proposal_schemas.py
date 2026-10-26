@@ -148,6 +148,7 @@ class SceneProposalResponse(AnalysisModel):
     dimensions: InputDimensions
     dimensions_to_confirm: Annotated[list[DimensionName], Field(max_length=3)]
     estimated_axes: Annotated[list[DimensionName], Field(max_length=3)]
+    assumed_axes: Annotated[list[DimensionName], Field(max_length=3)] = Field(default_factory=list)
     scene: RoomScene | None
     validation: GeometryReport | None
     fidelity: FidelityReport | None = None
@@ -173,9 +174,11 @@ class SceneProposalResponse(AnalysisModel):
     def consistent_status(self) -> Self:
         if self.visual_review is not None and (self.scene is None or self.visual_review.result_scene_hash != scene_hash(self.scene)):
             raise ValueError("Visual review must identify this exact reconstructed scene.")
-        for axes in (self.dimensions_to_confirm, self.estimated_axes):
+        for axes in (self.dimensions_to_confirm, self.estimated_axes, self.assumed_axes):
             if len(set(axes)) != len(axes):
                 raise ValueError("Dimension axes must be unique.")
+        if not set(self.assumed_axes) <= set(self.estimated_axes):
+            raise ValueError("Assumed dimensions must remain explicitly estimated.")
         if any(getattr(self.dimensions, axis) is None for axis in self.estimated_axes):
             raise ValueError("Estimated axes must have values.")
         if (

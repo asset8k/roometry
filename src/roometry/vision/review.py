@@ -273,7 +273,7 @@ class VisualReviewer:
         if judgment.verdict == "needs_correction" and actionable:
             problems = [issue("fidelity", f.description, *f.entity_ids) for f in actionable if f.entity_ids]
             previous = draft_from_scene(proposal.scene)
-            measurements = Measurements(proposal.dimensions, [], proposal.estimated_axes)
+            measurements = Measurements(proposal.dimensions, [], proposal.estimated_axes, proposal.assumed_axes)
             wall_ids = {item.id for item in analysis.observations.walls}
             room_appearance = any(f.kind == "color" and (not f.entity_ids or set(f.entity_ids) <= wall_ids) for f in actionable)
             try:

@@ -10,6 +10,7 @@ import { RoomGenerationController } from '../../lib/room-generation-controller'
 import RoomGenerationWorkspace from '../room-analysis/RoomGenerationWorkspace'
 import RoomImprovementWorkspace from '../room-analysis/RoomImprovementWorkspace'
 import { Button, GlassPanel } from '../ui/primitives'
+import { useWorkspaceGuard } from './WorkspaceNavigation'
 
 function RecoveredRun({ data, onConnectionChange }: { data: { run: unknown; input: unknown; request_id?: string }; onConnectionChange: (online: boolean) => void }) {
   const [controller] = useState(() => {
@@ -17,6 +18,8 @@ function RecoveredRun({ data, onConnectionChange }: { data: { run: unknown; inpu
     generation.restore(parsePreparedInput(data.input), parseAgentRun(data.run)); return generation
   })
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot)
+  const active = ['starting', 'running', 'awaiting_answer'].includes(state.phase) || state.cancelling || state.recovery
+  useWorkspaceGuard({ dirty: !state.run?.working_scene || active, active, hasWork: true, priority: 20, leave: controller.leaveWorkspace })
   useEffect(controller.connect, [controller])
   const [starting, setStarting] = useState(false), [error, setError] = useState<string | null>(null)
   return <>{state.phase === 'starting' && data.request_id && <Button disabled={starting} onClick={() => {

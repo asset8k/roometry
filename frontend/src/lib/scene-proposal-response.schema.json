@@ -2560,6 +2560,19 @@
       "title": "Estimated Axes",
       "type": "array"
     },
+    "assumed_axes": {
+      "items": {
+        "enum": [
+          "width_m",
+          "length_m",
+          "height_m"
+        ],
+        "type": "string"
+      },
+      "maxItems": 3,
+      "title": "Assumed Axes",
+      "type": "array"
+    },
     "scene": {
       "anyOf": [
         {

@@ -22,6 +22,8 @@ Use **one active FastAPI worker** while guest photo storage remains local/proces
 
 Closing or refreshing a registered workspace does not send an automatic cancellation request. Explicit Cancel remains available. A backend restart during a genuinely in-flight provider request may stop that operation; it is deliberately not retried automatically. A normally paused human question survives restart and resumes from its stored interrupt.
 
+In-app navigation, the Roometry logo, New room and sign-out now guard unsaved work. Staying preserves the current workspace; confirmed departure stops active reconstruction/improvement work before opening a fresh page. An unconfirmed cancellation keeps the workspace available for retry. Pending saves must finish first, and only the exact confirmed save clears its dirty baseline. Browser refresh/close uses the native unsaved-work warning; registered recovery still works after refresh. Leaving never deletes a saved project or its private photos.
+
 Private project reads, image reads, mutations, run discovery and recovery require the owning account. Project deletion revokes associated runtime references/checkpoints and removes unreferenced photo batches. Rename/delete use revisions to reject stale mutations. Account changes hide the previous account's saved workspace; guest drafts retain their existing behavior.
 
 Saved JSON is compared by values while preserving array order: PostgreSQL JSONB can reorder object keys, which must not look like a changed or forged scene. Protected measurements, object identities, locks and placement constraints still apply.

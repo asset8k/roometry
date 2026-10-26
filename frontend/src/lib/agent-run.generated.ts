@@ -590,6 +590,14 @@ export type EstimatedAxes =
   | ["width_m" | "length_m" | "height_m"]
   | ["width_m" | "length_m" | "height_m", "width_m" | "length_m" | "height_m"]
   | ["width_m" | "length_m" | "height_m", "width_m" | "length_m" | "height_m", "width_m" | "length_m" | "height_m"];
+/**
+ * @maxItems 3
+ */
+export type AssumedAxes =
+  | []
+  | ["width_m" | "length_m" | "height_m"]
+  | ["width_m" | "length_m" | "height_m", "width_m" | "length_m" | "height_m"]
+  | ["width_m" | "length_m" | "height_m", "width_m" | "length_m" | "height_m", "width_m" | "length_m" | "height_m"];
 export type SchemaVersion1 = 1;
 export type RoomType2 =
   "bedroom" | "living_room" | "kitchen" | "bathroom" | "office" | "dining_room" | "entryway" | "laundry_room" | "other";
@@ -1977,6 +1985,7 @@ export interface SceneProposalResponse {
   dimensions: InputDimensions;
   dimensions_to_confirm: DimensionsToConfirm;
   estimated_axes: EstimatedAxes;
+  assumed_axes?: AssumedAxes;
   scene: RoomScene | null;
   validation: GeometryReport | null;
   fidelity?: FidelityReport | null;

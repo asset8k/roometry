@@ -342,6 +342,11 @@ class SceneTools:
                 context.owner,
                 isolated_dimensions=True,
                 allow_ambiguous_axes=True,
+                assume_missing_dimensions=any(
+                    q.kind == "room_dimensions"
+                    and state.clarification_answers.get(q.id) == "leave_unknown"
+                    for q in state.questions
+                ),
             )
             question = None
             if (

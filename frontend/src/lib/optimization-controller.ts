@@ -148,16 +148,16 @@ export class OptimizationController {
     if (this.locked()) return
     this.executionRequested = true
     await this.prepare()
-    if (this.state.result?.status === 'prepared' && !this.state.recovery) await this.execute()
+    if (this.state.result?.status === 'prepared' && !this.state.recovery && !this.cancelRequested) await this.execute()
   }
   execute = async () => {
     const result = this.state.result
-    if (!result || this.active || result.status !== 'prepared') return
+    if (!result || this.active || this.cancelRequested || result.status !== 'prepared') return
     this.executionRequested = true
     await this.dispatchExecution()
   }
   private async dispatchExecution() {
-    if (!this.state.result || this.active) return
+    if (!this.state.result || this.active || this.cancelRequested) return
     const abort = new AbortController(); this.active = abort
     this.update({ phase: 'running', recovery: false, error: null })
     // A read can display progress while the execute request awaits completion.
@@ -200,5 +200,21 @@ export class OptimizationController {
     this.active?.abort(); this.active = null; this.stopPolling()
     this.cancelRequested = true
     await this.submit()
+  }
+  leaveWorkspace = async () => {
+    const activeResult = this.state.result && ['prepared', 'running'].includes(this.state.result.status)
+    if (!this.pending || (!activeResult && !['preparing', 'prepared', 'running', 'cancelling'].includes(this.state.phase) && !this.state.recovery)) return
+    // If preparation lost its response, recover the same free request before
+    // cancelling it. Never execute/retry a paid candidate just to leave a page.
+    this.active?.abort(); this.active = null
+    this.executionRequested = false
+    this.cancelRequested = true
+    await this.submit()
+    if (this.state.recovery || this.state.phase === 'preparing' || this.state.phase === 'error') {
+      throw new Error('Couldn’t confirm the improvement stopped. Retry leaving, or keep this room and check its status.')
+    }
+    if (this.state.result?.status === 'prepared') await this.submit()
+    const latest = this.getSnapshot()
+    if (latest.recovery || latest.phase === 'error' || latest.result?.status === 'prepared') throw new Error('Couldn’t confirm cancellation. Your workspace is kept.')
   }
 }

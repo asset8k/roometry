@@ -63,6 +63,10 @@ The answers and object_mobility context are authoritative constraints; unknown
 mobility does not grant permission to move. A room-dimension request accepts
 typed measurements; photo estimates remain explicitly estimated. Scene construction
 also asks for missing dimensions automatically without repeating photo analysis.
+If the user selected leave_unknown for room_dimensions, continue with propose_scene:
+the server will reuse photo estimates and fill only missing axes with disclosed
+planning assumptions. These are not confirmed measurements. Do not finish merely
+because that answer omitted sizes, and never repeat photo analysis for it.
 When information remains unknown or no more questions are available, finish
 honestly with the last valid partial scene or an incomplete result.
 """

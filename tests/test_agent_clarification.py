@@ -104,15 +104,14 @@ async def test_invalid_answers_leave_the_same_interrupt_unconsumed(harness, defe
     assert current == paused and len(calls) == 3
 
 
-@pytest.mark.parametrize("choice,status", [("leave_unknown", "incomplete"), ("cancel_run", "cancelled")])
-async def test_unknown_or_cancel_answers_stop_without_manufacturing_measurements(harness, choice, status):
+async def test_cancel_answer_stops_without_manufacturing_measurements(harness):
     _, client, calls, _ = harness
     _, _, _, paused = await paused_dimensions(harness)
-    body = {"question_id": "q1", "choice_id": choice}
+    body = {"question_id": "q1", "choice_id": "cancel_run"}
     response = await client.post(f"/api/agent-runs/{paused['run_id']}/answer", json=body)
     assert response.status_code == 200, response.text
     state = response.json()
-    assert state["status"] == status and state["working_scene"] is None
+    assert state["status"] == "cancelled" and state["working_scene"] is None
     assert state["confirmed_dimensions"] == paused["confirmed_dimensions"]
     assert state["pending_question"] is None and len(calls) == 3
     assert (await client.post(f"/api/agent-runs/{paused['run_id']}/answer", json=body)).json() == state

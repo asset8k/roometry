@@ -10,6 +10,7 @@
   },
   "dimensions_to_confirm": [],
   "estimated_axes": [],
+  "assumed_axes": [],
   "scene": {
     "schema_version": 1,
     "room": {

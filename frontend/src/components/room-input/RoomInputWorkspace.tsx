@@ -3,6 +3,7 @@ import RoomGenerationWorkspace from '../room-analysis/RoomGenerationWorkspace'
 import { Button, Icon } from '../ui/primitives'
 import GlassSelect from '../ui/GlassSelect'
 import { useSiteActions } from '../site/SiteActions'
+import { useWorkspaceGuard } from '../site/WorkspaceNavigation'
 import { RoomGenerationController } from '../../lib/room-generation-controller'
 import { RoomInputController } from '../../lib/room-input-controller'
 import type { RoomInputState } from '../../lib/room-input-controller'
@@ -21,6 +22,10 @@ export default function RoomInputWorkspace({ onConnectionChange, inputController
   const generation = useMemo(() => new RoomGenerationController(controller), [controller])
   const generationState = useSyncExternalStore(generation.subscribe, generation.getSnapshot, generation.getSnapshot)
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot)
+  const hasInput = state.photos.length > 0 || Object.values(state.draft).some(value => !!value.trim())
+  const active = ['uploading', 'starting', 'running', 'awaiting_answer'].includes(generationState.phase) || generationState.cancelling || generationState.recovery
+  useWorkspaceGuard({ dirty: (state.dirty && hasInput) || (!generationState.run?.working_scene && (hasInput || !!generationState.run)) || active,
+    active, hasWork: hasInput || !!generationState.run, priority: 20, leave: generation.leaveWorkspace })
   useEffect(generation.connect, [generation])
   useEffect(() => {
     void controller.loadLimits()

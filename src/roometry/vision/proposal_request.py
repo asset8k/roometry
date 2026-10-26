@@ -144,6 +144,8 @@ def build_proposal_request(
         "input_options": analysis.input_options.model_dump(mode="json"),
         "room_dimensions": measurements.dimensions.model_dump(mode="json"),
         "estimated_axes": measurements.estimated,
+        "assumed_axes": measurements.assumed,
+        "dimension_assumptions": measurements.assumption_notes,
         "wall_axes": analysis.wall_axes.model_dump(mode="json") if analysis.wall_axes else None,
         "asset_bindings": bindings,
         "hypothesis_alternatives": alternatives,

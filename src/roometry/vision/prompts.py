@@ -68,6 +68,10 @@ Use null for uncertain attachment confidence rather than borrowing detection con
 Ordinary photos do not establish accurate metric dimensions. Prefer null over
 unsupported precision; any visual dimension estimate remains an estimate. User
 measurements in user_context must not be relabeled as independent photo estimates.
+When visible room boundaries, familiar-size furniture or openings provide a
+reasonable scale reference, include rough estimated_dimensions rounded to 0.5 m.
+Do not omit a defensible approximation just because exact measurement is impossible.
+Leave an axis null when no such evidence exists; never invent hidden room extents.
 Build a view-independent inventory before returning: match the same item across
 views using its shape, wall, neighboring furniture and supports. Use all views,
 not just the first photo; include important objects visible in secondary views.
@@ -228,6 +232,9 @@ span hypotheses. Follow the supplied axis-restricted assignment schema. Remainin
 unknown axes are estimates and must stay labeled. For square rooms either axis
 has the same span. Map each observed wall to a distinct north/south/east/west wall
 consistently, preserving known adjacency and opposition.
+assumed_axes and dimension_assumptions disclose starting sizes selected after the
+user chose estimates where photo scale was unavailable. Use room_shell as supplied;
+do not describe these assumed axes as measured or independently recovered from photos.
 Return wall_assignments and openings first. Check each opening against room_shell:
 offset plus width must fit its assigned wall span, sill plus height must fit room
 height. Do not drop a visible window because an uncertain size/offset is wrong;
