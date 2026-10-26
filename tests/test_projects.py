@@ -403,3 +403,46 @@ async def test_list_open_rename_and_delete_private_room_without_regeneration(roo
     assert (await client.get(f'/api/projects/{first["id"]}')).status_code==404
     assert not list(settings.project_storage_dir.rglob('*.jpg'))
     assert not app.state.analysis_service.analyzer.usage_records
+
+
+async def test_catalog_addition_survives_save_reopen_and_manual_copy_without_loosening_original(room):
+    from types import SimpleNamespace
+
+    from roometry.optimization.inventory import apply_inventory
+    from roometry.optimization.schemas import CandidateProposal
+
+    app, client, _, source, body = room
+    candidate_id = str(uuid4())
+    proposal = CandidateProposal(changes=[], additions=[{
+        'object_id': 'new_basket', 'asset_id': 'basket_standard_01',
+        'position': {'x': .3, 'z': 3.1}, 'rotation_y_rad': 0., 'color': None,
+    }], summary='Add a compact storage basket.', suggestions=[])
+    candidate = apply_inventory(source.working_scene, proposal).model_dump(mode='json')
+    result = {'source_run_id': source.run_id, 'parent_run_id': None,
+              'source_scene': source.working_scene.model_dump(mode='json'), 'status': 'completed',
+              'result_scene': candidate, 'attempts': [{'outcome': 'accepted'}], 'instruction': None}
+    app.state.project_service.improvements = SimpleNamespace(read=AsyncMock(return_value=SimpleNamespace(model_dump=lambda **_: result)))
+    body = copy.deepcopy(body)
+    body.update(improvement_run_ids=[candidate_id], selected_improvement_id=candidate_id, view='improved')
+    manual = copy.deepcopy(candidate)
+    next(o for o in manual['objects'] if o['id'] == 'new_basket').update(color='#AABBCC', locked=True)
+    body['manual_copies'].append({'parent_run_id': candidate_id, 'scene': manual})
+    reply = await saved(room, body)
+    opened = (await client.get(f"/api/projects/{reply['id']}")).json()
+    assert next(v for v in opened['versions'] if v['kind'] == 'base')['scene'] == source.working_scene.model_dump(mode='json')
+    assert any(v['kind'] == 'optimized' and v['scene'] == candidate for v in opened['versions'])
+    assert any(v['kind'] == 'manual' and v['scene'] == manual for v in opened['versions'])
+    body.update(project_id=reply['id'], expected_revision=1, request_id=str(uuid4()))
+    await client.delete(f'/api/rooms/inputs/{source.input_id}')
+    assert (await saved(room, body))['revision'] == 2
+
+
+@pytest.mark.parametrize('created', [False, True])
+async def test_editable_copy_ui_preference_survives_save_and_reopen(room, created):
+    _, client, _, source, body = room
+    body = copy.deepcopy(body)
+    body.update(view='original', has_editable_copy=created)
+    receipt = await saved(room, body)
+    detail = (await client.get(f"/api/projects/{receipt['id']}")).json()
+    assert detail['snapshot']['comparison']['has_editable_copy'] is created
+    assert next(v for v in detail['versions'] if v['kind'] == 'base')['scene'] == source.working_scene.model_dump(mode='json')

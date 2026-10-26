@@ -1,4 +1,4 @@
-import { Component, useCallback, useEffect, useRef, useState } from 'react'
+import { Component, useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Canvas, useThree } from '@react-three/fiber'
 import type { RoomScene } from '../../lib/scene.generated'
@@ -12,6 +12,8 @@ import { editRestriction, objectLabel } from '../../lib/scene-edits'
 import type { EditorState, SceneEditor } from '../../lib/scene-editor'
 import TransformGizmo from './TransformGizmo'
 import GlassSelect from '../ui/GlassSelect'
+import HelpTip from '../ui/HelpTip'
+import { Icon } from '../ui/primitives'
 
 function ViewerUnavailable({ onRetry }: { onRetry: () => void }) {
   return (
@@ -51,6 +53,7 @@ function ContextMonitor({ onLost }: { onLost: () => void }) {
 export default function RoomViewer({ scene, editor, state, onSelect }: {
   scene: RoomScene; editor: SceneEditor; state: EditorState; onSelect: (id: string | null) => void
 }) {
+  const instanceId = useId()
   const [command, setCommand] = useState<ViewCommand>({ mode: 'perspective', revision: 0 })
   const [zoom, setZoom] = useState({ factor: 1, revision: 0 })
   const [wallMode, setWallMode] = useState<WallMode>('cutaway')
@@ -71,7 +74,7 @@ export default function RoomViewer({ scene, editor, state, onSelect }: {
   const zoomBy = (factor: number) => setZoom(current => ({ factor, revision: current.revision + 1 }))
 
   return (
-    <div className="room-renderer">
+    <div className="room-renderer" data-viewer-instance={instanceId}>
       <div className="viewer-toolbar" aria-label="View controls" role="group">
         <div className="view-presets" role="group" aria-label="Camera view">
           <button type="button" disabled={state.dragging} aria-pressed={command.mode === 'perspective'} onClick={() => setView('perspective')}>Perspective</button>
@@ -80,24 +83,21 @@ export default function RoomViewer({ scene, editor, state, onSelect }: {
         <div className="view-actions">
           <button type="button" disabled={state.dragging} aria-label="Zoom in" onClick={() => zoomBy(0.8)}>+</button>
           <button type="button" disabled={state.dragging} aria-label="Zoom out" onClick={() => zoomBy(1.25)}>−</button>
-          <button type="button" disabled={state.dragging} onClick={() => setView(command.mode)}>Reset view</button>
+          <button className="reset-view-control" type="button" aria-label="Reset view" title="Reset view" disabled={state.dragging} onClick={() => setView(command.mode)}><Icon name="refresh"/><span>Reset view</span></button>
         </div>
         <GlassSelect className="wall-control" label="Walls" disabled={state.dragging} value={wallMode}
           options={[{ value: 'cutaway', label: 'Cutaway' }, { value: 'transparent', label: 'Transparent' }, { value: 'hidden', label: 'Hidden' }]}
           onChange={value => setWallMode(value as WallMode)} />
+        <HelpTip label="Camera controls">Drag to orbit, scroll or pinch to zoom, and right-drag to pan. Top-down shows north at the top. Wall controls keep opening markers visible.</HelpTip>
       </div>
-      <p className="view-hint" role="status">
-        {command.mode === 'top' ? 'North ↑ · Overhead perspective · Drag with two fingers to pan.' : 'Drag to orbit · Pinch or scroll to zoom · Right-drag to pan.'}
-        {wallMode !== 'cutaway' && ' Wall-mounted objects and opening markers stay visible.'}
-      </p>
-      <div className="selection-strip">
+      {(selected || state.busy || state.dragging) && <div className="selection-strip">
         {selected ? <>
           <strong>{objectLabel(selected)}</strong>
-          <span>{editable ? `${state.mode === 'move' ? 'Move handles · 5 cm steps' : 'Rotate ring · 15° steps'}` : state.view === 'before' ? 'Inspecting · layout is read-only' : 'Inspecting · position protected'}</span>
-          <a href="#object-inspector" onClick={() => onSelect(selected.id)}>{state.view === 'before' ? 'Inspect values' : 'Edit values'}</a>
-        </> : <span>Select an object in the room or the Objects list.</span>}
+          <span>{editable ? `${state.mode === 'move' ? 'Move handles · 5 cm steps' : 'Rotate ring · 15° steps'}` : state.view === 'before' ? 'Read-only' : 'Position protected'}</span>
+          <a href="#object-inspector" onClick={() => onSelect(selected.id)}>Object details</a>
+        </> : null}
         {(state.busy || state.dragging) && <button type="button" onClick={() => editor.cancel()}>Cancel edit</button>}
-      </div>
+      </div>}
       {state.notice && <div className={`editor-notice ${state.notice.kind}`} role={state.notice.kind === 'error' || state.notice.kind === 'rejected' ? 'alert' : 'status'}>
         <p>{state.notice.text}</p>
         {state.notice.details && <ul>{state.notice.details.map((detail, index) => <li key={index}>{detail}</li>)}</ul>}

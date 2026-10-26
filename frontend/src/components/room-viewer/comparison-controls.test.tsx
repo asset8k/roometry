@@ -13,10 +13,12 @@ describe('comparison inspection controls', () => {
     const state = editor.getSnapshot()
     const object = state.scene.objects.find(item => item.id === 'desk_1')!
     const html = renderToStaticMarkup(<ObjectInspector scene={state.scene} object={object} editor={editor} state={state} />)
-    const inputs = html.match(/<input\b[^>]*>/g)!
-    expect(inputs).toHaveLength(3)
-    expect(inputs.every(input => input.includes('disabled=""'))).toBe(view === 'before')
-    if (view === 'before') expect(html).toContain('This layout is read-only. Switch to the editable layout to make changes.')
+    const inputs = html.match(/<input\b[^>]*>/g) ?? []
+    expect(inputs).toHaveLength(view === 'before' ? 0 : 3)
+    if (view === 'before') {
+      expect(html).toContain('Edit object')
+      expect(html).not.toContain('Apply position')
+    } else expect(inputs.every(input => !input.includes('disabled=""'))).toBe(true)
   })
 
   it.each([true, false])('protects original colors when readOnly=%s while retaining locked protection', readOnly => {
@@ -32,8 +34,7 @@ describe('comparison inspection controls', () => {
       expect(inputs.find(input => input.includes(`Color for ${label}`))!.includes('disabled=""')).toBe(readOnly)
     }
     if (readOnly) expect(inputs.every(input => input.includes('disabled=""'))).toBe(true)
-    const reset = html.match(/<button\b[^>]*>Reset colors<\/button>/)![0]
-    expect(reset.includes('disabled=""')).toBe(readOnly)
+    expect(html.includes('Reset colors')).toBe(!readOnly)
     // Read-only still permits inspection through object selection.
     const selection = html.match(/<button\b[^>]*aria-label="Select desk"[^>]*>/)![0]
     expect(selection).not.toContain('disabled=""')

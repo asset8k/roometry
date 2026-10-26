@@ -26,7 +26,7 @@ export default function RunWorkflow({ kind, run, progress, streamMode, message, 
     const active = stage === 'reviewing' ? 2 : stage === 'checking' || stage === 'validating' ? 1 : 0
     states = labels.map((_, index) => index < active ? 'done' : index === active ? 'active' : 'waiting')
   }
-  return <div className="run-workflow">
+  return <div className="run-workflow" data-kind={kind} data-paused={paused}>
     <ol aria-label={kind === 'reconstruction' ? 'Room generation stages' : 'Improvement stages'}>
       {labels.map((label, index) => <li key={label} data-state={states[index]} aria-current={states[index] === 'active' ? 'step' : undefined}>
         <span className="workflow-node">{states[index] === 'done' ? <Icon name="check"/> : <span className="workflow-dot" aria-hidden="true"/>}<span>{label}</span>
@@ -34,7 +34,7 @@ export default function RunWorkflow({ kind, run, progress, streamMode, message, 
         </span>{index < labels.length - 1 && <Icon name="arrow" className="workflow-arrow"/>}
       </li>)}
     </ol>
-    <p className="workflow-message" role="status">{message}</p>
+    <p className="workflow-message" role="status" hidden={paused}>{message}</p>
     {streamMode === 'reconnecting' && <p className="workflow-reconnecting" role="status">Reconnecting… your room keeps running.</p>}
     {!paused && <progress className="workflow-indicator" aria-label={kind === 'reconstruction' ? 'Room generation progress' : 'Room improvement progress'}/>}
   </div>

@@ -10,8 +10,9 @@ const materialLabels: Record<string, string> = { wood: 'Wood', metal: 'Metal', l
 export function sceneChanges(original: RoomScene, improved: RoomScene) {
   return improved.objects.flatMap(object => {
     const before = original.objects.find(item => item.id === object.id)
-    if (!before) return []
+    if (!before) return [{ id: object.id, type: words(object.type), details: ['Added catalog furniture'] }]
     const details: string[] = []
+    if (object.asset_id !== before.asset_id || JSON.stringify(object.dimensions_m) !== JSON.stringify(before.dimensions_m)) details.push('Replaced with a catalog model')
     const distance = Math.hypot(object.position.x - before.position.x, object.position.z - before.position.z)
     if (distance > .001) details.push(`Moved ${distance < .01 ? '<0.01' : distance.toFixed(2).replace(/0+$/, '').replace(/\.$/, '')} m${object.support_object_id ? ' with its supporting furniture' : ''}`)
     const angle = Math.abs(Math.atan2(Math.sin(object.rotation_y_rad - before.rotation_y_rad), Math.cos(object.rotation_y_rad - before.rotation_y_rad))) * 180 / Math.PI
@@ -22,7 +23,8 @@ export function sceneChanges(original: RoomScene, improved: RoomScene) {
       if ((a ?? '').toUpperCase() !== (b ?? '').toUpperCase()) details.push(`${materialLabels[field]}: ${a ?? 'model default'} → ${b ?? 'model default'}`)
     }
     return details.length ? [{ id: object.id, type: words(object.type), details }] : []
-  })
+  }).concat(original.objects.filter(object => !improved.objects.some(item => item.id === object.id))
+    .map(object => ({ id: object.id, type: words(object.type), details: ['Removed from proposed layout'] })))
 }
 
 export default function ImprovementComparison({ run, labels = {} }: { run: OptimizationRun; labels?: Readonly<Record<string, string>> }) {

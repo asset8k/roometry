@@ -159,16 +159,17 @@ edit services; the stateless preview endpoint alone cannot establish ownership.
 
 Users select **1–10 photos**, enter the room type if known, and optionally provide
 a description and dimensions, then press **Generate room**. The initial form
-submits `general_analysis`; improvement goals, budget and style are reserved for
-the later optimization flow. Their optional API fields remain compatible with
-existing clients. The frontend uploads internally and starts one owned agent
+submits `general_analysis`; improvement goals and optional style preferences come
+after reconstruction. Legacy budget API fields remain compatible with saved
+requests but are not collected or used to restrict design concepts. The frontend uploads internally and starts one owned agent
 run. The graph analyzes photos together, builds a base scene, and can inspect,
 validate, or correct it using bounded tools. It can interrupt for up to three
 questions with three choices each, then resume without repeating photo analysis.
 This stage reconstructs the observed room; goal-driven optimization comes later.
 
-Completed and clearly labeled partial scenes open in the editable viewer.
-**Base scene** stays read-only; **Your layout** preserves working edits when
+Completed and clearly labeled partial scenes open on read-only **Original**.
+**Edit layout** or **Edit object** asks once before creating **Your layout**.
+The editable tab appears after confirmation and preserves working edits when
 switching. Movable floor objects can move/rotate and carry supported children.
 Rejected geometry rolls back; color previews remain independent. Reset layout
 restores the run's initial working geometry. Refresh clears the browser state.
@@ -389,7 +390,7 @@ than being described as absent. Only supported, non-low-confidence scores below 
 the lowest eligible category is selected. Ratings describe the original snapshot,
 not subsequent viewer edits.
 
-Improvement actions now collect one selected focus and optional budget, style and
+Improvement actions collect one selected focus and optional style and
 constraints after reconstruction. `POST /api/agent-runs/{source_run_id}/optimizations`
 prepares a separate owned `OptimizationRun`; retrying its request UUID with the
 same normalized preferences returns that run. Reusing it for different data is a
@@ -397,13 +398,15 @@ same normalized preferences returns that run. Reusing it for different data is a
 existing session, origin checks, JSON limits and no-store responses. Capacity is
 bounded; input revocation, parent expiry and cleanup revoke linked requests too.
 
-The server chooses the original scene snapshot, never a client-supplied scene.
+The server chooses an owned original/retained snapshot, or validates manual edits
+against that owned ancestor before using the submitted scene context.
 The snapshot retains the original assessment and privately keeps observations,
 confirmed dimensions, clarification answers, fixed/locked objects and reconstruction
 constraints for execution. Partial reconstructions are allowed with their existing
 limitations. Viewer edits and legacy upload improvement preferences are not
-silently imported. New optional preferences apply only to the improvement request;
-budget zero remains zero. Preparing, reading and cancelling make no model calls.
+silently imported. New optional preferences apply only to the improvement request.
+Legacy budget fields remain readable but are excluded from model context and
+acceptance rules. Preparing, reading and cancelling make no model calls.
 Status `prepared` means saved, not an improved layout. Posting `{}` to
 `/{run_id}/execute` runs the separate checkpointed optimization graph once. Duplicate
 execute requests read progress or the terminal result; failed/disconnected paid
@@ -413,22 +416,34 @@ The graph proposes small atomic patches, validates components/supports, checks
 door/walking-clearance regressions, compares the same 0–10 assessment policy, and
 reviews a viable candidate against the retained scene using six diagnostic views.
 Supported items follow their parent transforms. Room dimensions, openings,
-inventory, assets, sizes, fixed/locked items and confirmed facing constraints are
-preserved. Generic photo placement relationships do not lock furniture during
-redesign. A measured target must improve by at least 0.2 points and other measured
-categories may not fall by more than 0.5. Aesthetics uses a qualitative pairwise
-judgment, never an invented numeric score; uncertain or contradicted preference
-reviews do not authorize application. Rejected candidates feed the next proposal;
-earlier validated gains survive later failures and budget exhaustion.
+fixed/locked items and confirmed facing constraints are preserved. Generic photo
+placement relationships do not lock furniture during redesign. Patches can move,
+rotate or recolor existing items, add approved movable floor catalog models,
+explicitly remove movable items, or replace floor furniture with a same-function
+catalog model. Replacement sizes come from catalog metadata; source measurements
+remain in Original. New/replacement items use `agent_added`/`catalog` provenance.
+A replacement retains compatible material controls and supported children; missing
+or ill-fitting supports reject the candidate. Removing a host requires explicit
+removal of its movable children. Manual-edit ancestry validation stays stricter:
+users cannot smuggle inventory changes through a scene context or saved copy.
+
+Functional gains require at least 0.5 points on the same displayed rubric. Openness
+also needs 0.5 m² more main walking area or a better checked route; storage needs
+more usable capacity or better front access. Creating a previously absent storage
+or workspace function requires a usable rating of at least 6/10, without inventing
+a zero baseline. Other measured categories may not fall by more than 0.5. Utility
+checks prevent deleting primary sleeping, seating, dining, workspace or storage
+functions to game an empty-floor score. Aesthetics uses pairwise visual review;
+a supplied low-confidence or non-improving rendered rubric cannot authorize an
+improvement. Rejected candidates feed the next proposal; earlier validated gains
+survive later failures and budget exhaustion.
 
 Defaults allow three candidates, six economical Luna calls and 24 tool calls, with
 bounded request/output sizes and per-request deadlines. No photo analysis or Sol
-construction call is repeated. One optional read-only MCP search supplies unpriced
-catalog context; failure does not block rearrangement of existing furniture.
-Purchases, removals, asset swaps and resizing are excluded. A stated purchase
-budget also excludes unpriced finish changes; those remain suggestions. Without a
-stated budget, supported color overrides are design previews with unknown costs.
-Partial inventories retain provisional ratings and visible limitations.
+construction call is repeated. One optional read-only MCP search and compact
+shared catalog metadata supply unpriced model choices. Additions and replacements
+are design concepts, not verified stock, costs or purchases. No extra model call
+is introduced. Partial inventories retain provisional ratings and visible limitations.
 
 The frontend submits preferences and starts execution from the same user action,
 shows real stage/candidate progress, recovers the same run after connection loss,
@@ -436,16 +451,18 @@ and displays its outcome and checks. `result_scene` and `result_assessment` are
 separate from the immutable original. An explicit `no_improvement` result preserves
 the original rather than presenting an unchanged room as improved.
 
-The viewer now offers read-only Original and Improved snapshots plus Your layout,
-an independent editable copy. Each source and candidate keeps its own accepted
+New reconstructions show Original first; Improved appears only when a candidate
+exists. Edit layout/object opens a one-time confirmation before revealing Your
+layout, an independent editable copy. Cancel and Escape leave the source unchanged. Each source and candidate keeps its own accepted
 manual geometry and color previews across view and version switches. Editing a
 copy is explicit; reset restores that copy's baseline geometry, preserving color
 previews. A newly retained candidate opens automatically unless a drag or edit
 request is active; it cannot interrupt that manual operation. Switching views
 explicitly cancels pending edits and ignores stale responses. Previous candidates
-remain selectable when another focus produces a result. All copies are transient
-client state and reset on refresh; they do not start model calls or alter saved
-snapshots. Room dimensions remain identical, so camera framing is preserved.
+remain selectable when another focus produces a result. Unsaved copies remain client state. An explicit private save retains copies,
+colors, locks and `has_editable_copy`, including an unchanged copy saved while
+Original is visible; older saves infer the tab from existing edits. Creating or
+switching copies does not start model calls or alter saved snapshots. Room dimensions remain identical, so camera framing is preserved.
 
 Only terminal runs with an actual retained, accepted change enable Improved.
 Failed, budget-limited and cancelled runs can expose their earlier validated best
@@ -453,8 +470,11 @@ candidate with an early-stop warning. A no-improvement or unsuccessful run witho
 a retained candidate leaves the original available. Comparison tables use the
 saved 0–10 assessments, mark unknown/not-applicable or provisional categories, and
 show deltas only under the same scoring policy. Aesthetics remains qualitative
-when no numeric candidate rating exists. An actual scene diff names moved,
-rotated and recolored objects, including supported children. Later manual edits
+when no numeric candidate rating exists. The user-facing clearance disclosure
+shows concise door/path checks; legacy 0–100 proxy formulas remain API diagnostics
+and do not duplicate the four room rating cards. Long recommendation previews
+are bounded and metric identifiers are rendered in plain language. An actual scene diff names moved,
+rotated, recolored, added, removed and replaced objects, including supported children. Later manual edits
 do not silently change these saved-snapshot scores or improvement claims.
 
 The photo aesthetics card exposes its five 0–2 rubric aspects. An aesthetics

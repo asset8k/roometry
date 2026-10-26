@@ -13,6 +13,7 @@ function setup() {
  const source = finishedRun(prepared())
  source.working_scene = loadExampleScene()
  const comparison = new SceneComparison(source.working_scene)
+ comparison.editCopy()
  let run: OptimizationRun
  const client: OptimizationClient = {
   prepare: vi.fn(async (_, request: StartOptimizationRequest) => {

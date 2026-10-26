@@ -34,6 +34,7 @@ class SaveProjectRequest(ProjectModel):
         default_factory=list
     )
     manual_copies: Annotated[list[ManualCopy], Field(min_length=1, max_length=9)]
+    has_editable_copy: bool = Field(default=False, strict=True)
     view: Literal["original", "improved", "editing"]
     editing_parent_run_id: OpaqueId | None
     selected_improvement_id: OpaqueId | None

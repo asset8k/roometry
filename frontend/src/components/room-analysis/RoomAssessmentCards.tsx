@@ -1,6 +1,7 @@
 import type { AgentState } from '../../lib/agent-run'
 import type { Focus } from '../../lib/optimization'
 import { AestheticBreakdown } from './AestheticBreakdown'
+import { readableText } from '../../lib/display-text'
 
 type Assessment = NonNullable<AgentState['room_assessment']>
 const categories = [
@@ -28,12 +29,12 @@ export default function RoomAssessmentCards({ assessment, onImprove, disabled = 
               : <>{score}<span> / 10</span></>}
           </p>
           {card.status === 'rated' && <span className="assessment-confidence">{card.confidence === 'low' ? 'Limited evidence' : card.source === 'photos' ? 'Photo-based estimate' : 'Model-based estimate'}</span>}
-          <details className="assessment-explanation"><summary>Why this rating?</summary><p>{card.explanation}</p>{key === 'aesthetics' && <AestheticBreakdown metrics={card.metrics ?? []} />}</details>
+          <details className="assessment-explanation"><summary>Why this rating?</summary><p>{readableText(card.explanation)}</p>{key === 'aesthetics' && <AestheticBreakdown metrics={card.metrics ?? []} />}</details>
           <button type="button" disabled={disabled || !onImprove} onClick={() => onImprove?.(key)} aria-describedby="assessment-actions-note">{key === 'workspace' && card.status === 'not_applicable' ? 'Create a workspace' : action}</button>
         </article>
       })}</div>
       <p id="assessment-actions-note" className="input-help">{onImprove ? 'Choose an area to improve.' : 'Improvement actions are unavailable for this run. You can explore and edit your room below.'}</p>
-      <details className="assessment-notes"><summary>About these ratings</summary><p>Recommendations are optional. Ratings describe the original reconstruction. New requests start from the visible layout, including submitted edits.</p><ul>{assessment.notes.map((note, i) => <li key={i}>{note}</li>)}
+      <details className="assessment-notes"><summary>About these ratings</summary><p>Recommendations are optional. Ratings describe the original reconstruction. New requests start from the visible layout, including submitted edits.</p><ul>{assessment.notes.map((note, i) => <li key={i}>{readableText(note)}</li>)}
         <li>Aesthetics uses a subjective five-part rubric for harmony, materials, balance, visual order and lighting.</li>
         <li>A low rating highlights a possible opportunity, not an instruction to change your room.</li>
       </ul></details>

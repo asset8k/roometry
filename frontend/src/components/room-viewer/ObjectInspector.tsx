@@ -2,15 +2,18 @@ import { useEffect, useState } from 'react'
 import type { RoomScene, SceneObject } from '../../lib/scene.generated'
 import { editRestriction, objectLabel } from '../../lib/scene-edits'
 import type { SceneEditor, EditorState } from '../../lib/scene-editor'
+import { Button } from '../ui/primitives'
+import HelpTip from '../ui/HelpTip'
 
-export default function ObjectInspector({ scene, object, editor, state, onToggleLock }: {
+export default function ObjectInspector({ scene, object, editor, state, onToggleLock, onRequestEdit }: {
   scene: RoomScene; object: SceneObject; editor: SceneEditor; state: EditorState
-  onToggleLock?: () => void
+  onToggleLock?: () => void; onRequestEdit?: () => void
 }) {
   const [x, setX] = useState(String(object.position.x))
   const [z, setZ] = useState(String(object.position.z))
   const [angle, setAngle] = useState(String(object.rotation_y_rad * 180 / Math.PI))
-  const restriction = state.view === 'before' ? 'This layout is read-only. Switch to the editable layout to make changes.' : editRestriction(scene, object)
+  const readOnly = state.view === 'before'
+  const restriction = editRestriction(scene, object)
   const disabled = Boolean(restriction) || state.busy || state.dragging
 
   useEffect(() => {
@@ -23,10 +26,11 @@ export default function ObjectInspector({ scene, object, editor, state, onToggle
   return (
     <section className="object-inspector" id="object-inspector" tabIndex={-1} aria-label="Selected object">
       <div className="inspector-heading"><h3>{objectLabel(object)}</h3><button type="button" disabled={state.busy || state.dragging} onClick={() => editor.select(null)}>Clear</button></div>
-      <button type="button" className="object-lock" aria-pressed={object.locked} disabled={!editor.canToggleLock(object.id)} onClick={onToggleLock ?? (() => editor.toggleLock(object.id))}>{object.locked ? 'Unlock object' : 'Lock object'}</button>
-      {restriction ? <p className="edit-restriction">{restriction}</p> : (
-        <p className="inspector-help">Drag the handles or enter values. Supporting furniture carries its objects along.</p>
-      )}
+      <p className="object-size">{object.dimensions_m.width.toFixed(2)} × {object.dimensions_m.depth.toFixed(2)} × {object.dimensions_m.height.toFixed(2)} m <span>W × D × H</span></p>
+      {readOnly ? <Button onClick={onRequestEdit} disabled={!onRequestEdit}>Edit object</Button> : <>
+      <div className="inspector-options"><button type="button" className="object-lock" aria-pressed={object.locked} disabled={!editor.canToggleLock(object.id)} onClick={onToggleLock ?? (() => editor.toggleLock(object.id))}>{object.locked ? 'Unlock' : 'Lock'} object</button>
+        <HelpTip label="About object edits">Move furniture with the handles or values below. Supported objects follow their furniture. Locked and fixed positions stay protected.</HelpTip></div>
+      {restriction && <p className="edit-restriction">{restriction}</p>}
       <div className="edit-mode" role="group" aria-label="Object handle mode">
         <button type="button" disabled={disabled} aria-pressed={state.mode === 'move'} onClick={() => editor.setMode('move')}>Move</button>
         <button type="button" disabled={disabled} aria-pressed={state.mode === 'rotate'} onClick={() => editor.setMode('rotate')}>Rotate</button>
@@ -48,6 +52,7 @@ export default function ObjectInspector({ scene, object, editor, state, onToggle
         <label>Angle (°)<input aria-label="Object angle in degrees" type="number" required step="any" value={angle} disabled={disabled} onChange={event => setAngle(event.target.value)} /></label>
         <button className="apply-edit" type="submit" disabled={disabled}>Apply rotation</button>
       </form>
+      </>}
     </section>
   )
 }

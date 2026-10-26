@@ -40,3 +40,5 @@ Requests are bounded at 8 MiB and reject unknown fields, duplicate JSON keys, in
 Browser verification used a fixture reconstruction with real uploads, authentication, PostgreSQL and durable photo storage. It verified guest → sign-in → explicit save → backend restart → save changes. A separate local PostgreSQL check verified photo retrieval after restart and concurrent revision protection. No model requests were made.
 
 **Steps 3 and 4 are complete:** see [room reopening, registered-run recovery and the final audit](room-recovery.md). Public sharing and daily generation quotas remain in the following milestone. Saving is explicit; there is no autosave yet.
+
+The workspace opens new reconstructions on Original. Creating an editable copy requires a one-time confirmation; saving retains that UI choice even if its furniture is unchanged. Older saves with existing edits keep the editable tab available.

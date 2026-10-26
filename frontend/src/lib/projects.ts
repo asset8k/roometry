@@ -3,6 +3,7 @@ import { canonicalJson } from './canonical-json'
 
 export interface SavedMessage { id: string; role: 'user' | 'assistant'; text: string }
 export interface SaveSnapshot {
+  has_editable_copy?: boolean
   improvement_run_ids: string[]
   manual_copies: { parent_run_id: string | null; scene: RoomScene }[]
   view: 'original' | 'improved' | 'editing'
@@ -47,7 +48,7 @@ interface SaveState { owner: string | null; saved: SavedProject | null; pending:
 interface Entry { saved: SavedProject | null; request: SaveProjectRequest | null; signature?: string }
 export function savedWorkspaceSignature(sourceRunId: string, snapshot: SaveSnapshot, messages: SavedMessage[]) {
   return canonicalJson({ source_run_id: sourceRunId, manual_copies: snapshot.manual_copies, improvement_run_ids: snapshot.improvement_run_ids,
-    view: snapshot.view, editing_parent_run_id: snapshot.editing_parent_run_id, selected_improvement_id: snapshot.selected_improvement_id, messages })
+    view: snapshot.view, has_editable_copy: snapshot.has_editable_copy ?? false, editing_parent_run_id: snapshot.editing_parent_run_id, selected_improvement_id: snapshot.selected_improvement_id, messages })
 }
 /** Per-account save receipts; retries use a frozen request and never regenerate a room. */
 export class ProjectSaveController {
@@ -108,7 +109,7 @@ export interface OpenedProject {
   project: { id: string; title: string; revision: number; visibility: 'private'; images: { id: string; url: string }[];
     versions: { id: string; scene: RoomScene }[]; snapshot: { messages: SavedMessage[];
       improvements: Record<string, OptimizationRun>; versions: { key: string; parent_key: string | null; version_id: string }[];
-      comparison: Pick<SaveSnapshot, 'view' | 'editing_parent_run_id' | 'selected_improvement_id'> } }
+      comparison: Pick<SaveSnapshot, 'view' | 'editing_parent_run_id' | 'selected_improvement_id' | 'has_editable_copy'> } }
   run: AgentState
 }
 export async function projectRequest(path: string, signal: AbortSignal, method = 'GET', body?: object): Promise<unknown> {
@@ -143,6 +144,7 @@ export function parseOpenedProject(value: unknown): OpenedProject {
   const improvements = Object.fromEntries(Object.entries(data.project.snapshot.improvements).map(([key, item]) => [key, parseOptimization(item)]))
   const snapshot = data.project.snapshot
   if (!['original', 'improved', 'editing'].includes(snapshot.comparison.view)
+    || (snapshot.comparison.has_editable_copy !== undefined && typeof snapshot.comparison.has_editable_copy !== 'boolean')
     || snapshot.messages.some(item => !item || !['user', 'assistant'].includes(item.role) || typeof item.text !== 'string' || typeof item.id !== 'string')) throw new ProjectError('The saved workspace is incomplete.')
   const keys = new Set(snapshot.versions.map(item => item.key))
   const active = snapshot.comparison.view === 'original' ? 'original' : snapshot.comparison.view === 'improved' ? snapshot.comparison.selected_improvement_id : `manual:${snapshot.comparison.editing_parent_run_id ?? 'original'}`

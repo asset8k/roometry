@@ -3,48 +3,45 @@ import { LayoutAssessmentController } from '../../lib/layout-assessment'
 import type { AssessmentState } from '../../lib/layout-assessment'
 import type { ScoreLayoutRequest } from '../../lib/layout-scoring'
 import type { RoomScene } from '../../lib/scene.generated'
+import HelpTip from '../ui/HelpTip'
 
-const labels = { openness: 'Free floor space', storage: 'Storage size proxy', workspace: 'Desk usability', aesthetics: 'Style' }
-const routeLabels = { clear: 'Routes found', narrow: 'Narrow passages', blocked: 'Routes blocked', unassessed: 'Routes not assessed' }
+const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1)
+
+const routeLabels = { clear: 'Walking routes clear', narrow: 'Narrow walking passages', blocked: 'Walking routes blocked', unassessed: 'Walking routes not assessed' }
 
 export function LayoutAssessmentDetails({ state, scene, retry }: { state: AssessmentState; scene: RoomScene; retry: () => void }) {
-  const report = state.report
-  const name = (id: string) => scene.objects.find(obj => obj.id === id)?.type.replaceAll('_', ' ')
-    ?? (scene.openings.some(opening => opening.id === id) ? `${scene.openings.find(opening => opening.id === id)!.wall} door` : id.replaceAll('_', ' '))
-  const geometry = report?.geometry
-  const walking = geometry?.walking_space
-  const doors = geometry?.door_clearance
-  return <section className="layout-assessment" aria-label="Layout checks" aria-live="polite">
-    <h3>Layout checks</h3>
-    {state.status === 'loading' && <p role="status">Checking this layout’s clearance and goal measures…</p>}
-    {state.status === 'error' && <p>Layout checks are unavailable. Your room is still available. <button type="button" onClick={retry}>Retry checks</button></p>}
-    {report && <>
-      <p>Existing clearance problems remain visible. Edits that add obstructions or reduce checked routes are rejected.</p>
-      <ul>
-        {doors?.doors.map(door => <li key={door.door_id}>
-          <strong>{name(door.door_id)}</strong>: {door.access_status === 'clear' ? 'Access zone clear' : door.access_status === 'blocked' ? 'Access zone blocked' : 'Access not assessed'}
-          {(door.access_object_ids ?? []).length > 0 && ` (${(door.access_object_ids ?? []).map(name).join(', ')})`}.{' '}
-          {door.swing_status === 'unknown' ? 'Swing not assessed: hinge or swing direction unknown.'
-            : door.swing_status === 'clear' ? 'Inward swing clear.' : door.swing_status === 'blocked' ? `Inward swing blocked${(door.swing_object_ids ?? []).length ? ` (${(door.swing_object_ids ?? []).map(name).join(', ')})` : ''}.`
-            : door.swing_status === 'outside_room' ? 'Outward swing is outside this room’s checks.'
-            : door.swing_status === 'not_applicable' ? 'No swing area needed.' : 'Swing not assessed.'}
-        </li>)}
-        {walking && <li><strong>{routeLabels[walking.status]}</strong> · minimum {walking.policy.minimum_width_m} m, preferred {walking.policy.preferred_width_m} m.
-          {walking.entrances.map(entry => <span key={entry.door_id}> {name(entry.door_id)}: {routeLabels[entry.status].toLowerCase()}.{(entry.unreachable_door_ids ?? []).length > 0 && ` No sampled route to ${(entry.unreachable_door_ids ?? []).map(name).join(', ')}.`}</span>)}
-        </li>}
-      </ul>
-      <details><summary>Goal measures and check details</summary>
-        <p>Approximate planning checks, based on this model. Scores describe the current layout; they do not measure photo accuracy or produce an improved layout.</p>
-        <dl>{report.selected_criteria.map(key => <div key={key}><dt>{labels[key]}</dt><dd>{report[key].score === null ? 'Not assessed' : `${Math.round(report[key].score)} / 100`} — {report[key].explanation}</dd></div>)}</dl>
-        {report.overall_score !== null && <p>Selected goal average: {Math.round(report.overall_score)} / 100.</p>}
-        {report.overall_score === null && <p>No combined score: at least one selected goal is not assessed.</p>}
-        {walking?.grid_step_x_m && <p>Walking grid: {walking.grid_step_x_m.toFixed(2)} × {walking.grid_step_z_m?.toFixed(2)} m. A sampled failure may miss a path between grid points.</p>}
-        <ul>{[...(doors?.issues ?? []), ...(walking?.issues ?? [])].map((issue, i) => <li key={i}>{issue.entity_ids.map(name).join(', ')}{issue.entity_ids.length > 0 && ': '}{issue.message}</li>)}</ul>
-        {report.workstations.map(desk => <p key={desk.object_id}>{name(desk.object_id)}: approach {desk.approach_inside_room && desk.approach_clear ? 'clear' : 'obstructed or outside the room'}{desk.blocking_object_ids.length > 0 && ` (${desk.blocking_object_ids.map(name).join(', ')})`}.</p>)}
-        <ul>{report.warnings.map((warning, i) => <li key={i}>{warning}</li>)}</ul>
-      </details>
-    </>}
-  </section>
+  const report = state.report, geometry = report?.geometry
+  const walking = geometry?.walking_space, doors = geometry?.door_clearance
+  const name = (id: string) => capitalize(scene.objects.find(obj => obj.id === id)?.type.replaceAll('_', ' ')
+    ?? (scene.openings.some(opening => opening.id === id) ? `${scene.openings.find(opening => opening.id === id)!.wall} door` : 'room item'))
+  const blockedDoor = doors?.doors.some(door => door.access_status === 'blocked' || door.swing_status === 'blocked')
+  const needsAttention = blockedDoor || walking?.status === 'blocked' || walking?.status === 'narrow' || geometry?.valid === false
+  const summary = state.status === 'loading' ? 'Checking…' : state.status === 'error' ? 'Unavailable'
+    : blockedDoor ? 'Door access needs attention' : walking ? routeLabels[walking.status] : 'Checks available'
+  return <details className="layout-assessment" aria-label="Layout checks">
+    <summary><span>Layout checks</span><span className={needsAttention ? 'check-warning' : 'check-summary'} role="status">{summary}</span></summary>
+    <div className="layout-check-details">
+      <div className="layout-check-heading"><h3>Clearance & access</h3><HelpTip label="About layout checks">Approximate checks of this layout. Existing problems stay visible; edits that worsen checked access are rejected. These checks do not measure photo accuracy.</HelpTip></div>
+      {state.status === 'error' && <p>Your room is still available. <button type="button" onClick={retry}>Retry checks</button></p>}
+      {report && <>
+        <ul>{doors?.doors.map(door => <li key={door.door_id}>
+          <strong>{name(door.door_id)}</strong>: {door.access_status === 'clear' ? 'Access clear' : door.access_status === 'blocked' ? 'Access blocked' : 'Access not assessed'}
+          {(door.access_object_ids ?? []).length > 0 && ` by ${(door.access_object_ids ?? []).map(name).join(', ')}`}.{' '}
+          {door.swing_status === 'unknown' ? 'Door swing unknown.' : door.swing_status === 'clear' ? 'Swing clear.'
+            : door.swing_status === 'blocked' ? `Swing blocked${(door.swing_object_ids ?? []).length ? ` by ${(door.swing_object_ids ?? []).map(name).join(', ')}` : ''}.`
+            : door.swing_status === 'outside_room' ? 'Outward swing not checked.' : door.swing_status === 'not_applicable' ? 'No swing space needed.' : 'Swing not assessed.'}
+        </li>)}</ul>
+        {walking && <p>{routeLabels[walking.status]}. Minimum width {walking.policy.minimum_width_m} m; {walking.policy.preferred_width_m} m preferred.</p>}
+        {report.workstations.length > 0 && <ul>{report.workstations.map(desk => <li key={desk.object_id}>
+          <strong>{name(desk.object_id)}</strong>: working side {desk.approach_inside_room && desk.approach_clear ? 'clear' : 'needs more room'}
+          {desk.blocking_object_ids.length > 0 && ` (${desk.blocking_object_ids.map(name).join(', ')})`}.
+        </li>)}</ul>}
+        {walking?.entrances.filter(entry => (entry.unreachable_door_ids ?? []).length > 0).map(entry => <p key={entry.door_id}>
+          No clear route from {name(entry.door_id)} to {(entry.unreachable_door_ids ?? []).map(name).join(', ')}.
+        </p>)}
+      </>}
+    </div>
+  </details>
 }
 
 export default function LayoutAssessment({ scene, goals }: { scene: RoomScene; goals?: ScoreLayoutRequest['goals'] }) {

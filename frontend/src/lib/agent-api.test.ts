@@ -45,7 +45,7 @@ describe('agent HTTP integration', () => {
       expect(generation.getSnapshot().phase).toBe('awaiting_answer')
       const html = render()
       expect(html.match(/type="radio"/g)).toHaveLength(3)
-      expect(html).toContain('Question 1 of up to 3')
+      expect(html).toContain('Question 1 of 3 max')
       expect(html).not.toContain('Build base scene')
       expect(html).not.toContain('3D room viewer')
       await generation.answer({ question_id: 'q1', choice_id: 'enter_measurements', dimensions: { height_m: 2.6 } })

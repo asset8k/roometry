@@ -14,7 +14,8 @@ afterEach(() => vi.unstubAllGlobals())
 
 describe('private project saves', () => {
   it('captures accepted manual geometry, colors and locks even while Original is visible', async () => {
-    const views = comparison(), editor = views.getSnapshot().editor
+    const views = comparison(); views.editCopy()
+    const editor = views.getSnapshot().editor
     editor.select('desk_1')
     await editor.submit({ operation: 'move', object_id: 'desk_1', position: { x: .9, z: 2 } })
     views.setColor('rug_1', '#aabbcc'); views.toggleLock('rug_1')

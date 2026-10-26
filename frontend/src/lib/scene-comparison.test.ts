@@ -21,6 +21,7 @@ describe('original/improved comparison and independent editable copies', () => {
   it('retains manual edits and color previews when an improvement arrives, without changing saved scenes', async () => {
     const original = loadExampleScene(), improved = candidate(), before = structuredClone(improved)
     const comparison = new SceneComparison(original, async scene => acceptedMove(scene))
+    comparison.editCopy()
     const originalEditor = comparison.getSnapshot().editor
     originalEditor.select('desk_1'); await originalEditor.submit(move)
     comparison.setColor('rug_1', '#DD8855')
@@ -94,7 +95,7 @@ describe('original/improved comparison and independent editable copies', () => {
     const foreign = candidate(); foreign.source_scene.room.width_m += 1
     expect(comparison.offer(foreign)).toBe(false)
     expect(comparison.getSnapshot().improvements).toHaveLength(0)
-    expect(comparison.getSnapshot().view).toBe('editing')
+    expect(comparison.getSnapshot().view).toBe('original')
   })
 
   it.each(['failed', 'budget_exhausted', 'cancelled'] as const)('offers the best retained candidate after %s, with that outcome intact', status => {
@@ -109,6 +110,7 @@ describe('original/improved comparison and independent editable copies', () => {
     let release!: (result: PreviewEditResponse) => void
     const client = vi.fn(() => new Promise<PreviewEditResponse>(resolve => { release = resolve }))
     const comparison = new SceneComparison(loadExampleScene(), client)
+    comparison.editCopy()
     const editor = comparison.getSnapshot().editor
     editor.select('desk_1')
     const pending = editor.submit(move)
@@ -122,4 +124,27 @@ describe('original/improved comparison and independent editable copies', () => {
     comparison.show('original'); comparison.editCopy()
     expect(editor.getSnapshot().scene).toEqual(loadExampleScene())
   })
+})
+
+it('opens Original read-only and creates a separate copy only after explicit editing', async () => {
+  const original = loadExampleScene(), client = vi.fn(async scene => acceptedMove(scene))
+  const comparison = new SceneComparison(original, client)
+  const editor = comparison.getSnapshot().editor
+  expect(comparison.getSnapshot()).toMatchObject({ view: 'original', hasEditableCopy: false })
+  expect(editor.getSnapshot().view).toBe('before')
+  editor.select('desk_1')
+  expect(await editor.submit(move)).toBe(false)
+  comparison.setColor('rug_1', '#123456')
+  expect(client).not.toHaveBeenCalled()
+  expect(comparison.currentContext().scene).toEqual(original)
+  comparison.show('editing')
+  expect(comparison.getSnapshot().view).toBe('original')
+  comparison.editCopy()
+  expect(comparison.getSnapshot()).toMatchObject({ view: 'editing', hasEditableCopy: true })
+  editor.select('desk_1'); expect(await editor.submit(move)).toBe(true)
+  comparison.show('original')
+  expect(comparison.currentContext().scene).toEqual(original)
+  expect(comparison.snapshotForSave().has_editable_copy).toBe(true)
+  comparison.show('editing')
+  expect(deskX(comparison)).toBe(.85)
 })

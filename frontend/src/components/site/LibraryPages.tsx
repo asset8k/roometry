@@ -42,17 +42,17 @@ export function MyRooms({ onSignIn, onCreate, user }: { onSignIn: () => void; on
         }}>Load more rooms</Button>}
         {own && own.runs.length > 0 && <><h2 className="recovery-heading">Recent reconstructions</h2><div className="private-room-grid">{own.runs.map(run => <GlassPanel key={run.id} className="private-room-card"><span className="section-label">{runLabels[run.status] ?? 'Reconstruction'}</span><h3>Your {run.room_type.replaceAll('_', ' ')}</h3><a className="ui-button" href={`#run/${run.id}`}>{run.status === 'awaiting_answer' ? 'Answer question' : 'Open reconstruction'}<Icon name="arrow"/></a></GlassPanel>)}</div></>}
       </>}
-    {action && own && <Dialog title={action.kind === 'rename' ? 'Rename room' : 'Delete room?'} onClose={() => { if (!busy) setAction(null) }}>
+    {action && own && <Dialog title={action.kind === 'rename' ? 'Rename room' : 'Delete room?'} onClose={() => { if (!busy) setAction(null) }} dismissible={!busy}>{dismiss => <>
       <form className="account-form" onSubmit={event => {
         event.preventDefault(); if (busy) return; setBusy(true); setError(null)
         const operation = action.kind === 'rename' ? projectsClient.rename(action.room, title.trim(), AbortSignal.timeout(20000)) : projectsClient.delete(action.room, AbortSignal.timeout(20000))
-        void operation.then(() => { setAction(null); setRefresh(value => value + 1) }).catch(reason => { setAction(null); setError((reason as Error).message) }).finally(() => setBusy(false))
+        void operation.then(() => { dismiss(() => { setAction(null); setRefresh(value => value + 1) }) }).catch(reason => { dismiss(() => { setAction(null); setError((reason as Error).message) }) }).finally(() => setBusy(false))
       }}>
         {action.kind === 'rename' ? <label>Room name<input data-initial-focus required maxLength={120} value={title} disabled={busy} onChange={event => setTitle(event.target.value)}/></label> : <p>Delete “{action.room.title}”, its photos and saved history? This can’t be undone.</p>}
         <Button variant="primary" type="submit" disabled={busy || (action.kind === 'rename' && !title.trim())}>{busy ? action.kind === 'delete' ? 'Deleting…' : 'Saving…' : action.kind === 'rename' ? 'Save name' : 'Delete room'}</Button>
-        <Button disabled={busy} onClick={() => setAction(null)}>{action.kind === 'delete' ? 'Keep room' : 'Cancel'}</Button>
+        <Button disabled={busy} onClick={() => dismiss()}>{action.kind === 'delete' ? 'Keep room' : 'Cancel'}</Button>
       </form>
-    </Dialog>}
+    </>}</Dialog>}
   </section>
 }
 

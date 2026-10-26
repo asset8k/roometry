@@ -88,6 +88,7 @@ describe('saved versus unsaved workspace content', () => {
     await saves.save(source.run_id, 'Room', comparison.snapshotForSave, [])
     expect(saves.confirmedSignature()).toBeUndefined()
     const object = source.working_scene!.objects.find(o => !o.locked)!
+    comparison.editCopy()
     comparison.setColor(object.id, '#123456'); comparison.toggleLock(object.id)
     const edited = savedWorkspaceSignature(source.run_id, comparison.snapshotForSave(), [])
     expect(edited).not.toBe(initial)

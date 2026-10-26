@@ -4,16 +4,23 @@ from typing import Annotated, Literal, Self
 
 from pydantic import AwareDatetime, Field, field_validator, model_validator
 
-from roometry.agents.state import RunModel, RunLimits, RunUsage
-from roometry.assessment.schemas import RoomAssessment, AestheticComparison
-from roometry.scenes.hashing import scene_hash
-from roometry.scenes.schemas import RoomScene, Identifier, Color, MaterialColors, FiniteNumber
+from roometry.agents.state import RunLimits, RunModel, RunUsage
+from roometry.assessment.schemas import AestheticComparison, RoomAssessment
 from roometry.scenes.edit_schemas import FloorPosition
+from roometry.scenes.hashing import scene_hash
+from roometry.scenes.schemas import (
+    Color,
+    FiniteNumber,
+    Identifier,
+    MaterialColors,
+    RoomScene,
+)
 from roometry.scenes.scoring import Criterion
 from roometry.uploads.schemas import InputBudget, OpaqueId
 
 
 class OptimizationPreferences(RunModel):
+    # Retained for saved requests; no longer collected or used as a design limit.
     budget: InputBudget | None = None
     style: Annotated[str, Field(max_length=100)] | None = None
     constraints: Annotated[str, Field(max_length=1000)] | None = None
@@ -56,11 +63,41 @@ class ObjectChange(RunModel):
     material_colors: MaterialColors | None
 
 
+class CatalogAddition(RunModel):
+    object_id: Identifier
+    asset_id: Identifier
+    position: FloorPosition
+    rotation_y_rad: FiniteNumber
+    color: Color | None = None
+
+
+class CatalogReplacement(RunModel):
+    object_id: Identifier
+    asset_id: Identifier
+    position: FloorPosition | None = None
+    rotation_y_rad: FiniteNumber | None = None
+    color: Color | None = None
+
+
 class CandidateProposal(RunModel):
     changes: Annotated[list[ObjectChange], Field(max_length=24)]
+    additions: Annotated[list[CatalogAddition], Field(max_length=8)] = Field(default_factory=list)
+    removals: Annotated[list[Identifier], Field(max_length=24)] = Field(default_factory=list)
+    replacements: Annotated[list[CatalogReplacement], Field(max_length=8)] = Field(default_factory=list)
     summary: Annotated[str, Field(min_length=1, max_length=500)]
     suggestions: Annotated[list[Annotated[str, Field(max_length=400)]], Field(max_length=6)]
     finish: bool = False
+
+    @model_validator(mode="after")
+    def atomic_operations(self) -> Self:
+        ids = [c.object_id for c in self.changes] + self.removals + [c.object_id for c in self.additions] + [c.object_id for c in self.replacements]
+        if len(ids) > 24 or len(ids) != len(set(ids)):
+            raise ValueError("Use at most 24 distinct object operations per candidate.")
+        return self
+
+    @property
+    def has_operations(self) -> bool:
+        return bool(self.changes or self.additions or self.removals or self.replacements)
 
 
 class CandidateReview(RunModel):
@@ -118,6 +155,11 @@ class OptimizationRun(RunModel):
             raise ValueError("Result ratings must describe the retained candidate.")
         if self.result_scene and (self.result_scene.room != self.source_scene.room or self.result_scene.openings != self.source_scene.openings):
             raise ValueError("Optimization must preserve room measurements and openings.")
+        if self.result_scene:
+            retained = {o.id: o for o in self.result_scene.objects}
+            for obj in self.source_scene.objects:
+                if (obj.fixed or obj.locked) and retained.get(obj.id) != obj:
+                    raise ValueError("Optimization must preserve fixed and locked objects.")
         if self.status == "completed" and (self.result_scene is None or self.result_scene == self.source_scene):
             raise ValueError("Completed optimization requires an actual retained change.")
         return self

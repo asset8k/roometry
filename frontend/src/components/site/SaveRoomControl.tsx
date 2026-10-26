@@ -26,7 +26,7 @@ export default function SaveRoomControl({ run, comparison, messages, disabled, i
       if (!owner) { actions?.account('signin'); return }
       setOpen(true)
     }}><Icon name="save"/>{own && state.saved ? 'Save changes' : 'Save'}</Button>
-    {open && owner && own && <Dialog title={state.saved ? 'Save room changes' : 'Save your room'} onClose={() => { if (!state.pending) setOpen(false) }}>
+    {open && owner && own && <Dialog title={state.saved ? 'Save room changes' : 'Save your room'} onClose={() => { if (!state.pending) setOpen(false) }} dismissible={!state.pending}>{dismiss => <>
       <p className="dialog-description">Photos, chat and layouts stay private. Saving doesn’t generate a new room.</p>
       <form className="account-form" onSubmit={event => { event.preventDefault(); void controller.save(run.run_id, title, comparison.snapshotForSave, messages).then(saved => {
         const signature = controller.confirmedSignature()
@@ -37,8 +37,8 @@ export default function SaveRoomControl({ run, comparison, messages, disabled, i
         {state.retry && <p className="input-help">Retry checks the same snapshot. It won’t create a duplicate room.</p>}
         {state.saved && !state.error && <p className="input-notice success" role="status">Saved privately · {state.saved.image_count} {state.saved.image_count === 1 ? 'photo' : 'photos'} · revision {state.saved.revision}.</p>}
         <Button variant="primary" type="submit" disabled={state.pending || disabled || !title.trim()} aria-busy={state.pending}>{state.pending ? 'Saving room…' : state.retry ? 'Retry same save' : state.saved ? 'Save changes' : 'Save privately'}<Icon name="save"/></Button>
-        <Button variant="quiet" disabled={state.pending} onClick={() => setOpen(false)}>Back to room</Button>
+        <Button variant="quiet" disabled={state.pending} onClick={() => dismiss()}>Back to room</Button>
       </form>
-    </Dialog>}
+    </>}</Dialog>}
   </>
 }

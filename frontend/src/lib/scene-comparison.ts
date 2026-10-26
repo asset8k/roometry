@@ -12,6 +12,7 @@ export interface ComparisonState {
   editingId: string
   selectedImprovementId: string | null
   improvements: readonly OptimizationRun[]
+  hasEditableCopy: boolean
   colors: Readonly<Record<string, string>>
 }
 
@@ -31,23 +32,28 @@ export class SceneComparison {
     this.original = structuredClone(scene)
     const editor = new SceneEditor(scene, client, scene)
     this.copies.set('original', { editor, colors: {} })
-    this.state = { view: 'editing', editor, editingId: 'original', selectedImprovementId: null, improvements: [], colors: {} }
+    editor.switchView('before')
+    this.state = { view: 'original', hasEditableCopy: false, editor, editingId: 'original', selectedImprovementId: null, improvements: [], colors: {} }
   }
   static restore(saved: OpenedProject, client?: EditClient): SceneComparison {
     const result = new SceneComparison(saved.run.working_scene!, client)
     const snapshot = saved.project.snapshot
     for (const improvement of Object.values(snapshot.improvements)) result.offer(improvement, improvement.source_scene)
     const versions = new Map(saved.project.versions.map(version => [version.id, version.scene]))
+    let legacyEdits = false
     for (const version of snapshot.versions.filter(item => item.key.startsWith('manual:'))) {
       const copy = result.copies.get(version.parent_key!)
       if (copy) {
         const scene = versions.get(version.version_id)!, baseline = copy.editor.savedScene()
+        legacyEdits ||= canonicalJson(scene) !== canonicalJson(baseline)
         copy.colors = Object.fromEntries(scene.objects.filter(object => baseline.objects.find(item => item.id === object.id)?.color !== object.color).map(object => [object.id, object.color]))
         copy.editor.restoreAccepted(scene)
       }
     }
     const editingId = snapshot.comparison.editing_parent_run_id ?? 'original'
-    result.update({ editingId, selectedImprovementId: snapshot.comparison.selected_improvement_id })
+    const hasEditableCopy = !!snapshot.comparison.has_editable_copy || snapshot.comparison.view === 'editing'
+      || legacyEdits
+    result.update({ editingId, hasEditableCopy, selectedImprovementId: snapshot.comparison.selected_improvement_id })
     const view = snapshot.comparison.view
     const active = view === 'original' ? 'original' : view === 'editing' ? editingId : snapshot.comparison.selected_improvement_id!
     result.activate(view, active)
@@ -89,6 +95,7 @@ export class SceneComparison {
     return { scene: structuredClone(scene), parent_run_id: parent === 'original' ? null : parent }
   }
   show = (view: ComparisonView) => {
+    if (view === 'editing' && !this.state.hasEditableCopy) return
     const id = view === 'original' ? 'original' : view === 'editing' ? this.state.editingId : this.state.selectedImprovementId
     if (id) this.activate(view, id)
   }
@@ -101,7 +108,7 @@ export class SceneComparison {
     if (this.state.view === 'editing') return
     const id = this.state.view === 'improved' ? this.state.selectedImprovementId : 'original'
     if (!id) return
-    this.update({ editingId: id })
+    this.update({ editingId: id, hasEditableCopy: true })
     this.activate('editing', id)
   }
   setColor = (id: string, color: string) => {
@@ -124,7 +131,7 @@ export class SceneComparison {
       scene.objects = scene.objects.map(object => object.locked || !copy.colors[object.id] ? object : { ...object, color: copy.colors[object.id].toUpperCase() })
       return { parent_run_id: id === 'original' ? null : id, scene }
     })
-    return { manual_copies, improvement_run_ids: this.state.improvements.map(run => run.run_id), view: this.state.view,
+    return { manual_copies, has_editable_copy: this.state.hasEditableCopy, improvement_run_ids: this.state.improvements.map(run => run.run_id), view: this.state.view,
       editing_parent_run_id: this.state.editingId === 'original' ? null : this.state.editingId,
       selected_improvement_id: this.state.selectedImprovementId }
   }

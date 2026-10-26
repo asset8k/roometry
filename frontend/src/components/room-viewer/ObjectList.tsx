@@ -16,8 +16,8 @@ export default function ObjectList({ scene, hasColorPreviews, onColorChange, onR
   return (
     <section className="object-colors" aria-label="Object color previews">
       <div className="objects-heading">
-        <h3>Objects & colors</h3>
-        <button type="button" disabled={readOnly || !hasColorPreviews} onClick={onResetColors}>Reset colors</button>
+        <h3>Objects</h3>
+        {!readOnly && hasColorPreviews && <button type="button" onClick={onResetColors}>Reset colors</button>}
       </div>
       <ul className="object-list">
         {scene.objects.map(object => {
@@ -45,7 +45,7 @@ export default function ObjectList({ scene, hasColorPreviews, onColorChange, onR
           )
         })}
       </ul>
-      <p className="color-preview-note">{readOnly ? 'Original colors are read-only. Switch to the editable layout to try colors; your previews are kept.' : "Color changes are local previews and aren't saved. Fixed objects can be recolored; locked objects stay protected. Orbit the room to see items on the opposite wall."}</p>
+
     </section>
   )
 }

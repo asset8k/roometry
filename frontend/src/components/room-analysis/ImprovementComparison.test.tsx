@@ -104,19 +104,21 @@ describe('saved improvement comparison', () => {
     expect(sceneChanges(run.source_scene, run.result_scene!).find(change => change.id === a.id)!.details).toContain('Turned 2°')
   })
 
-  it('disables Improved until a retained result exists and labels each copy’s editing permissions', () => {
+  it('shows only available layouts and offers editing without duplicate copy buttons', () => {
     const run = result(), comparison = new SceneComparison(run.source_scene)
     const html = () => renderToStaticMarkup(<ComparisonControls comparison={comparison} views={comparison.getSnapshot()} />)
-    expect(html()).toMatch(/<button[^>]*disabled=""[^>]*>Improved/)
+    expect(html()).not.toMatch(/>Improved<\/button>/)
+    expect(html()).not.toMatch(/>Your layout<\/button>/)
     comparison.offer(run)
-    expect(html()).toContain('Edit improved copy')
+    expect(html()).toContain('Edit layout')
     expect(html()).toMatch(/<button[^>]*aria-pressed="true"[^>]*>Improved/)
-    expect(html()).toMatch(/<button[^>]*disabled=""[^>]*>Reset layout/)
+    expect(html()).not.toMatch(/>Reset layout<\/button>/)
     comparison.editCopy()
-    expect(html()).toContain('Editing a copy of workspace')
+    expect(html()).toMatch(/>Your layout<\/button>/)
     expect(html()).not.toMatch(/<button[^>]*disabled=""[^>]*>Reset layout/)
     comparison.show('original')
-    expect(html()).toContain('Edit original copy')
+    expect(html()).toContain('Edit layout')
+    expect(html()).not.toContain('Edit original copy')
   })
 
   it('keeps version selection and early-stop labels for earlier retained candidates', () => {
@@ -127,7 +129,7 @@ describe('saved improvement comparison', () => {
     const html = renderToStaticMarkup(<ComparisonControls comparison={comparison} views={comparison.getSnapshot()} />)
     expect(html).toContain('role="combobox"')
     expect(html).not.toContain('<select')
-    expect(html).toContain('2. Storage &amp; organization (run stopped early)')
+    expect(html).toContain('2. Storage &amp; organization (partial)')
   })
 
   it('connects a completed optimization to the comparison and editable candidate without another model request', async () => {
@@ -152,4 +154,15 @@ describe('saved improvement comparison', () => {
     expect(source.working_scene).toEqual(original)
     expect(prepares).toBe(1); expect(executes).toBe(1)
   })
+})
+
+it('explains added, removed and replaced furniture without leaking asset IDs', () => {
+  const run = result(), improved = run.result_scene!
+  const removed = improved.objects.pop()!
+  improved.objects[0].asset_id = 'sofa_standard_01'
+  improved.objects.push({ ...structuredClone(removed), id: 'new_storage', type: 'wardrobe' })
+  const changes = sceneChanges(run.source_scene, improved)
+  expect(changes.some(item => item.details.includes('Added catalog furniture'))).toBe(true)
+  expect(changes.some(item => item.details.includes('Replaced with a catalog model'))).toBe(true)
+  expect(changes.some(item => item.id === removed.id && item.details.includes('Removed from proposed layout'))).toBe(true)
 })

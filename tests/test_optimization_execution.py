@@ -34,6 +34,7 @@ def change(object_id='bed_observed', **values):
 
 def proposal(changes=None, *, finish=True):
     return {'changes': changes if changes is not None else [change(color='#746A5B')],
+            'additions': [], 'removals': [], 'replacements': [],
             'summary': 'Coordinate the existing upholstery palette.', 'suggestions': [], 'finish': finish}
 
 
@@ -196,7 +197,7 @@ def test_storage_front_access_and_locks_budget_and_inventory_are_enforced():
     with pytest.raises(ValueError, match='unlocked'): evaluate(run, CandidateProposal.model_validate(proposal([change('wardrobe', rotation_y_rad=0.)])), source)
     from roometry.uploads.schemas import InputBudget
     run = policy_run(case([cabinet]), focus='aesthetics', budget=InputBudget(amount=0., currency='USD'))
-    with pytest.raises(ValueError, match='costs are unknown'): evaluate(run, CandidateProposal.model_validate(proposal([change('wardrobe', color='#AA8877')])), source)
+    assert evaluate(run, CandidateProposal.model_validate(proposal([change('wardrobe', color='#AA8877')])), source).changed == ['wardrobe']  # Historical budget metadata no longer restricts design.
     with pytest.raises(ValueError, match='existing'): evaluate(run, CandidateProposal.model_validate(proposal([change('invented', color='#AA8877')])), source)
 
 

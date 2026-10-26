@@ -25,7 +25,7 @@ describe('guided generation workspace', () => {
   it('shows exactly three answer choices and holds the viewer until work finishes', () => {
     const html = render({ phase: 'awaiting_answer', run: waitingRun(input) })
     expect(html.match(/type="radio"/g)).toHaveLength(3)
-    expect(html).toContain('What is the room height')
+    expect(html).toContain('What are the room dimensions?')
     expect(html).not.toContain('type="checkbox"')
     expect(html).not.toContain('Build base scene')
     expect(html).not.toContain('3D room viewer')
@@ -37,7 +37,7 @@ describe('guided generation workspace', () => {
     expect(html).toContain('Bed')
     expect(html).toContain('unresolved and absent from the 3D scene')
     expect(html).toContain('3D room viewer')
-    expect(html).toContain('Reset layout')
+    expect(html).toContain('Edit layout')
     expect(html).not.toContain('Example bedroom')
   })
   it('keeps recovered analysis warnings visible alongside the usable scene', () => {
@@ -108,8 +108,8 @@ describe('guided generation workspace', () => {
     run.pending_question!.choices[1] = { id: 'leave_unknown', label: "I don't know — finish without a complete scene" }
     const html = render({ phase: 'awaiting_answer', run })
     expect(html).toContain('Use estimated dimensions')
-    expect(html).toContain('assumed 4 × 4 × 2.6 m starting size')
-    expect(html).toContain('measurements you enter take priority')
+    expect(html).toContain('Unclear sizes start at 4 × 4 × 2.6 m')
+    expect(html).toContain('Enter what you know, or use photo estimates')
     expect(html).not.toContain('finish without a complete scene')
     expect(html.match(/type="radio"/g)).toHaveLength(3)
   })

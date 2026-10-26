@@ -351,6 +351,7 @@ class ProjectService:
                     "comparison": {
                         "view": body.view,
                         "editing_parent_run_id": body.editing_parent_run_id,
+                        "has_editable_copy": body.has_editable_copy,
                         "selected_improvement_id": body.selected_improvement_id,
                     },
                     "messages": [m.model_dump() for m in body.messages],

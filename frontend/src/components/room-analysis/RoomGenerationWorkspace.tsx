@@ -60,7 +60,7 @@ export default function RoomGenerationWorkspace({ state, controller, onConnectio
   const objects = run?.analysis?.observations.objects ?? []
   const entityName = (id: string) => displayText(objects.find(obj => obj.id === id)?.label ?? run?.analysis?.observations.walls.find(wall => wall.id === id)?.label ?? id)
   const estimated = run?.proposal?.estimated_axes ?? []
-  const report = <GlassPanel className={`analysis-card${state.phase === 'awaiting_answer' ? ' clarification-card' : ''}`}>
+  const report = <GlassPanel className={`analysis-card${!terminal ? ' progress-card' : ''}${state.phase === 'awaiting_answer' ? ' clarification-card' : ''}`}>
       <span className="section-label"><Icon name="spark" />From photos to your room</span>
       <h2 aria-live="polite">{state.phase === 'awaiting_answer' ? 'One quick question' : needsDimensions ? 'Room measurements are still needed' : needsWall ? 'Room orientation still needs identifying' : preview ? 'Your reconstruction preview' : titles[state.phase] ?? 'Creating your room'}</h2>
       {!terminal && <RunWorkflow kind="reconstruction" run={run} progress={state.progress} streamMode={state.streamMode}
@@ -81,10 +81,12 @@ export default function RoomGenerationWorkspace({ state, controller, onConnectio
       {terminal && run?.proposal?.status === 'incomplete' && <details className="analysis-notes"><summary>Construction details</summary><ul>{run.proposal.issues.map((issue, index) => <li key={index}>{issue.entity_ids.length > 0 && <strong>{issue.entity_ids.map(entityName).join(', ')}: </strong>}{issue.message}</li>)}</ul></details>}
       {terminal && estimated.length > 0 && <p className="analysis-caution">Estimated room dimensions: {estimated.map(axis => dimensionLabels[axis].toLowerCase()).join(', ')}. These have not been supplied by you.</p>}
       {terminal && !!run?.proposal?.assumed_axes?.length && <p className="analysis-caution">Some dimensions use an assumed starting size because photo scale was unclear. Check the room measurements before planning changes.</p>}
-      {run?.analysis && <details className="analysis-notes"><summary>Photo observations and uncertainties</summary>
-        <ul>{objects.map(obj => <li key={obj.id}><strong>{displayText(obj.label)}</strong>{obj.relative_location ? ` · ${obj.relative_location}` : ''}</li>)}</ul>
-        <ul>{run.analysis.observations.unknowns.map((note, index) => <li key={index}>{note}</li>)}</ul>
-        <ul>{run.analysis.observations.warnings.map((note, index) => <li key={index}>{note}</li>)}</ul>
+      {run?.analysis && <details className="analysis-notes photo-observations"><summary>Photo observations and uncertainties</summary>
+        <h3>Observed objects · {objects.length}</h3>
+        <dl className="observation-list">{objects.slice(0, 6).map(obj => <div key={obj.id}><dt>{displayText(obj.label)}</dt><dd>{obj.relative_location || 'Location uncertain'}</dd></div>)}</dl>
+        {objects.length > 6 && <details><summary>{objects.length - 6} more objects</summary><dl className="observation-list">{objects.slice(6).map(obj => <div key={obj.id}><dt>{displayText(obj.label)}</dt><dd>{obj.relative_location || 'Location uncertain'}</dd></div>)}</dl></details>}
+        {!!run.analysis.observations.unknowns.length && <><h3>Uncertainties</h3><ul>{run.analysis.observations.unknowns.map((note, index) => <li key={index}>{note}</li>)}</ul></>}
+        {!!run.analysis.observations.warnings.length && <><h3>Photo limitations</h3><ul>{run.analysis.observations.warnings.map((note, index) => <li key={index}>{note}</li>)}</ul></>}
       </details>}
       {scene && <>
         {run?.proposal?.visual_review && <details className="analysis-notes" open={run.proposal.visual_review.status === 'unavailable' || run.proposal.visual_review.judgment?.verdict !== 'consistent'}>
@@ -162,8 +164,8 @@ export function ClarificationForm({ run, disabled, onAnswer }: {
   }
   return <form className="clarification-form" onSubmit={event => { event.preventDefault(); submit() }}>
     <fieldset disabled={disabled}>
-      <legend><span className="section-label">Question {run.questions.length} of up to 3</span><strong>{displayText(question.question)}</strong></legend>
-      {question.kind === 'room_dimensions' && <p className="input-help">Use photo estimates, or an assumed 4 × 4 × 2.6 m starting size where scale is unclear. Any measurements you enter take priority.</p>}
+      <legend><span className="section-label">Question {run.questions.length} of 3 max</span><strong>{question.kind === 'room_dimensions' ? 'What are the room dimensions?' : displayText(question.question)}</strong></legend>
+      {question.kind === 'room_dimensions' && <p className="input-help">Enter what you know, or use photo estimates. Unclear sizes start at 4 × 4 × 2.6 m and stay labeled approximate.</p>}
       <div className="clarification-choices">{question.choices.map(option => <label key={option.id}>
         <input type="radio" name={`answer-${question.id}`} value={option.id} checked={choice === option.id} onChange={() => setChoice(option.id)} required /><span>{displayText(question.kind === 'room_dimensions' && option.id === 'leave_unknown' ? 'Use estimated dimensions' : option.label)}</span><Icon name="check" className="choice-check" />
       </label>)}</div>

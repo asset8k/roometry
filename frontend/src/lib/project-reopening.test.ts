@@ -83,3 +83,18 @@ it('accepts equal JSONB scenes with reordered keys, while rejecting changed posi
   changed.source_scene.objects[0].position.x += .5
   expect(() => checkOptimization(changed, source, request)).toThrow('does not match')
 })
+
+it('remembers explicit copy creation even when saved on Original with unchanged furniture', () => {
+  const saved = savedWorkspace()
+  saved.project.snapshot.comparison.view = 'original'
+  saved.project.snapshot.comparison.editing_parent_run_id = null
+  saved.project.snapshot.comparison.has_editable_copy = true
+  for (const entry of saved.project.snapshot.versions.filter(v => v.key.startsWith('manual:'))) {
+    const version = saved.project.versions.find(v => v.id === entry.version_id)!
+    version.scene = structuredClone(entry.parent_key === 'original' ? saved.run.working_scene! : saved.project.snapshot.improvements[entry.parent_key!].result_scene!)
+  }
+  const comparison = SceneComparison.restore(parseOpenedProject(saved))
+  expect(comparison.getSnapshot()).toMatchObject({ view: 'original', hasEditableCopy: true })
+  comparison.show('editing')
+  expect(comparison.getSnapshot().view).toBe('editing')
+})

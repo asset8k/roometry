@@ -31,6 +31,7 @@ describe('unified workspace journey',()=>{
    expect(generation.getSnapshot().phase).toBe(partial?'partial':'completed')
    const original=structuredClone(source.working_scene!)
    const comparison=new SceneComparison(source.working_scene!,async(scene,edit)=>({accepted:true,scene:previewTransform(scene,edit),changed_object_ids:['desk_observed','computer_observed'],edit_errors:[],base_validation:geometryReport(),candidate_validation:geometryReport()}))
+   comparison.editCopy()
    const editor=comparison.getSnapshot().editor
    editor.select('desk_observed')
    expect(await editor.submit({operation:'move',object_id:'desk_observed',position:{x:2.8,z:.6}})).toBe(true)

@@ -19,7 +19,7 @@ export interface ImprovementState {
 
 /** A second user action prepares a linked request; it never reruns reconstruction. */
 export class OptimizationController {
-  private state: ImprovementState = { focus: null, draft: { budget: '', currency: 'USD', style: '', constraints: '' }, phase: 'idle', result: null, error: null, recovery: false }
+  private state: ImprovementState = { focus: null, draft: { style: '', constraints: '' }, phase: 'idle', result: null, error: null, recovery: false }
   private listeners = new Set<() => void>()
   private pending: StartOptimizationRequest | null = null
   private active: AbortController | null = null
@@ -59,7 +59,7 @@ export class OptimizationController {
     this.select('aesthetics')
     if (!this.available()) return
     this.context = structuredClone(context); this.instruction = instruction.trim()
-    this.update({ instruction: this.instruction, draft: { budget: '', currency: 'USD', style: '', constraints: '' } })
+    this.update({ instruction: this.instruction, draft: { style: '', constraints: '' } })
     await this.start()
   }
   close = () => { if (!this.locked()) this.update({ focus: null, phase: 'idle', error: null }) }

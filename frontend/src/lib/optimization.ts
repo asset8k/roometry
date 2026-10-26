@@ -6,6 +6,7 @@ import requestSchema from './optimization-request.schema.json'
 import { AgentRunError, agentFailure } from './agent-run'
 import type { AgentState } from './agent-run'
 import { parseRoomScene } from './scene'
+import { dimensionsFor, getCatalogAsset } from '../components/room-viewer/asset-catalog'
 import type { OptimizationRun } from './optimization-run.generated'
 import type { StartOptimizationRequest, OptimizationPreferences, Focus } from './optimization-request.generated'
 
@@ -35,11 +36,18 @@ export function parseOptimization(data: unknown): OptimizationRun {
     const source = data.source_scene
     if (canonicalJson(data.result_scene.room) !== canonicalJson(source.room)
       || canonicalJson(data.result_scene.openings) !== canonicalJson(source.openings)
-      || canonicalJson(data.result_scene.objects.map(o => o.id)) !== canonicalJson(source.objects.map(o => o.id))
-      || source.objects.some(old => {
-        const changed = data.result_scene!.objects.find(o => o.id === old.id)!
-        return ((old.fixed || old.locked) && canonicalJson(old) !== canonicalJson(changed))
-          || canonicalJson({ ...old, position: null, rotation_y_rad: null, color: null, material_colors: null }) !== canonicalJson({ ...changed, position: null, rotation_y_rad: null, color: null, material_colors: null })
+      || source.objects.some(old => (old.fixed || old.locked)
+        && canonicalJson(old) !== canonicalJson(data.result_scene!.objects.find(o => o.id === old.id)))
+      || data.result_scene.objects.some(object => {
+        const old = source.objects.find(o => o.id === object.id)
+        const immutable = (item: typeof object) => ({ ...item, position: null, rotation_y_rad: null, color: null, material_colors: null, support_surface_id: null })
+        if (old && canonicalJson(immutable(old)) === canonicalJson(immutable(object))) return false
+        const asset = getCatalogAsset(object.asset_id)
+        if (!asset || object.placement !== 'floor' || object.fixed || object.locked
+          || object.provenance !== 'agent_added' || object.measurements_source !== 'catalog'
+          || (old && (old.placement !== 'floor' || old.type !== object.type))) return true
+        const [width, height, depth] = dimensionsFor(asset, 'floor')
+        return object.dimensions_m.width !== width || object.dimensions_m.height !== height || object.dimensions_m.depth !== depth
       })) throw new AgentRunError('The improvement changed protected room data.')
   }
   if ((data.status === 'completed' && (!data.result_scene || canonicalJson(data.result_scene) === canonicalJson(data.source_scene)))
@@ -80,16 +88,14 @@ export const optimizationClient = {
   cancel: (sourceId: string, runId: string, signal: AbortSignal) => request(`/${encodeURIComponent(sourceId)}/optimizations/${encodeURIComponent(runId)}/cancel`, signal, {}),
 }
 export type OptimizationClient = typeof optimizationClient
-export interface ImprovementDraft { budget: string; currency: string; style: string; constraints: string }
+export interface ImprovementDraft { style: string; constraints: string }
 export function improvementPreferences(draft: ImprovementDraft): OptimizationPreferences {
-  const amount = draft.budget.trim() ? Number(draft.budget) : null
-  if (amount !== null && (!Number.isFinite(amount) || amount < 0 || amount > 1000000)) throw new Error('Enter a budget from 0 to 1,000,000, or leave it blank.')
   const preferences: OptimizationPreferences = {
-    budget: amount === null ? null : { amount, currency: draft.currency.trim().toUpperCase() },
+    budget: null,
     style: draft.style.trim() || null, constraints: draft.constraints.trim() || null,
   }
   if (!validRequest({ request_id: '77777777-7777-4777-8777-777777777777', focus: 'openness', preferences })) {
-    throw new Error('Use a three-letter currency code and keep style and notes within their displayed limits.')
+    throw new Error('Keep style and notes within their displayed limits.')
   }
   return preferences
 }

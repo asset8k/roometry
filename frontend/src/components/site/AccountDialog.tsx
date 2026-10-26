@@ -18,12 +18,12 @@ export default function AccountDialog({ intent = 'signin', onClose, onGuest, con
   const passwordId = useId()
   const title = state.user ? 'You’re signed in.' : mode === 'signup' ? 'Make room for more.' : intent === 'save' ? 'Keep your room.' : 'Welcome back.'
   const change = () => { setError(null); controller.clearError() }
-  if (state.user) return <Dialog title={title} onClose={onClose}>
-    <p className="dialog-description">Signed in as {state.user.username}.</p>
+  if (state.user) return <Dialog title={title} onClose={onClose}>{dismiss => <>
+    <p className="dialog-description">Signed in as {state.user!.username}.</p>
     <p className="feature-notice">Choose Save in your room to keep it privately. Your current workspace stays here.</p>
-    <Button variant="primary" onClick={onClose}>Back to your room<Icon name="arrow"/></Button>
-  </Dialog>
-  return <Dialog title={title} onClose={onClose}>
+    <Button variant="primary" onClick={() => dismiss()}>Back to your room<Icon name="arrow"/></Button>
+  </>}</Dialog>
+  return <Dialog title={title} onClose={onClose}>{dismiss => <>
     <p className="dialog-description">{mode === 'signup' ? 'Create your Roometry account.' : 'Sign in to your Roometry account.'}</p>
     <div className="auth-tabs" role="group" aria-label="Account form">
       <button type="button" disabled={state.pending} aria-pressed={mode === 'signin'} onClick={() => { setMode('signin'); setVisible(false); setPassword(''); setConfirmation(''); change() }}>Sign in</button>
@@ -35,7 +35,7 @@ export default function AccountDialog({ intent = 'signin', onClose, onGuest, con
       if (mode === 'signup' && password !== confirmation) { setError('Passwords don’t match.'); return }
       setError(null)
       void controller.authenticate(mode, username, password).then(success => {
-        if (success && mounted.current) { setPassword(''); setConfirmation(''); onClose() }
+        if (success && mounted.current) { setPassword(''); setConfirmation(''); dismiss() }
       })
     }}>
       <label>Username<input data-initial-focus name="username" autoComplete="username" autoCapitalize="none" spellCheck={false} required minLength={3} maxLength={32} pattern="[A-Za-z0-9_]{3,32}"
@@ -49,6 +49,6 @@ export default function AccountDialog({ intent = 'signin', onClose, onGuest, con
       {(error || state.error) && <p ref={notice} className="input-notice error" role="alert" tabIndex={-1}>{error || state.error}</p>}
       <Button variant="primary" type="submit" disabled={state.pending} aria-busy={state.pending}>{state.pending ? mode === 'signup' ? 'Creating account…' : 'Signing in…' : mode === 'signup' ? 'Create account' : 'Sign in'}<Icon name="arrow"/></Button>
     </form>
-    <Button variant="quiet" className="guest-action" onClick={onGuest}>Continue as guest<Icon name="arrow"/></Button>
-  </Dialog>
+    <Button variant="quiet" className="guest-action" onClick={() => dismiss(onGuest)}>Continue as guest<Icon name="arrow"/></Button>
+  </>}</Dialog>
 }

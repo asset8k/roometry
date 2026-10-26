@@ -32,14 +32,14 @@ describe('improvement selection and linked request', () => {
       expect(init).toMatchObject({ method: 'POST', credentials: 'include', cache: 'no-store' })
       const body = JSON.parse(init!.body as string) as StartOptimizationRequest
       expect(body).toEqual({ request_id: expect.any(String), focus: 'storage',
-        preferences: { budget: { amount: 0, currency: 'USD' }, style: 'Warm minimal', constraints: 'Keep the desk near the window.' } })
+        preferences: { budget: null, style: 'Warm minimal', constraints: 'Keep the desk near the window.' } })
       return Response.json(preparedImprovement(source, body))
     })
     vi.stubGlobal('fetch', fetcher)
     const controller = new OptimizationController(source)
     // No request is made from rendering, selecting or entering preferences.
     controller.select('storage')
-    controller.change({ budget: '0', currency: 'usd', style: '  Warm minimal  ', constraints: ' Keep the desk near the window. ' })
+    controller.change({ style: '  Warm minimal  ', constraints: ' Keep the desk near the window. ' })
     expect(fetcher).not.toHaveBeenCalled()
     await controller.prepare()
     expect(controller.getSnapshot().phase).toBe('prepared')
@@ -70,19 +70,19 @@ describe('improvement selection and linked request', () => {
     expect(html).toContain('Recommendations are optional')
   })
 
-  it('shows optional preferences only after selection, keeps zero purchase budgets and bounds invalid input', async () => {
+  it('shows optional preferences without budget or currency and bounds invalid input', async () => {
     const { controller, client, render } = setup()
     expect(render()).toBe('')
     controller.select('aesthetics')
-    expect(render()).toContain('Budget (optional)')
+    expect(render()).not.toContain('Budget')
+    expect(render()).not.toContain('Currency')
     expect(render()).toContain('Style preference (optional)')
     expect(render()).toContain('Improve room')
-    controller.change({ budget: '-1' }); await controller.prepare()
-    expect(controller.getSnapshot().error).toContain('Enter a budget')
+    controller.change({ style: 'a'.repeat(101) }); await controller.prepare()
+    expect(controller.getSnapshot().error).toContain('within their displayed limits')
     expect(client.prepare).not.toHaveBeenCalled()
-    expect(improvementPreferences({ budget: '0', currency: 'kzt', style: ' ', constraints: ' ' })).toEqual({ budget: { amount: 0, currency: 'KZT' }, style: null, constraints: null })
-    expect(() => improvementPreferences({ budget: '5', currency: 'bad-code', style: '', constraints: '' })).toThrow()
-    expect(() => improvementPreferences({ budget: '', currency: '', style: 'a'.repeat(101), constraints: '' })).toThrow()
+    expect(improvementPreferences({ style: ' ', constraints: ' ' })).toEqual({ budget: null, style: null, constraints: null })
+    expect(() => improvementPreferences({ style: 'a'.repeat(101), constraints: '' })).toThrow()
   })
 
   it('retries an ambiguous response with the identical ID and frozen preferences while suppressing duplicate clicks', async () => {
@@ -92,7 +92,7 @@ describe('improvement selection and linked request', () => {
     controller.select('openness'); await controller.prepare()
     const original = structuredClone(vi.mocked(client.prepare).mock.calls[0][1])
     expect(controller.getSnapshot().recovery).toBe(true)
-    controller.change({ budget: '999' }); controller.select('storage')
+    controller.change({ constraints: 'changed later' }); controller.select('storage')
     vi.mocked(client.prepare).mockImplementationOnce(() => new Promise(resolve => { release = resolve }))
     const retry = controller.retry()
     await controller.retry(); await controller.prepare()
@@ -173,4 +173,22 @@ describe('improvement selection and linked request', () => {
     vi.stubGlobal('fetch', vi.fn(async () => Response.json({ detail: [{ code: 'run_not_found', message: 'Unavailable.' }] }, { status: 404 })))
     await expect(optimizationClient.read(source.run_id, result.run_id, new AbortController().signal)).rejects.toMatchObject({ status: 404 })
   })
+})
+
+it('accepts catalog inventory changes while keeping protected objects and catalog dimensions enforced', () => {
+  const source = finishedRun(prepared())
+  const run = preparedImprovement(source, { request_id: '77777777-7777-4777-8777-777777777777', focus: 'storage' })
+  run.status = 'completed'; run.stage = 'finished'; run.result_scene = structuredClone(run.source_scene)
+  const added = { ...structuredClone(run.source_scene.objects[0]), id: 'new_storage', type: 'wardrobe' as const,
+    asset_id: 'wardrobe_standard_01' as const, placement: 'floor' as const, support_object_id: null, support_surface_id: null,
+    wall: null, opening_id: null, position: { x: 1, y: 0, z: 1 }, dimensions_m: { width: 1.2, height: 2.1, depth: .6 },
+    provenance: 'agent_added' as const, measurements_source: 'catalog' as const, fixed: false, locked: false }
+  run.result_scene.objects.push(added)
+  expect(parseOptimization(run).result_scene!.objects).toHaveLength(run.source_scene.objects.length + 1)
+  added.dimensions_m.width = 20
+  expect(() => parseOptimization(run)).toThrow('protected room data')
+  added.dimensions_m.width = 1.2
+  run.source_scene.objects[0].locked = true
+  run.result_scene.objects = run.result_scene.objects.filter(o => o.id !== run.source_scene.objects[0].id)
+  expect(() => parseOptimization(run)).toThrow('protected room data')
 })

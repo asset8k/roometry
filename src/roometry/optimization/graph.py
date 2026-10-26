@@ -1,24 +1,29 @@
 """Checkpointed propose → validate/score → review → retain loop, bounded by policy."""
 
-from dataclasses import dataclass
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from typing import TypedDict
 
 import anyio
-from langgraph.graph import StateGraph, START, END
+from langgraph.graph import END, START, StateGraph
 from langgraph.runtime import Runtime
 from pydantic import ValidationError
 
-from roometry.assessment.metrics import measure_room
-from roometry.assessment.evidence import evidence_for_run
-from roometry.model_calls import observe_model_calls
-from roometry.agents.state import AgentState
 from roometry.agents.budget import RunBudget
-from roometry.optimization.provider import OptimizationProvider
-from roometry.optimization.policy import evaluate
-from roometry.optimization.schemas import CandidateProposal, CandidateReview, OptimizationAttempt, OptimizationRun
-from roometry.scenes.mutations import EditRejected
+from roometry.agents.state import AgentState
+from roometry.assessment.evidence import evidence_for_run
+from roometry.assessment.metrics import measure_room, with_recommendation
+from roometry.model_calls import observe_model_calls
 from roometry.optimization.context import refinement_message
+from roometry.optimization.policy import evaluate, meaningful_gain
+from roometry.optimization.provider import OptimizationProvider
+from roometry.optimization.schemas import (
+    CandidateProposal,
+    CandidateReview,
+    OptimizationAttempt,
+    OptimizationRun,
+)
+from roometry.scenes.mutations import EditRejected
 
 
 class GraphState(TypedDict, total=False):
@@ -56,12 +61,13 @@ async def initialize(state, runtime: Runtime[OptimizationContext]):
     run, context = OptimizationRun.model_validate(state['run']), runtime.context
     stop = await stopped(run, context)
     if stop: return stop
-    baseline = run.baseline_assessment or await anyio.to_thread.run_sync(lambda: measure_room(run.source_scene, evidence=evidence_for_run(context.source)))
-    limitations = ["Only existing furniture is rearranged; unpriced purchases are suggestions, not applied additions.",
+    baseline = await anyio.to_thread.run_sync(lambda: measure_room(run.source_scene, evidence=evidence_for_run(context.source)))
+    if run.baseline_assessment:
+        baseline = with_recommendation(baseline, aesthetics=run.baseline_assessment.aesthetics.model_dump())
+    limitations = ["Added and replacement furniture represents catalog design ideas, not verified products or purchases.",
                    "Clearance and scores are approximate model checks, not a safety certification.",
                    "Style and free-text preferences are reviewed qualitatively; verify suggested changes in your room."]
     if run.source_status == "partial": limitations.append("The source reconstruction is partial; unresolved observations remain unresolved. Only affected rating categories have limited confidence.")
-    if run.preferences.budget is not None: limitations.append("A stated budget limits applied changes to rearrangement; finish-work costs are unknown.")
     return saved(run, context, baseline_assessment=baseline.model_dump(), limitations=limitations, status="running", stage="proposing")
 
 
@@ -91,9 +97,9 @@ async def validate(state, runtime: Runtime[OptimizationContext]):
     if stop: return stop
     if run.status != "running": return saved(run, context)
     proposal = CandidateProposal.model_validate(state['proposal'])
-    if not proposal.changes:
+    if not proposal.has_operations:
         return saved(run, context, status="completed" if run.result_scene else "no_improvement", stage="finished",
-            message="The best validated layout is retained." if run.result_scene else "No useful existing-item change was proposed. Your original room is retained; review the suggestions.")
+            message="The best validated layout is retained." if run.result_scene else "No useful layout change was proposed. Your original room is retained; review the suggestions.")
     await context.budget.reserve_tool()  # Atomic assembly and geometry/clearance.
     await context.budget.reserve_tool()  # Fixed-policy score comparison.
     try:
@@ -103,11 +109,11 @@ async def validate(state, runtime: Runtime[OptimizationContext]):
         return {**saved(run, context, stage="proposing", attempts=attempt(run, proposal, outcome="rejected", issues=[message])), "candidate": None}
     await context.authorize()
     if context.cancelled(): return await stopped(run, context)
-    gain = run.instruction is not None or run.focus == "aesthetics" or (evaluation.before_score is not None and evaluation.after_score is not None and evaluation.after_score >= evaluation.before_score + .2 - 1e-8)
+    gain = await anyio.to_thread.run_sync(lambda: meaningful_gain(run, evaluation, context.source))
     if evaluation.issues or not evaluation.changed or not gain:
         return {**saved(run, context, stage="proposing", attempts=attempt(run, proposal,
             outcome="rejected" if evaluation.issues else "no_gain",
-            issues=evaluation.issues or ["No measurable improvement for the chosen focus; the retained scene is unchanged."],
+            issues=evaluation.issues or ["Propose a meaningful gain: clearer walking space, usable added storage, or a usable workstation. A tiny score change or cosmetic change alone does not improve a functional goal."],
             before=evaluation.before_score, after=evaluation.after_score)), "candidate": None}
     return {**saved(run, context, stage="reviewing"), "candidate": {
         "scene": evaluation.scene.model_dump(), "assessment": evaluation.assessment.model_dump(),
@@ -116,8 +122,9 @@ async def validate(state, runtime: Runtime[OptimizationContext]):
 
 async def review(state, runtime: Runtime[OptimizationContext]):
     from types import SimpleNamespace
-    from roometry.scenes.schemas import RoomScene
+
     from roometry.assessment.schemas import RoomAssessment
+    from roometry.scenes.schemas import RoomScene
     run, context = OptimizationRun.model_validate(state['run']), runtime.context
     stop = await stopped(run, context)
     if stop: return stop
@@ -130,6 +137,10 @@ async def review(state, runtime: Runtime[OptimizationContext]):
     await context.authorize()
     if context.cancelled(): return await stopped(run, context)
     accepted = judgment.preferred == "candidate" and judgment.confidence != "low" and judgment.constraints_satisfied
+    rubric = judgment.aesthetics if run.focus == "aesthetics" and not run.instruction else None
+    if rubric and (rubric.confidence == "low" or rubric.candidate.total <= rubric.retained.total):
+        accepted = False
+        judgment = judgment.model_copy(update={"explanation": "The rendered design rubric does not establish a meaningful aesthetic gain. Try a more coherent palette, proportions or grouping."})
     proposal = CandidateProposal.model_validate(state['proposal'])
     updates = {"attempts": attempt(run, proposal, outcome="accepted" if accepted else "rejected",
         issues=[] if accepted else [judgment.explanation], before=raw['before'], after=raw['after'],
