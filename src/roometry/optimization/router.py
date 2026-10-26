@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Request, Response, Header, Query
 from starlette.responses import StreamingResponse
 from roometry.progress import progress_response
+from roometry.agents.access import stream_reader
 from roometry.agents.checkpointing import RunUnavailable
 
 from roometry.agents.router import EmptyRequest, RunFailure, access, result
@@ -29,7 +30,7 @@ async def improvement_result(operation):
              summary="Prepare a separate improvement request; no optimization is executed yet")
 async def prepare_improvement(source_run_id: OpaqueId, body: StartOptimizationRequest,
                               request: Request, response: Response) -> OptimizationRun:
-    _, owner = access(request, response, mutation=True)
+    _, owner = await access(request, response, mutation=True)
     runs: OptimizationRuns = request.app.state.optimization_runs
     return await improvement_result(runs.prepare(source_run_id, owner, body))
 
@@ -37,7 +38,7 @@ async def prepare_improvement(source_run_id: OpaqueId, body: StartOptimizationRe
 @router.get("/{source_run_id}/optimizations/{run_id}", response_model=OptimizationRun)
 async def read_improvement(source_run_id: OpaqueId, run_id: OpaqueId,
                            request: Request, response: Response) -> OptimizationRun:
-    _, owner = access(request, response)
+    _, owner = await access(request, response)
     runs: OptimizationRuns = request.app.state.optimization_runs
     found = await improvement_result(runs.read(run_id, owner))
     if found.source_run_id != source_run_id:
@@ -50,7 +51,7 @@ async def read_improvement(source_run_id: OpaqueId, run_id: OpaqueId,
 async def stream_improvement(source_run_id: OpaqueId, run_id: OpaqueId, request: Request, response: Response,
                              last_event_id: str | None = Header(default=None, max_length=80),
                              after: str | None = Query(default=None, max_length=80)):
-    _, owner = access(request, response)
+    _, owner = await access(request, response)
     runs: OptimizationRuns = request.app.state.optimization_runs
     found, log = await improvement_result(runs.observe(run_id, owner))
     if found.source_run_id != source_run_id:
@@ -59,14 +60,14 @@ async def stream_improvement(source_run_id: OpaqueId, run_id: OpaqueId, request:
         current = await runs.read(run_id, owner)
         if current.source_run_id != source_run_id: raise RunUnavailable()
         return current
-    return progress_response(request, log, read, cursor=last_event_id or after)
+    return progress_response(request, log, stream_reader(request, owner, read), cursor=last_event_id or after)
 
 
 @router.post("/{source_run_id}/optimizations/{run_id}/execute", response_model=OptimizationRun,
              summary="Execute the bounded improvement graph once; retries read the same execution")
 async def execute_improvement(source_run_id: OpaqueId, run_id: OpaqueId, body: EmptyRequest,
                               request: Request, response: Response) -> OptimizationRun:
-    _, owner = access(request, response, mutation=True)
+    _, owner = await access(request, response, mutation=True)
     runs: OptimizationRuns = request.app.state.optimization_runs
     found = await improvement_result(runs.read(run_id, owner))
     if found.source_run_id != source_run_id:
@@ -77,7 +78,7 @@ async def execute_improvement(source_run_id: OpaqueId, run_id: OpaqueId, body: E
 @router.post("/{source_run_id}/optimizations/{run_id}/cancel", response_model=OptimizationRun)
 async def cancel_improvement(source_run_id: OpaqueId, run_id: OpaqueId, body: EmptyRequest,
                              request: Request, response: Response) -> OptimizationRun:
-    _, owner = access(request, response, mutation=True)
+    _, owner = await access(request, response, mutation=True)
     runs: OptimizationRuns = request.app.state.optimization_runs
     found = await improvement_result(runs.read(run_id, owner))
     if found.source_run_id != source_run_id:

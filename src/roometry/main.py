@@ -25,7 +25,12 @@ from roometry.auth.router import AuthAttempts, clear_cookie
 from roometry.auth.router import router as auth_router
 from roometry.auth.service import AuthService
 from roometry.config import Settings, get_settings
+from sqlalchemy.exc import SQLAlchemyError
 from roometry.database import Database
+from roometry.agents.persistence import RegisteredRuns, DurableCheckpoints, WorkspaceInputs
+from roometry.projects.router import router as projects_router
+from roometry.projects.service import ProjectService
+from roometry.projects.storage import ProjectPhotos
 from roometry.mcp.furniture_client import FurnitureCatalogClient
 from roometry.optimization.router import router as optimization_router
 from roometry.optimization.runs import OptimizationRuns
@@ -59,15 +64,19 @@ def create_app(
     service = UploadService(
         settings.public_upload_limits(), LocalInputStorage(settings.upload_storage_dir)
     )
+    registered = RegisteredRuns(database, ProjectPhotos(settings.project_storage_dir), service.storage)
+    workspace_inputs = WorkspaceInputs(registered)
     analyzer = PhotoAnalyzer(settings, analysis_client)
-    analysis_service = AnalysisService(settings, service.storage, analyzer)
+    analysis_service = AnalysisService(settings, workspace_inputs, analyzer)
+    registered.analysis = analysis_service
     scene_tools = SceneTools(analysis_service, FurnitureCatalogClient(
         timeout_seconds=settings.mcp_furniture_timeout_seconds,
         max_response_bytes=settings.mcp_furniture_max_response_bytes,
     ))
     agent_runs = AgentRuns(
-        service.storage.resolve,
+        workspace_inputs.resolve,
         RoomAgent(settings, analyzer),
+        checkpoints=DurableCheckpoints(registered),
         execute_tool=scene_tools,
         review_scene=scene_tools.review,
         assess_room=RoomAssessor(analysis_service),
@@ -94,7 +103,8 @@ def create_app(
                 await analysis_service.cleanup()
                 await agent_runs.cleanup()
                 await optimization_runs.cleanup()
-            except OSError:
+                await anyio.to_thread.run_sync(registered.cleanup)
+            except (OSError, SQLAlchemyError):
                 logging.getLogger(__name__).warning(
                     "Temporary upload cleanup will be retried."
                 )
@@ -123,9 +133,11 @@ def create_app(
     application = FastAPI(title="Roometry API", version="0.1.0", lifespan=lifespan)
     application.state.settings = settings
     application.state.database = database
+    application.state.registered_runs = registered
     application.state.auth_service = AuthService(database, settings)
     application.state.auth_hash_limiter = anyio.CapacityLimiter(2)
     application.state.auth_attempts = AuthAttempts(settings.auth_attempts_per_minute)
+    application.state.project_service = ProjectService(database, ProjectPhotos(settings.project_storage_dir), workspace_inputs, agent_runs, optimization_runs)
     application.state.upload_service = service
     application.state.analysis_service = analysis_service
     application.state.agent_runs = agent_runs
@@ -137,6 +149,7 @@ def create_app(
         AnalysisRequestLimitMiddleware, max_bytes=settings.analysis_max_body_bytes
     )
     application.add_middleware(AuthBodyLimitMiddleware)
+    application.add_middleware(AuthBodyLimitMiddleware, prefix="/api/projects", max_bytes=8 * 1024 * 1024, subject="saved room data")
 
     if settings.cors_origins:
         application.add_middleware(
@@ -149,10 +162,15 @@ def create_app(
 
     application.include_router(scenes_router)
     application.include_router(auth_router)
+    application.include_router(projects_router)
     application.include_router(uploads_router)
     application.include_router(analysis_router)
     application.include_router(agent_router)
     application.include_router(optimization_router)
+
+    @application.exception_handler(SQLAlchemyError)
+    async def persistence_error(_request:Request,_error:SQLAlchemyError):
+        return JSONResponse({"detail":[{"code":"workspace_unavailable","message":"Saved work is temporarily unavailable. Retry the same request to check its status."}]},status_code=503,headers={"Cache-Control":"no-store"})
 
     @application.exception_handler(AuthFailure)
     async def auth_error(_request: Request, error: AuthFailure) -> JSONResponse:
@@ -195,6 +213,8 @@ def create_app(
         _request: Request,
         error: RequestValidationError,
     ) -> JSONResponse:
+        if _request.url.path.startswith("/api/projects"):
+            return await auth_error(_request, AuthFailure(422, "invalid_project", "Check the room title, scenes and conversation before saving."))
         if _request.url.path.startswith("/api/auth/"):
             return await auth_error(
                 _request,

@@ -66,7 +66,7 @@ describe('account sessions',()=>{
   expect(html).not.toMatch(/<button[^>]*type="submit"[^>]*disabled/)
   await auth.refresh()
   const loggedIn=renderToStaticMarkup(<AccountDialog controller={auth} intent="save" onClose={()=>{}} onGuest={()=>{}}/>)
-  expect(loggedIn).toContain('test_user');expect(loggedIn).toContain('Room saving is the next step')
+  expect(loggedIn).toContain('test_user');expect(loggedIn).toContain('Choose Save in your room')
   expect(loggedIn).not.toContain('type="password"')
  })
 })

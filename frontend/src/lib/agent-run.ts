@@ -1,3 +1,4 @@
+import { canonicalJson } from './canonical-json'
 import Ajv2020 from 'ajv/dist/2020.js'
 import addFormats from 'ajv-formats'
 import schema from './agent-run.schema.json'
@@ -38,8 +39,9 @@ export function parseAgentRun(data: unknown): AgentState {
   // responses without cards are also readable; the UI explains their absence.
   if (data && typeof data === 'object' && !Array.isArray(data)) {
     const source = data as Record<string, unknown>
+    if (source.persistence === undefined) data = { ...source, persistence: 'temporary' }
     if (source.room_assessment === undefined || (source.room_assessment !== null && !coherentAssessment(source.room_assessment))) {
-      data = { ...source, room_assessment: null }
+      data = { ...(data as Record<string, unknown>), room_assessment: null }
     }
   }
   if (!valid(data)) throw new AgentRunError('The service returned an unreadable generation status.')
@@ -48,7 +50,7 @@ export function parseAgentRun(data: unknown): AgentState {
   if (data.analysis) {
     parseRoomAnalysis(data.analysis)
     if (data.analysis.input_id !== data.input_id || data.analysis.expires_at !== data.input_expires_at
-      || JSON.stringify(data.analysis.observations.image_ids) !== JSON.stringify(data.image_ids)) throw new AgentRunError('The analysis belongs to a different room.')
+      || canonicalJson(data.analysis.observations.image_ids) !== canonicalJson(data.image_ids)) throw new AgentRunError('The analysis belongs to a different room.')
   }
   if (data.proposal) {
     parseSceneProposal(data.proposal)
@@ -60,8 +62,8 @@ export function parseAgentRun(data: unknown): AgentState {
   if (scene && data.base_scene) {
     parseRoomScene(scene); parseRoomScene(data.base_scene)
     if (!data.proposal?.scene || !data.proposal.validation?.valid
-      || JSON.stringify(scene.room) !== JSON.stringify(data.base_scene.room)
-      || JSON.stringify(scene.objects.map(obj => obj.id)) !== JSON.stringify(data.base_scene.objects.map(obj => obj.id))
+      || canonicalJson(scene.room) !== canonicalJson(data.base_scene.room)
+      || canonicalJson(scene.objects.map(obj => obj.id)) !== canonicalJson(data.base_scene.objects.map(obj => obj.id))
       || dimensionAxes.some(axis => scene.room[axis] !== data.proposal?.dimensions[axis]
         || (data.confirmed_dimensions?.[axis] != null && scene.room[axis] !== data.confirmed_dimensions[axis]))) throw new AgentRunError('The scene changed room identity or supplied measurements.')
     const expected = [...(data.analysis?.observations.objects ?? []), ...(data.analysis?.observations.openings ?? [])].map(item => item.id)
@@ -71,7 +73,7 @@ export function parseAgentRun(data: unknown): AgentState {
   if (data.pending_question) {
     const q = data.pending_question
     if (data.status !== 'awaiting_answer' || new Set(q.choices.map(choice => choice.id)).size !== 3
-      || data.submitted_answers?.[q.id] || !data.questions?.some(item => JSON.stringify(item) === JSON.stringify(q))) throw new AgentRunError('The pending question is inconsistent.')
+      || data.submitted_answers?.[q.id] || !data.questions?.some(item => canonicalJson(item) === canonicalJson(q))) throw new AgentRunError('The pending question is inconsistent.')
   } else if (data.status === 'awaiting_answer') throw new AgentRunError('The generation is missing its question.')
   return structuredClone(data)
 }
@@ -79,7 +81,7 @@ export function parseAgentRun(data: unknown): AgentState {
 export function checkRunInput(run: AgentState, input: PreparedRoomInput, runId?: string) {
   if (run.input_id !== input.input_id || (runId && run.run_id !== runId)
     || Date.parse(run.input_expires_at) !== Date.parse(input.expires_at)
-    || JSON.stringify(run.image_ids) !== JSON.stringify(input.images.map(image => image.image_id))
+    || canonicalJson(run.image_ids) !== canonicalJson(input.images.map(image => image.image_id))
     || dimensionAxes.some(axis => input.options.dimensions?.measurements_source === 'user_confirmed'
       && input.options.dimensions[axis] != null && run.confirmed_dimensions?.[axis] !== input.options.dimensions[axis])) throw new AgentRunError('This generation does not match your uploaded room.')
 }

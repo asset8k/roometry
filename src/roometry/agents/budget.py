@@ -16,11 +16,13 @@ class RunBudget:
         authorize: Callable[[], Awaitable[None]],
         cancelled: Callable[[], bool],
         *, run_id: str | None = None,
+        persist_usage=None,
     ):
         self.limits, self.usage = limits, usage
         self.authorize, self.cancelled = authorize, cancelled
         self.exhausted = False
         self.run_id = run_id
+        self.persist_usage = persist_usage
 
     def sync(self, usage: RunUsage) -> None:
         self.usage = RunUsage(
@@ -46,6 +48,9 @@ class RunBudget:
                 "unknown_usage_calls": self.usage.unknown_usage_calls + 1,
             }
         )
+
+        if self.persist_usage is not None:
+            await self.persist_usage(self.usage)
 
     def after_call(self, usage: ResponseUsage | None) -> None:
         if usage is not None:

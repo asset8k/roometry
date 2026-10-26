@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useSyncExternalStore } from 'react'
 import RoomGenerationWorkspace from '../room-analysis/RoomGenerationWorkspace'
 import { Button, Icon } from '../ui/primitives'
 import GlassSelect from '../ui/GlassSelect'
+import { useSiteActions } from '../site/SiteActions'
 import { RoomGenerationController } from '../../lib/room-generation-controller'
 import { RoomInputController } from '../../lib/room-input-controller'
 import type { RoomInputState } from '../../lib/room-input-controller'
@@ -14,6 +15,8 @@ const roomTypes = [
 const roomLabel = (type: string | null | undefined) => roomTypes.find(([value]) => value === type)?.[1] ?? 'Not specified'
 
 export default function RoomInputWorkspace({ onConnectionChange, inputController }: { onConnectionChange: (online: boolean) => void; inputController?: RoomInputController }) {
+  const account = useSiteActions()?.userId ?? null
+  const generationOwner = useRef<string | null>(null)
   const controller = useMemo(() => inputController ?? new RoomInputController(), [inputController])
   const generation = useMemo(() => new RoomGenerationController(controller), [controller])
   const generationState = useSyncExternalStore(generation.subscribe, generation.getSnapshot, generation.getSnapshot)
@@ -30,7 +33,8 @@ export default function RoomInputWorkspace({ onConnectionChange, inputController
   useEffect(() => {
     if (generationState.connection !== undefined) onConnectionChange(generationState.connection)
   }, [generationState.connection, onConnectionChange])
-  const form = <RoomInputForm state={state} controller={controller} locked={generation.locked()} generating={['starting', 'running', 'awaiting_answer'].includes(generationState.phase)} generated={['completed', 'partial'].includes(generationState.phase)} recovering={generationState.recovery} onGenerate={generation.generate} onCancel={() => void generation.cancel()} onClear={() => void generation.discard()} />
+  const form = <RoomInputForm state={state} controller={controller} locked={generation.locked()} generating={['starting', 'running', 'awaiting_answer'].includes(generationState.phase)} generated={['completed', 'partial'].includes(generationState.phase)} recovering={generationState.recovery} onGenerate={async () => { generationOwner.current = account; await generation.generate() }} onCancel={() => void generation.cancel()} onClear={() => void generation.discard()} />
+  if (generationState.run?.persistence === 'account' && generationOwner.current !== account) return <div className="input-notice info"><p>This reconstruction is private to the account that created it.</p><Button onClick={() => void generation.discard()}>Create another room</Button><a className="ui-button" href="#my-rooms">My rooms</a></div>
   return <>
     {generationState.run?.working_scene && !['starting', 'running', 'awaiting_answer'].includes(generationState.phase)
       ? <details className="source-inputs"><summary>Room photos &amp; details</summary>{form}</details> : form}
@@ -42,6 +46,7 @@ export function RoomInputForm({ state, controller, onGenerate, onCancel, onClear
   state: RoomInputState; controller: RoomInputController; onGenerate: () => Promise<void>; onCancel: () => void
   locked?: boolean; generating?: boolean; generated?: boolean; recovering?: boolean; onClear?: () => void
 }) {
+  const registered = Boolean(useSiteActions()?.userId)
   const { limits, draft, photos, busy, accepted } = state
   const photoInput = useId()
   const errorSummary = useRef<HTMLDivElement>(null)
@@ -110,7 +115,7 @@ export function RoomInputForm({ state, controller, onGenerate, onCancel, onClear
         <dt>Available until</dt><dd>{new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' }).format(new Date(accepted.expires_at))}</dd>
       </dl></details>}
       <div className="input-form-footer">
-        <details className="privacy-note"><summary><Icon name="lock" />Private photos · Temporary session</summary><p>Refresh clears this form. Uploaded copies expire automatically. Nothing is shared publicly.</p></details>
+        <details className="privacy-note"><summary><Icon name="lock" />Private photos · {registered ? 'Recoverable run' : 'Temporary session'}</summary><p>{registered ? 'Signed-in runs can be resumed for seven days. Save your finished room to keep it. Nothing is shared publicly.' : 'Refresh clears this form. Uploaded copies expire automatically. Nothing is shared publicly.'}</p></details>
         <div className="input-actions">
           {busy || generating || locked ? <Button onClick={onCancel}>Cancel</Button> : (photos.length > 0 || accepted || state.dirty || state.uncertain) && <Button variant="quiet" onClick={onClear ?? (() => void controller.discard())} disabled={!photos.length && !accepted && !state.dirty && !state.uncertain}>Clear</Button>}
           {recovering && <Button onClick={onClear}>Discard &amp; clear inputs</Button>}

@@ -4845,6 +4845,15 @@
   },
   "additionalProperties": false,
   "properties": {
+    "persistence": {
+      "default": "temporary",
+      "enum": [
+        "temporary",
+        "account"
+      ],
+      "title": "Persistence",
+      "type": "string"
+    },
     "run_id": {
       "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
       "title": "Run Id",
@@ -5128,6 +5137,7 @@
     }
   },
   "required": [
+    "persistence",
     "run_id",
     "input_id",
     "image_ids",

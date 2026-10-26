@@ -5,6 +5,7 @@
  * and run json-schema-to-typescript to regenerate this file.
  */
 
+export type Persistence = "temporary" | "account";
 export type RunId = string;
 export type InputId = string;
 /**
@@ -1733,6 +1734,7 @@ export type StopReason = ("finished" | "budget_limit") | null;
 export type LastError = ("step_failed" | "step_timeout" | "invalid_step" | "decision_failed" | "tool_failed") | null;
 
 export interface AgentState {
+  persistence: Persistence;
   run_id: RunId;
   input_id: InputId;
   image_ids: ImageIds;

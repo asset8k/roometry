@@ -70,7 +70,7 @@ export class OptimizationController {
     return () => {
       clearTimeout(timer); this.connected = false; this.stopStream(); this.stopPolling(); this.reading?.abort(); this.reading = null
       this.active?.abort(); this.active = null
-      if (this.state.result && (this.state.result.status === 'running' || (this.executionRequested && this.state.result.status === 'prepared'))) {
+      if (this.source.persistence !== 'account' && this.state.result && (this.state.result.status === 'running' || (this.executionRequested && this.state.result.status === 'prepared'))) {
         void this.client.cancel(this.source.run_id, this.state.result.run_id, AbortSignal.timeout(10000)).catch(() => {})
       }
     }

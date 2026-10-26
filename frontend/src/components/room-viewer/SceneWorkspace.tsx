@@ -36,10 +36,10 @@ export function ComparisonControls({ comparison, views }: { comparison: SceneCom
   </div>
 }
 
-export default function SceneWorkspace({ initialScene, onConnectionChange, goals, improvement = null, objectLabels, comparison: suppliedComparison, overview, chat }: {
+export default function SceneWorkspace({ initialScene, onConnectionChange, goals, improvement = null, objectLabels, comparison: suppliedComparison, overview, chat, saveAction }: {
   goals?: ScoreLayoutRequest['goals']; initialScene: RoomScene; onConnectionChange: (online: boolean) => void
   improvement?: OptimizationRun | null; objectLabels?: Readonly<Record<string, string>>
-  comparison?: SceneComparison; overview?: ReactNode; chat?: ReactNode
+  comparison?: SceneComparison; overview?: ReactNode; chat?: ReactNode; saveAction?: ReactNode
 }) {
   const comparison = useMemo(() => suppliedComparison ?? new SceneComparison(initialScene), [initialScene, suppliedComparison])
   const views = useSyncExternalStore(comparison.subscribe, comparison.getSnapshot, comparison.getSnapshot)
@@ -150,7 +150,7 @@ export default function SceneWorkspace({ initialScene, onConnectionChange, goals
         onClick={() => setMobilePanelOpen(open => !open)}><Icon name={mobilePanelOpen ? 'close' : 'room'}/>{mobilePanelOpen ? 'Close tools' : 'Room tools'}</button>}
 
       <section className="viewer-card" aria-label="3D room viewer">
-        <div className="viewer-heading"><h2>Room overview</h2><div className="viewer-actions"><span>{scene.objects.length} objects</span>{siteActions && <><Button onClick={() => siteActions.account('save')}><Icon name="save"/>Save</Button><Button onClick={() => siteActions.share(scene)}><Icon name="share"/>Share</Button></>}</div></div>
+        <div className="viewer-heading"><h2>Room overview</h2><div className="viewer-actions"><span>{scene.objects.length} objects</span>{siteActions && <>{saveAction ?? <Button onClick={() => siteActions.account('save')}><Icon name="save"/>Save</Button>}<Button onClick={() => siteActions.share(scene)}><Icon name="share"/>Share</Button></>}</div></div>
         <ComparisonControls comparison={comparison} views={views} />
         {improvement && selectedImprovement && improvement.run_id !== selectedImprovement.run_id && <p className="comparison-history-note" role="status">
           {['prepared', 'running'].includes(improvement.status) ? 'A new improvement is in progress.' : 'This request produced no new retained candidate.'} The comparison still shows your earlier {selectedImprovement.instruction ? 'chat refinement' : improvementLabels[selectedImprovement.focus].toLowerCase()} candidate.
@@ -163,7 +163,7 @@ export default function SceneWorkspace({ initialScene, onConnectionChange, goals
         {selectedImprovement && <details className="candidate-details"><summary>Candidate details</summary><ImprovementComparison run={selectedImprovement} labels={objectLabels} /></details>}
         <LayoutAssessment key={JSON.stringify(state.scene)} scene={state.scene} goals={goals} />
         <div className="viewer-footer">
-          <p>{readOnly ? 'Saved scenes are read-only. Edit a copy to make changes.' : 'Layout changes are checked before applying. Reset layout keeps your colors.'} Edits reset on refresh.</p>
+          <p>{readOnly ? 'Saved scenes are read-only. Edit a copy to make changes.' : 'Layout changes are checked before applying. Reset layout keeps your colors.'} Use Save to keep changes.</p>
           <span>Openings shown as markers</span>
         </div>
       </section>

@@ -143,11 +143,12 @@ class AnalysisService:
 
         def invalid_inputs() -> list[str]:
             invalid = []
-            for input_id, state in states:
+            for key, state in states:
+                input_id = key.rsplit(":", 1)[-1]
                 try:
                     self.storage.resolve(input_id, state.owner)
                 except UploadFailure:
-                    invalid.append(input_id)
+                    invalid.append(key)
             return invalid
 
         invalid = await anyio.to_thread.run_sync(invalid_inputs)
@@ -252,7 +253,8 @@ class AnalysisService:
     async def _analyze(self, input_id: str, owner: str) -> RoomAnalysisResponse:
         prepared = await anyio.to_thread.run_sync(self._resolve, input_id, owner)
         await self.cleanup()
-        state = self._states.get(input_id)
+        cache_key = self.cache_key(input_id, owner)
+        state = self._states.get(cache_key)
         if state is not None and state.result is not None:
             return state.result.model_copy(deep=True)
         if (
@@ -283,7 +285,7 @@ class AnalysisService:
             state = AnalysisState(
                 owner=owner, expires_at=prepared.expires_at, analysis_id=str(uuid4())
             )
-            self._states[input_id] = state
+            self._states[cache_key] = state
 
         repair_used = False
         original_response: Response | None = None
@@ -425,14 +427,20 @@ class AnalysisService:
             "This upload has reached its analysis attempt limit.",
         )
 
+    @staticmethod
+    def cache_key(input_id: str, owner: str) -> str:
+        # A browser may explicitly reuse its upload after switching accounts.
+        # Confirmed relationships and construction attempts belong to that owner.
+        return f"{owner}:{input_id}" if owner.startswith("account:") else input_id
+
     async def _owned_analysis(self, analysis_id: str, owner: str) -> AnalysisState:
-        for input_id, state in list(self._states.items()):
+        for state in list(self._states.values()):
             if (
                 state.owner == owner
                 and state.analysis_id == analysis_id
                 and state.result is not None
             ):
-                await anyio.to_thread.run_sync(self._resolve, input_id, owner)
+                await anyio.to_thread.run_sync(self._resolve, state.result.input_id, owner)
                 if self.storage.now() >= state.expires_at:
                     break
                 return state

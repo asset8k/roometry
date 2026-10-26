@@ -6,14 +6,21 @@ from starlette.responses import JSONResponse
 
 
 class AuthBodyLimitMiddleware:
-    def __init__(self, app):
-        self.app = app
+    def __init__(
+        self, app, prefix="/api/auth/", max_bytes=4096, subject="sign-in details"
+    ):
+        self.app, self.prefix, self.max_bytes, self.subject = (
+            app,
+            prefix,
+            max_bytes,
+            subject,
+        )
 
     async def __call__(self, scope, receive, send):
         if (
             scope["type"] != "http"
-            or scope["method"] != "POST"
-            or not scope["path"].startswith("/api/auth/")
+            or scope["method"] not in {"POST", "PATCH", "DELETE"}
+            or not scope["path"].startswith(self.prefix)
         ):
             return await self.app(scope, receive, send)
 
@@ -26,33 +33,36 @@ class AuthBodyLimitMiddleware:
 
         headers = scope["headers"]
         lengths = [v for k, v in headers if k.lower() == b"content-length"]
-        if len(lengths) > 1 or (lengths and not lengths[0].isdigit()):
+        if len(lengths) > 1 or (
+            lengths and (not lengths[0].isdigit() or len(lengths[0]) > 16)
+        ):
             return await fail(400, "invalid_request", "Invalid request headers.")
-        if lengths and int(lengths[0]) > 4096:
+        if lengths and int(lengths[0]) > self.max_bytes:
             return await fail(
                 413,
                 "request_too_large",
-                "Keep sign-in details within the displayed limits.",
+                f"Keep {self.subject} within the displayed limits.",
             )
         content_type = next(
             (v for k, v in headers if k.lower() == b"content-type"), b""
         )
         if content_type.split(b";", 1)[0].strip().lower() != b"application/json":
             return await fail(
-                415, "unsupported_media_type", "Send sign-in details as JSON."
+                415, "unsupported_media_type", f"Send {self.subject} as JSON."
             )
         body = bytearray()
         while True:
             message = await receive()
             if message["type"] == "http.disconnect":
                 return
-            body.extend(message.get("body", b""))
-            if len(body) > 4096:
+            chunk = message.get("body", b"")
+            if len(body) + len(chunk) > self.max_bytes:
                 return await fail(
                     413,
                     "request_too_large",
-                    "Keep sign-in details within the displayed limits.",
+                    f"Keep {self.subject} within the displayed limits.",
                 )
+            body.extend(chunk)
             if not message.get("more_body", False):
                 break
 
@@ -71,7 +81,7 @@ class AuthBodyLimitMiddleware:
             json.loads(body, object_pairs_hook=unique, parse_constant=finite)
         except (ValueError, UnicodeError, RecursionError):
             return await fail(
-                422, "invalid_request", "Check the sign-in details and try again."
+                422, "invalid_request", f"Check the {self.subject} and try again."
             )
         sent = False
 

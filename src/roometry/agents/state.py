@@ -161,6 +161,7 @@ def append_events(left: list[RunEvent], right: list[RunEvent]) -> list[RunEvent]
 
 
 class AgentState(RunModel):
+    persistence: Literal["temporary", "account"] = "temporary"
     run_id: OpaqueId
     input_id: OpaqueId
     image_ids: Annotated[list[OpaqueId], Field(min_length=1, max_length=MAX_IMAGES)]

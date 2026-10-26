@@ -1,3 +1,5 @@
+import { canonicalJson } from './canonical-json'
+import type { OpenedProject, SaveSnapshot } from './projects'
 import { SceneEditor } from './scene-editor'
 import type { RoomScene } from './scene.generated'
 import type { OptimizationRun } from './optimization'
@@ -16,7 +18,7 @@ export interface ComparisonState {
 export function retainedImprovement(run: OptimizationRun | null): run is OptimizationRun & { result_scene: RoomScene } {
   return !!run?.result_scene && !['prepared', 'running', 'no_improvement'].includes(run.status)
     && run.attempts.some(attempt => attempt.outcome === 'accepted')
-    && JSON.stringify(run.source_scene) !== JSON.stringify(run.result_scene)
+    && canonicalJson(run.source_scene) !== canonicalJson(run.result_scene)
 }
 
 /** Saved scenes are read-only; every original/candidate has its own manual copy. */
@@ -31,6 +33,27 @@ export class SceneComparison {
     this.copies.set('original', { editor, colors: {} })
     this.state = { view: 'editing', editor, editingId: 'original', selectedImprovementId: null, improvements: [], colors: {} }
   }
+  static restore(saved: OpenedProject, client?: EditClient): SceneComparison {
+    const result = new SceneComparison(saved.run.working_scene!, client)
+    const snapshot = saved.project.snapshot
+    for (const improvement of Object.values(snapshot.improvements)) result.offer(improvement, improvement.source_scene)
+    const versions = new Map(saved.project.versions.map(version => [version.id, version.scene]))
+    for (const version of snapshot.versions.filter(item => item.key.startsWith('manual:'))) {
+      const copy = result.copies.get(version.parent_key!)
+      if (copy) {
+        const scene = versions.get(version.version_id)!, baseline = copy.editor.savedScene()
+        copy.colors = Object.fromEntries(scene.objects.filter(object => baseline.objects.find(item => item.id === object.id)?.color !== object.color).map(object => [object.id, object.color]))
+        copy.editor.restoreAccepted(scene)
+      }
+    }
+    const editingId = snapshot.comparison.editing_parent_run_id ?? 'original'
+    result.update({ editingId, selectedImprovementId: snapshot.comparison.selected_improvement_id })
+    const view = snapshot.comparison.view
+    const active = view === 'original' ? 'original' : view === 'editing' ? editingId : snapshot.comparison.selected_improvement_id!
+    result.activate(view, active)
+    result.update({ colors: result.copies.get(active)!.colors })
+    return result
+  }
   getSnapshot = () => this.state
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener) } }
   private update(patch: Partial<ComparisonState>) { this.state = { ...this.state, ...patch }; this.listeners.forEach(listener => listener()) }
@@ -44,14 +67,14 @@ export class SceneComparison {
   }
   offer = (run: OptimizationRun | null, requestScene?: RoomScene) => {
     if (!retainedImprovement(run) || this.copies.has(run.run_id)
-      || JSON.stringify(run.source_scene) !== JSON.stringify(requestScene ?? this.original)) return false
+      || canonicalJson(run.source_scene) !== canonicalJson(requestScene ?? this.original)) return false
     const saved = structuredClone(run)
     this.copies.set(saved.run_id, { editor: new SceneEditor(saved.result_scene!, this.client, saved.result_scene!), colors: {} })
     const editing = this.state.editor.getSnapshot()
     // Do not interrupt a drag or an in-flight manual edit when a result arrives.
     // Do not replace newer manual edits made while a candidate was being checked.
     const current = this.currentContext().scene
-    const activate = !editing.busy && !editing.dragging && (!requestScene || JSON.stringify(current) === JSON.stringify(requestScene))
+    const activate = !editing.busy && !editing.dragging && (!requestScene || canonicalJson(current) === canonicalJson(requestScene))
     this.update({ improvements: [...this.state.improvements, saved],
       ...(activate || this.state.view !== 'improved' ? { selectedImprovementId: saved.run_id } : {}) })
     if (activate) this.activate('improved', saved.run_id)
@@ -92,6 +115,18 @@ export class SceneComparison {
     if (this.state.view !== 'editing') return
     this.copies.get(this.state.editingId)!.colors = {}
     this.update({ colors: {} })
+  }
+  snapshotForSave = (): SaveSnapshot => {
+    const manual_copies = [...this.copies].map(([id, copy]) => {
+      const status = copy.editor.getSnapshot()
+      if (status.busy || status.dragging) throw new Error('Finish the current edit before saving.')
+      const scene = copy.editor.savedScene()
+      scene.objects = scene.objects.map(object => object.locked || !copy.colors[object.id] ? object : { ...object, color: copy.colors[object.id].toUpperCase() })
+      return { parent_run_id: id === 'original' ? null : id, scene }
+    })
+    return { manual_copies, improvement_run_ids: this.state.improvements.map(run => run.run_id), view: this.state.view,
+      editing_parent_run_id: this.state.editingId === 'original' ? null : this.state.editingId,
+      selected_improvement_id: this.state.selectedImprovementId }
   }
   cancelEdits = () => { for (const copy of this.copies.values()) copy.editor.cancel(false) }
 }

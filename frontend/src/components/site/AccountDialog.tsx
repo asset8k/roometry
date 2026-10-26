@@ -20,7 +20,7 @@ export default function AccountDialog({ intent = 'signin', onClose, onGuest, con
   const change = () => { setError(null); controller.clearError() }
   if (state.user) return <Dialog title={title} onClose={onClose}>
     <p className="dialog-description">Signed in as {state.user.username}.</p>
-    <p className="feature-notice">Room saving is the next step. Your current workspace stays here.</p>
+    <p className="feature-notice">Choose Save in your room to keep it privately. Your current workspace stays here.</p>
     <Button variant="primary" onClick={onClose}>Back to your room<Icon name="arrow"/></Button>
   </Dialog>
   return <Dialog title={title} onClose={onClose}>

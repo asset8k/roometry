@@ -37,6 +37,7 @@ class CheckpointRun:
         # No arbitrary class reconstruction or pickle fallback is needed.
         serde=JsonPlusSerializer(allowed_msgpack_modules=[]),
     ))
+    recovery: bool = False
     busy: bool = False
     cancel_requested: bool = False
     answer_in_flight: ClarificationAnswer | None = None
@@ -72,7 +73,7 @@ class TemporaryCheckpoints:
             raise RunUnavailable()
         return entry
 
-    def remove(self, run_id: str) -> None:
+    def remove(self, run_id: str, owner: str | None = None) -> None:
         # Internal only; callers must authorize ownership before revocation.
         self._runs.pop(run_id, None)
 

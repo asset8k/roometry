@@ -47,6 +47,7 @@ class AgentRuns:
         self.checkpoints = (
             checkpoints if checkpoints is not None else TemporaryCheckpoints()
         )
+        self.durable = getattr(self.checkpoints, "registered", None)
         self.ttl_seconds = ttl_seconds
         self._start_lock = anyio.Lock()
 
@@ -67,10 +68,11 @@ class AgentRuns:
         prepared = await self._input(input_id, owner)
         now = self.now()
         dimensions = prepared.options.dimensions
-        expires_at = min(prepared.expires_at, now + timedelta(seconds=self.ttl_seconds))
+        expires_at = prepared.expires_at if owner.startswith("account:") else min(prepared.expires_at, now + timedelta(seconds=self.ttl_seconds))
         if expires_at <= now:
             raise RunUnavailable()
         state = AgentState(
+            persistence="account" if owner.startswith("account:") else "temporary",
             run_id=new_run_id(),
             input_id=input_id,
             image_ids=[image.image_id for image in prepared.images],
@@ -92,7 +94,7 @@ class AgentRuns:
         try:
             prepared = await self._input(entry.initial.input_id, owner)
         except RunUnavailable:
-            self.checkpoints.remove(run_id)
+            self.checkpoints.remove(run_id, owner)
             raise
         # Recheck after I/O; deletion/expiry may have happened while resolving.
         current = self.checkpoints.get(run_id, owner, self.now())
@@ -102,7 +104,7 @@ class AgentRuns:
             or [image.image_id for image in prepared.images]
             != current.initial.image_ids
         ):
-            self.checkpoints.remove(run_id)
+            self.checkpoints.remove(run_id, owner)
             raise RunUnavailable()
         return current
 
@@ -115,12 +117,28 @@ class AgentRuns:
 
     async def read(self, run_id: str, owner: str) -> AgentState:
         entry = await self._owned(run_id, owner)
-        snapshot = await build_graph(entry.saver).aget_state(self._config(entry))
+        graph = build_graph(entry.saver)
+        snapshot = await graph.aget_state(self._config(entry))
         result = (
             AgentState.model_validate(snapshot.values)
             if snapshot.values
             else entry.initial
         )
+        if entry.recovery and self.durable:
+            record = await anyio.to_thread.run_sync(self.durable.load, owner, run_id)
+            stable = bool(snapshot.interrupts) or result.status not in {"queued", "running", "awaiting_answer"}
+            expired_lease = record['lease_until'] is None or record['lease_until'].replace(tzinfo=UTC) <= self.now()
+            if stable and expired_lease:
+                await anyio.to_thread.run_sync(lambda:self.durable.release(owner,run_id,recovery=True))
+                entry.recovery=False
+            elif expired_lease:
+                status = result.proposal.status if result.working_scene and result.proposal else 'failed'
+                status = 'cancelled' if record['cancel_requested'] else 'completed' if status == 'ready' else 'partial' if status == 'partial' else 'failed'
+                await graph.aupdate_state(self._config(entry), {"status":status,"continue_run":False,"pending_tool":None,
+                    "pending_question":None,"last_error":"step_failed","usage":record['usage']}, as_node="finalize")
+                await anyio.to_thread.run_sync(lambda:self.durable.release(owner,run_id,recovery=True))
+                entry.recovery=False
+                return await self.read(run_id,owner)
         await self._owned(run_id, owner)
         return result.model_copy(deep=True)
 
@@ -135,6 +153,9 @@ class AgentRuns:
 
     async def read_request(self, request_id: str, owner: str) -> AgentState:
         """Read-only discovery while the original start request is in flight."""
+        if self.durable and owner.startswith('account:'):
+            found=await anyio.to_thread.run_sync(self.durable.find,owner,request_id)
+            if found:return await self.read(found,owner)
         for entry in list(self.checkpoints._runs.values()):
             if entry.owner == owner and entry.request_id == request_id:
                 return await self.read(entry.initial.run_id, owner)
@@ -143,6 +164,14 @@ class AgentRuns:
     async def start(self, input_id: str, owner: str, request_id: str) -> AgentState:
         """Client-generated request IDs make retried starts safe as well."""
         initial: AgentState | None = None
+        if self.durable and owner.startswith('account:'):
+            found=await anyio.to_thread.run_sync(self.durable.find,owner,request_id)
+            if found:
+                existing=await self.read(found,owner)
+                if existing.input_id!=input_id:raise AnswerConflict('This request identifies another input.')
+                metadata=await anyio.to_thread.run_sync(self.durable.load,owner,found)
+                if existing.status=='queued' and metadata['execution_owner'] is None:return await self.execute(found,owner)
+                return existing
         async with self._start_lock:
             self.checkpoints.cleanup(self.now())
             for entry in self.checkpoints._runs.values():
@@ -157,6 +186,8 @@ class AgentRuns:
                 initial = await self.create(input_id, owner)
                 entry = self.checkpoints.get(initial.run_id, owner, self.now())
                 entry.request_id = request_id
+                if self.durable and owner.startswith('account:'):
+                    await anyio.to_thread.run_sync(self.durable.request,owner,initial.run_id,request_id)
                 existing_id = None
         if existing_id is not None:
             return await self.read(existing_id, owner)
@@ -206,6 +237,12 @@ class AgentRuns:
         async def authorize() -> None:
             await self._owned(run_id, owner)
 
+        if self.durable and owner.startswith('account:'):
+            await self.read(run_id,owner)
+            await anyio.to_thread.run_sync(self.durable.claim,owner,run_id,entry.initial.limits.step_timeout_seconds)
+        async def persist_usage(usage):
+            if self.durable and owner.startswith('account:'):
+                await anyio.to_thread.run_sync(self.durable.reserve,owner,run_id,usage,entry.initial.limits.step_timeout_seconds)
         graph, config = build_graph(entry.saver), self._config(entry)
         budget = RunBudget(
             entry.initial.limits,
@@ -213,6 +250,7 @@ class AgentRuns:
             authorize,
             lambda: entry.cancel_requested,
             run_id=run_id,
+            persist_usage=persist_usage,
         )
         entry.busy = True
         try:
@@ -256,7 +294,7 @@ class AgentRuns:
             )
             # Only this original mutation drives the graph. SSE merely observes
             # bounded public events; disconnecting a subscriber cannot replay work.
-            async for values in graph.astream(graph_input, config, context=context, stream_mode="values"):
+            async for values in graph.astream(graph_input, config, context=context, stream_mode="values", durability="sync"):
                 if "run_id" in values:
                     state = AgentState.model_validate({k: v for k, v in values.items() if k != "__interrupt__"})
                     if state.status in {"queued", "running", "awaiting_answer"}:
@@ -293,10 +331,17 @@ class AgentRuns:
         finally:
             entry.answer_in_flight = None
             entry.busy = False
+            if self.durable and owner.startswith('account:'):
+                with anyio.CancelScope(shield=True):
+                    await anyio.to_thread.run_sync(self.durable.release,owner,run_id)
 
     async def cancel(self, run_id: str, owner: str) -> AgentState:
         entry = await self._owned(run_id, owner)
         entry.cancel_requested = True
+        if self.durable and owner.startswith('account:'):
+            await anyio.to_thread.run_sync(self.durable.cancel,owner,run_id)
+            record=await anyio.to_thread.run_sync(self.durable.load,owner,run_id)
+            if record['execution_owner'] not in (None,self.durable.instance):return await self.read(run_id,owner)
         if entry.busy:
             current = await self.read(run_id, owner)
             entry.progress.publish(current, cancelling=True)
@@ -336,8 +381,8 @@ class AgentRuns:
 
     async def cleanup(self) -> None:
         self.checkpoints.cleanup(self.now())
-        for run_id, entry in list(self.checkpoints._runs.items()):
+        for entry in list(self.checkpoints._runs.values()):
             try:
-                await self._owned(run_id, entry.owner)
+                await self._owned(entry.initial.run_id, entry.owner)
             except RunUnavailable:
                 pass

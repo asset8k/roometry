@@ -48,7 +48,13 @@ class Settings(BaseSettings):
             raise ValueError("Production authentication requires secure cookies.")
         if self.database_url and self.jwt_secret_key and "*" in self.cors_origins:
             raise ValueError("Authentication requires explicit CORS origins.")
+        durable = self.project_storage_dir.absolute()
+        temporary = self.upload_storage_dir.absolute()
+        if durable == temporary or durable.is_relative_to(temporary):
+            raise ValueError("Saved photos require a separate private storage directory.")
         return self
+
+    project_storage_dir: Path = Path(__file__).resolve().parents[2] / ".local" / "project-images"
 
     # Limits apply to original uploads and normalized private derivatives.
     max_images_per_request: int = Field(default=MAX_IMAGES, ge=1, le=MAX_IMAGES)

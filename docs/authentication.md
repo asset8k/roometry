@@ -62,6 +62,8 @@ For HTTPS deployment, set `AUTH_COOKIE_SECURE=true` and list exact frontend `COR
 
 ## Verification and scope
 
+Private room saving has since been implemented in [milestone step 2](private-room-saving.md). The scope below describes step 1.
+
 `uv run pytest tests/test_auth.py -q` covers password hashing, duplicate registrations, expired/tampered tokens, disabled users, logout replay, restart restoration, request validation, origin checks, throttling and migration upgrade/downgrade. Fast isolated tests use migrated SQLite databases; browser verification uses the local PostgreSQL database.
 
 The browser flow was checked for registration, wrong-password feedback, sign-in, sign-out, preserved room drafts, and session restoration after a backend restart and page reload. No model calls are needed.

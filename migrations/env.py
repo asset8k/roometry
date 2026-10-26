@@ -5,6 +5,8 @@ from sqlalchemy import create_engine, pool
 
 from roometry.config import Settings
 from roometry.database import Base, database_url
+from roometry.agents import persistence_model as runtime_models  # noqa: F401
+from roometry.projects import model as project_models  # noqa: F401 - register model metadata.
 from roometry.users.model import AuthSession, User  # noqa: F401 - register model metadata.
 
 config = context.config

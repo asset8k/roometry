@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import type { OpenedProject } from '../../lib/projects'
 import type { AgentState } from '../../lib/agent-run'
 import { OptimizationController } from '../../lib/optimization-controller'
 import type { ImprovementState } from '../../lib/optimization-controller'
 import { improvementLabels } from '../../lib/optimization'
 import RunWorkflow from './RunWorkflow'
+import SaveRoomControl from '../site/SaveRoomControl'
 import { progressLabels } from '../../lib/run-progress'
 import RoomAssessmentCards from './RoomAssessmentCards'
 import SceneWorkspace from '../room-viewer/SceneWorkspace'
@@ -11,10 +13,10 @@ import { SceneComparison } from '../../lib/scene-comparison'
 import { retainedImprovement } from '../../lib/scene-comparison'
 import { Button, Icon } from '../ui/primitives'
 
-export default function RoomImprovementWorkspace({ run, onConnectionChange }: { run: AgentState; onConnectionChange: (online: boolean) => void }) {
+export default function RoomImprovementWorkspace({ run, onConnectionChange, restored }: { run: AgentState; onConnectionChange: (online: boolean) => void; restored?: OpenedProject }) {
   const [controller] = useState(() => new OptimizationController(run))
-  const [comparison] = useState(() => new SceneComparison(run.working_scene!))
-  const [messages, setMessages] = useState<{ id: string; role: 'user' | 'assistant'; text: string }[]>([])
+  const [comparison] = useState(() => restored ? SceneComparison.restore(restored) : new SceneComparison(run.working_scene!))
+  const [messages, setMessages] = useState<{ id: string; role: 'user' | 'assistant'; text: string }[]>(restored?.project.snapshot.messages ?? [])
   const [draft, setDraft] = useState('')
   const recorded = useRef(new Set<string>())
   const transcript = useRef<HTMLDivElement>(null)
@@ -62,7 +64,8 @@ export default function RoomImprovementWorkspace({ run, onConnectionChange }: { 
     </form>
   </section>
   return run.working_scene && <SceneWorkspace goals={run.input_options.goals} initialScene={run.working_scene}
-    comparison={comparison} overview={overview} chat={chat} improvement={state.result}
+    comparison={comparison} saveAction={<SaveRoomControl run={run} comparison={comparison} messages={messages} initial={restored ? { id: restored.project.id, title: restored.project.title, revision: restored.project.revision,
+      image_count: restored.project.images.length, version_count: restored.project.versions.length, visibility: 'private', saved_at: run.created_at } : undefined} disabled={editor.busy || editor.dragging || ['preparing', 'prepared', 'running', 'cancelling'].includes(state.phase) || state.recovery} />} overview={overview} chat={chat} improvement={state.result}
     objectLabels={Object.fromEntries((run.analysis?.observations.objects ?? []).map(object => [object.id, object.label]))}
     onConnectionChange={onConnectionChange} />
 }

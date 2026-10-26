@@ -8,6 +8,7 @@ from starlette.responses import StreamingResponse
 from roometry.progress import progress_response
 from pydantic import Field
 
+from roometry.agents.access import execution_owner, stream_reader
 from roometry.agents.checkpointing import RunBusy, RunCapacityReached, RunUnavailable
 from roometry.agents.clarification import AnswerConflict, InvalidAnswer
 from roometry.agents.runs import AgentRuns
@@ -54,13 +55,13 @@ router = APIRouter(
 )
 
 
-def access(
+async def access(
     request: Request, response: Response, *, mutation: bool = False
 ) -> tuple[AgentRuns, str]:
     if mutation:
         check_origin(request, cast(Settings, request.app.state.settings))
     response.headers["Cache-Control"] = "no-store"
-    _, owner = session(request)
+    owner = await execution_owner(request, reference=request.path_params.get("source_run_id") or request.path_params.get("run_id"), request_id=request.query_params.get("request_id"))
     return cast(AgentRuns, request.app.state.agent_runs), owner
 
 
@@ -93,7 +94,8 @@ async def result[T](operation: Awaitable[T]) -> T:
 async def start_run(
     body: StartRunRequest, request: Request, response: Response
 ) -> AgentState:
-    runs, owner = access(request, response, mutation=True)
+    runs, owner = await access(request, response, mutation=True)
+    owner = await execution_owner(request, input_id=body.input_id)
     return await result(runs.start(body.input_id, owner, body.request_id))
 
 
@@ -102,7 +104,7 @@ async def start_run(
     summary="Find an owned run by its start request ID without executing it",
 )
 async def read_started_run(request_id: OpaqueId, request: Request, response: Response) -> AgentState:
-    runs, owner = access(request, response)
+    runs, owner = await access(request, response)
     return await result(runs.read_request(request_id, owner))
 
 
@@ -111,7 +113,7 @@ async def read_started_run(request_id: OpaqueId, request: Request, response: Res
     summary="Read the current owned run without executing or resuming it",
 )
 async def read_run(run_id: OpaqueId, request: Request, response: Response) -> AgentState:
-    runs, owner = access(request, response)
+    runs, owner = await access(request, response)
     return await result(runs.read(run_id, owner))
 
 
@@ -120,9 +122,9 @@ async def read_run(run_id: OpaqueId, request: Request, response: Response) -> Ag
 async def stream_run(run_id: OpaqueId, request: Request, response: Response,
                      last_event_id: str | None = Header(default=None, max_length=80),
                      after: str | None = Query(default=None, max_length=80)):
-    runs, owner = access(request, response)
+    runs, owner = await access(request, response)
     _, log = await result(runs.observe(run_id, owner))
-    return progress_response(request, log, lambda: runs.read(run_id, owner), cursor=last_event_id or after)
+    return progress_response(request, log, stream_reader(request, owner, lambda: runs.read(run_id, owner)), cursor=last_event_id or after)
 
 
 @router.post(
@@ -132,7 +134,7 @@ async def stream_run(run_id: OpaqueId, request: Request, response: Response,
 async def answer_run(
     run_id: OpaqueId, body: ClarificationAnswer, request: Request, response: Response
 ) -> AgentState:
-    runs, owner = access(request, response, mutation=True)
+    runs, owner = await access(request, response, mutation=True)
     return await result(runs.answer(run_id, owner, body))
 
 
@@ -144,5 +146,5 @@ async def answer_run(
 async def cancel_run(
     run_id: OpaqueId, body: EmptyRequest, request: Request, response: Response
 ) -> AgentState:
-    runs, owner = access(request, response, mutation=True)
+    runs, owner = await access(request, response, mutation=True)
     return await result(runs.cancel(run_id, owner))

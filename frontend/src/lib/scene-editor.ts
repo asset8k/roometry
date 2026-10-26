@@ -44,6 +44,12 @@ export class SceneEditor {
     }
   }
 
+  restoreAccepted = (scene: RoomScene) => {
+    this.cancel(false); this.afterScene = structuredClone(scene)
+    this.update({ scene: this.state.view === 'before' ? this.beforeScene! : this.afterScene, draft: null, notice: null, busy: false, dragging: false })
+  }
+  /** Accepted editable copy, even while the Original comparison is visible. */
+  savedScene = () => structuredClone(this.afterScene)
   getSnapshot = () => this.state
   subscribe = (listener: () => void) => {
     this.listeners.add(listener)

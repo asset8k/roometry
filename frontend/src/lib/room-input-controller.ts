@@ -31,6 +31,7 @@ export class RoomInputController {
     private urls: ObjectUrls = { create: file => URL.createObjectURL(file), revoke: url => URL.revokeObjectURL(url) },
     private now = Date.now,
   ) {}
+  restorePrepared = (input: PreparedRoomInput) => this.update({ accepted: structuredClone(input), dirty: false, uncertain: false, busy: null, notice: null })
   getSnapshot = () => this.state
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener) } }
   private update(patch: Partial<RoomInputState>) {

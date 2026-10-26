@@ -91,8 +91,17 @@ export class RoomGenerationController {
       this.timer = setTimeout(() => { void this.poll() }, this.pollMs)
     }
   }
+  restore = (input: PreparedRoomInput, run: AgentState) => {
+    this.inputs.restorePrepared(input); this.input = structuredClone(input)
+    this.startRequest = { input_id: input.input_id, request_id: crypto.randomUUID() }
+    this.accept(run, this.revision)
+  }
   private accept(run: AgentState, revision: number) {
     if (revision !== this.revision || !this.input) return
+    if (run.persistence === 'account' && run.input_id === this.input.input_id && run.input_expires_at !== this.input.expires_at) {
+      this.input = { ...this.input, expires_at: run.input_expires_at }
+      this.inputs.restorePrepared(this.input)
+    }
     checkRunInput(run, this.input, this.state.run?.run_id)
     if (!newerRun(run, this.state.run)) return
     if (this.pendingAnswer && run.submitted_answers?.[this.pendingAnswer.question_id]) this.pendingAnswer = null
@@ -263,7 +272,7 @@ export class RoomGenerationController {
   }
   private releaseRun() {
     const request = this.startRequest, run = this.state.run
-    const shouldCancel = request && this.locked()
+    const shouldCancel = request && this.locked() && run?.persistence !== 'account'
     this.revision++; this.stopTimer(); this.stopStream(); this.refreshQueued = false
     this.reading = null; this.cancelPending = false
     this.requests.forEach(controller => controller.abort()); this.requests.clear(); this.mutation = null

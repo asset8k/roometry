@@ -85,7 +85,7 @@ async def test_log_replays_ordered_ids_and_resyncs_missing_or_foreign_cursors():
     room.available = False
     async def revoked(): return await runs.read(initial.run_id, OWNER)
     text = await collect(progress_response(Connected(), log, revoked, cursor=f'{initial.run_id}:1', recheck_seconds=.001))
-    assert messages(text)[0][0] == 'snapshot'
+    assert not messages(text)  # Revoked before iteration: never replay old progress.
     assert 'event: unavailable' in text and log.subscribers == 0
 
 

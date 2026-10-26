@@ -5,6 +5,7 @@ import { analyzedRoom, needsDimensions, partialRoom, proposedRoom } from './room
 
 export function agentRun(input: PreparedRoomInput, patch: Partial<AgentState> = {}): AgentState {
   return parseAgentRun({
+    persistence: 'temporary',
     run_id: '66666666-6666-4666-8666-666666666666', input_id: input.input_id,
     image_ids: input.images.map(image => image.image_id), input_options: input.options,
     created_at: new Date(Date.now() - 1000).toISOString(), input_expires_at: input.expires_at, expires_at: input.expires_at,

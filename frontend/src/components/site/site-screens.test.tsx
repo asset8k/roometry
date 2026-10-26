@@ -32,7 +32,7 @@ describe('account and future sharing surfaces', () => {
     const saved = renderToStaticMarkup(<MyRooms onSignIn={vi.fn()} onCreate={vi.fn()}/>)
     const feed = renderToStaticMarkup(<Explore onCreate={vi.fn()}/>)
     expect(saved).toContain('Sign in to your Roometry account')
-    expect(saved).toContain('Saved rooms are the next step')
+    expect(saved).toContain('Private rooms and recoverable work')
     expect(feed).toContain('Community rooms are coming soon')
     expect(feed).toContain('Create your own')
     expect(saved + feed).not.toContain('<img')

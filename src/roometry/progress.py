@@ -9,6 +9,7 @@ from fastapi import Request
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.background import BackgroundTask
 from starlette.responses import StreamingResponse
+from sqlalchemy.exc import SQLAlchemyError
 
 from roometry.uploads.schemas import OpaqueId
 
@@ -102,6 +103,8 @@ def progress_response(request: Request, log: ProgressLog, read: Callable[[], Awa
 
     async def events():
         try:
+            # Recheck before replay too: logout/deletion can race response creation.
+            await read()
             yield "retry: 1500\n\n"
             # Replayed progress is followed by a snapshot signal: clients reconcile
             # via the existing authorized GET even if their last event ID is current.
@@ -115,11 +118,7 @@ def progress_response(request: Request, log: ProgressLog, read: Callable[[], Awa
                 with anyio.move_on_after(recheck_seconds):
                     await wake.wait()
                 if await request.is_disconnected(): return
-                try:
-                    state = await read()  # Ownership/revocation/expiry checked throughout.
-                except RunUnavailable:
-                    yield 'event: unavailable\ndata: {"code":"run_unavailable"}\n\n'
-                    return
+                state = await read()  # Ownership/revocation/expiry checked throughout.
                 # The graph publishes immediately; this also catches external cancellation.
                 if not log.events or (state.status not in {"queued", "running", "prepared", "awaiting_answer"} and log.events[-1].status != state.status):
                     log.publish(state)
@@ -136,6 +135,8 @@ def progress_response(request: Request, log: ProgressLog, read: Callable[[], Awa
                 if anyio.current_time() - heartbeat >= heartbeat_seconds:
                     yield 'event: heartbeat\ndata: {}\n\n'
                     heartbeat = anyio.current_time()
+        except (RunUnavailable, SQLAlchemyError):
+            yield 'event: unavailable\ndata: {"code":"run_unavailable"}\n\n'
         finally:
             release()
     return StreamingResponse(events(), media_type="text/event-stream", headers={
