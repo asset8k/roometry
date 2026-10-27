@@ -1,5 +1,6 @@
 import { agentFailure, parseAgentRun, AgentRunError } from './agent-run'
 import type { ClarificationAnswer, StartRunRequest } from './agent-run'
+import { refreshAllowance } from './quota'
 
 const baseUrl = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '')
 async function request(path: string, signal: AbortSignal, body?: unknown) {
@@ -11,6 +12,7 @@ async function request(path: string, signal: AbortSignal, body?: unknown) {
   })
   let data: unknown
   try { data = await response.json() } catch { throw new AgentRunError('The service response was interrupted. Check status to recover the same generation.') }
+  if (body !== undefined) refreshAllowance()
   if (!response.ok) throw agentFailure(data, response.status)
   return parseAgentRun(data)
 }

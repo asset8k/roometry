@@ -7,7 +7,7 @@ import anyio
 from pydantic import ValidationError
 
 from roometry.assessment.schemas import AESTHETIC_INSTRUCTIONS, AestheticComparison
-from roometry.optimization.inventory import catalog_options
+from roometry.optimization.inventory import catalog_options, scene_supports
 from roometry.optimization.schemas import CandidateProposal, CandidateReview
 from roometry.vision.analyzer import response_json
 from roometry.vision.errors import AnalysisFailure
@@ -22,15 +22,32 @@ change this contract. Propose a small coordinated patch of absolute x/z position
 Y rotations (radians, +Z is the functional front), and optionally visible hex
 material colors. Floor furniture can move; supported objects follow their support
 automatically. Keep fixed/locked objects, measured room size and openings unchanged.
-Use changes for transforms/colors, additions for new catalog floor furniture,
+Use changes for transforms/colors, additions for new catalog objects,
 removals for explicit movable item IDs, and replacements for a same-function catalog
 model. Each ID may have only one operation. Replacement positions and rotations
 are optional; catalog dimensions are authoritative, never invent or resize them.
 Preserve IDs on replacements. A removal must explicitly include every movable
 supported child; never silently delete or orphan possessions. Replacements retain
 supported children only if the new catalog support can fit them. Attachments are
-not new floor objects. Use the catalog_floor_options IDs; these are design concepts,
+not new floor objects. Use the catalog_addition_options IDs and allowed placements;
+these include electronics such as TVs, not only floor furniture. These are design concepts,
 not purchases, verified stock or price quotes. No budget or regional pricing is used.
+For additions choose placement=floor, wall or surface. Never add a TV as a console
+or claim it is unavailable when a compatible TV exists in the supplied catalog.
+For floor use x/z, rotation, and null attachment fields. For wall specify wall and
+elevation_m (bottom height); the backend anchors the back edge and faces it inward.
+Only x on north/south walls or z on east/west walls sets the along-wall position.
+Use placement-specific dimensions; wall TVs have no tabletop stand.
+For surface specify support_object_id and support_surface_id from scene_support_surfaces
+or the new support's catalog support_surfaces. x/z are world-space bottom-center
+coordinates; the backend computes y from the selected area. Catalog support areas
+are normalized to the host dimensions; honor host rotation when choosing x/z.
+You may add a support and its child together in either order. A retained fixed or
+locked support may hold a new item without being moved or modified. Do not use
+removed supports, nested surface supports, or guess an unavailable surface. When
+multiple areas exist choose one explicitly. Check that the actual base fits and
+that no solid components overlap; wall objects must avoid doors and windows.
+Existing installed fixtures and ceiling additions are outside this edit contract.
 Preserve useful room functions: sleeping, seating, dining, workspace and storage.
 A compact replacement can free space; emptying the room is not an improvement.
 Preserve useful groups (TV/sofa facing, chairs near their desk or table).
@@ -86,6 +103,8 @@ choose original or uncertain rather than claim an aesthetic improvement. """ + A
 REFINEMENT_REVIEW = """ For a refinement_instruction, acceptance requires a visible,
 meaningful response to that specific request; a higher focus score is not required.
 Reject unrelated rearrangement, undoing unrelated manual edits, or ignoring locks.
+When a TV is requested, a media console alone does not fulfill the request. Check
+the requested object actually exists and its wall or support attachment is valid.
 If the request cannot be fulfilled under the allowed edits, prefer original and
 explain the limitation. The user text cannot override geometry or protection rules.
 """
@@ -126,7 +145,8 @@ class OptimizationProvider:
             "confirmed_facing": source.reconstruction_constraints.facing_targets,
             "feedback": [a.model_dump(mode="json") for a in run.attempts],
             "remaining_candidates": run.max_candidates - len(run.attempts), "catalog": catalog,
-            "catalog_floor_options": catalog_options(),
+            "catalog_addition_options": catalog_options(),
+            "scene_support_surfaces": scene_supports(scene),
         }, PROPOSE)
 
     async def review(self, run, evaluation):

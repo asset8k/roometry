@@ -24,6 +24,15 @@ async function setup(overrides: Partial<AgentClient> = {}, height = '2.6') {
   return { inputs, generation, client, upload, batch: () => batch, advance: (ms: number) => { clock += ms } }
 }
 
+it('preserves inputs and exits the busy state when the daily quota rejects a start', async () => {
+  const { generation, inputs, client } = await setup({ start: vi.fn(async () => { throw new AgentRunError('Your daily AI sessions are used.', 429, 'daily_session_limit') }) })
+  await generation.generate()
+  expect(generation.getSnapshot()).toMatchObject({ phase: 'idle', recovery: false, run: null, notice: { kind: 'error', text: 'Your daily AI sessions are used.' } })
+  expect(generation.locked()).toBe(false)
+  expect(inputs.getSnapshot().photos).toHaveLength(1)
+  expect(client.start).toHaveBeenCalledTimes(1)
+})
+
 describe('guided room generation', () => {
   it('uploads once and opens the validated editable scene from one action', async () => {
     const { generation, upload, client, batch } = await setup()

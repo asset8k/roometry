@@ -17,7 +17,7 @@ from roometry.agents.checkpointing import (
 )
 from roometry.agents.clarification import AnswerConflict, validate_answer
 from roometry.agents.graph import build_graph
-from roometry.agents.nodes import RunContext, StepAdapter, AssessmentAdapter
+from roometry.agents.nodes import AssessmentAdapter, RunContext, StepAdapter
 from roometry.agents.state import AgentState, ClarificationAnswer, RunLimits
 from roometry.uploads.errors import UploadFailure
 from roometry.uploads.schemas import PreparedRoomInput
@@ -36,6 +36,7 @@ class AgentRuns:
         checkpoints: TemporaryCheckpoints | None = None,
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
         ttl_seconds: int = 3600,
+        quotas=None,
     ):
         if not 1 <= ttl_seconds <= 3600:
             raise ValueError("Run TTL must be between 1 second and 1 hour.")
@@ -49,6 +50,7 @@ class AgentRuns:
         )
         self.durable = getattr(self.checkpoints, "registered", None)
         self.ttl_seconds = ttl_seconds
+        self.quotas = quotas
         self._start_lock = anyio.Lock()
 
     async def _input(self, input_id: str, owner: str) -> PreparedRoomInput:
@@ -183,6 +185,8 @@ class AgentRuns:
                     existing_id = entry.initial.run_id
                     break
             else:
+                if self.quotas:
+                    await anyio.to_thread.run_sync(self.quotas.check_new, owner)
                 initial = await self.create(input_id, owner)
                 entry = self.checkpoints.get(initial.run_id, owner, self.now())
                 entry.request_id = request_id
@@ -241,6 +245,8 @@ class AgentRuns:
             await self.read(run_id,owner)
             await anyio.to_thread.run_sync(self.durable.claim,owner,run_id,entry.initial.limits.step_timeout_seconds)
         async def persist_usage(usage):
+            if self.quotas:
+                await anyio.to_thread.run_sync(self.quotas.started, run_id)
             if self.durable and owner.startswith('account:'):
                 await anyio.to_thread.run_sync(self.durable.reserve,owner,run_id,usage,entry.initial.limits.step_timeout_seconds)
         graph, config = build_graph(entry.saver), self._config(entry)
@@ -272,6 +278,8 @@ class AgentRuns:
                 validate_answer(current, answer)
             elif snapshot.interrupts or (snapshot.values and not snapshot.next):
                 return await self.read(run_id, owner)
+            if self.quotas:
+                await anyio.to_thread.run_sync(lambda: self.quotas.reserve(owner, run_id, run_id, initial=True))
             budget.sync(current.usage)
             context = RunContext(
                 self.advance,
@@ -331,6 +339,9 @@ class AgentRuns:
         finally:
             entry.answer_in_flight = None
             entry.busy = False
+            if self.quotas:
+                with anyio.CancelScope(shield=True):
+                    await anyio.to_thread.run_sync(self.quotas.release_unused, run_id)
             if self.durable and owner.startswith('account:'):
                 with anyio.CancelScope(shield=True):
                     await anyio.to_thread.run_sync(self.durable.release,owner,run_id)

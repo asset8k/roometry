@@ -115,17 +115,16 @@ async def test_specific_refinement_does_not_require_a_generic_focus_score_gain(h
     assert len(calls) == count + 2
 
 
-async def test_refinement_limit_is_server_enforced_and_idempotent(harness):
+async def test_disabled_product_quota_does_not_retain_the_old_five_chat_limit(harness):
     app, _, calls, _ = harness
     _, owner, source = await reconstructed(harness)
     service = app.state.optimization_runs
     body = StartOptimizationRequest.model_validate(request(source.working_scene))
     first = await service.prepare(source.run_id, owner, body)
-    for _ in range(4):
+    for _ in range(6):
         await service.prepare(source.run_id, owner, StartOptimizationRequest.model_validate(request(source.working_scene)))
     assert (await service.prepare(source.run_id, owner, body)).run_id == first.run_id
-    with pytest.raises(InvalidSceneContext, match='five chat'):
-        await service.prepare(source.run_id, owner, StartOptimizationRequest.model_validate(request(source.working_scene)))
+    assert len(service._runs) == 7
 
 
 async def test_foreign_or_unretained_parent_cannot_seed_refinement(harness):

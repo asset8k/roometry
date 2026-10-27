@@ -8,6 +8,8 @@ import { RoomGenerationController } from '../../lib/room-generation-controller'
 import { RoomInputController } from '../../lib/room-input-controller'
 import type { RoomInputState } from '../../lib/room-input-controller'
 import { formatBytes } from '../../lib/room-input'
+import { useAllowance } from '../../lib/quota'
+import AllowanceNotice from '../room-analysis/AllowanceNotice'
 
 const roomTypes = [
   ['bedroom', 'Bedroom'], ['living_room', 'Living room'], ['kitchen', 'Kitchen'], ['bathroom', 'Bathroom'],
@@ -21,6 +23,7 @@ export default function RoomInputWorkspace({ onConnectionChange, inputController
   const controller = useMemo(() => inputController ?? new RoomInputController(), [inputController])
   const generation = useMemo(() => new RoomGenerationController(controller), [controller])
   const generationState = useSyncExternalStore(generation.subscribe, generation.getSnapshot, generation.getSnapshot)
+  const allowance = useAllowance(undefined, `${account}:${generationState.phase}`)
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot)
   const hasInput = state.photos.length > 0 || Object.values(state.draft).some(value => !!value.trim())
   const active = ['uploading', 'starting', 'running', 'awaiting_answer'].includes(generationState.phase) || generationState.cancelling || generationState.recovery
@@ -38,18 +41,20 @@ export default function RoomInputWorkspace({ onConnectionChange, inputController
   useEffect(() => {
     if (generationState.connection !== undefined) onConnectionChange(generationState.connection)
   }, [generationState.connection, onConnectionChange])
-  const form = <RoomInputForm state={state} controller={controller} locked={generation.locked()} generating={['starting', 'running', 'awaiting_answer'].includes(generationState.phase)} generated={['completed', 'partial'].includes(generationState.phase)} recovering={generationState.recovery} onGenerate={async () => { generationOwner.current = account; await generation.generate() }} onCancel={() => void generation.cancel()} onClear={() => void generation.discard()} />
+  const form = <RoomInputForm quotaBlocked={!!allowance?.enabled && allowance.sessions_remaining === 0} state={state} controller={controller} locked={generation.locked()} generating={['starting', 'running', 'awaiting_answer'].includes(generationState.phase)} generated={['completed', 'partial'].includes(generationState.phase)} recovering={generationState.recovery} onGenerate={async () => { generationOwner.current = account; await generation.generate() }} onCancel={() => void generation.cancel()} onClear={() => void generation.discard()} />
   if (generationState.run?.persistence === 'account' && generationOwner.current !== account) return <div className="input-notice info"><p>This reconstruction is private to the account that created it.</p><Button onClick={() => void generation.discard()}>Create another room</Button><a className="ui-button" href="#my-rooms">My rooms</a></div>
   return <>
+    <AllowanceNotice allowance={allowance} />
+    {generationState.phase === 'idle' && generationState.notice?.kind === 'error' && <p className="input-notice error" role="alert">{generationState.notice.text}</p>}
     {generationState.run?.working_scene && !['starting', 'running', 'awaiting_answer'].includes(generationState.phase)
       ? <details className="source-inputs"><summary>Room photos &amp; details</summary>{form}</details> : form}
     <RoomGenerationWorkspace state={generationState} controller={generation} onConnectionChange={onConnectionChange} />
   </>
 }
 
-export function RoomInputForm({ state, controller, onGenerate, onCancel, onClear, recovering = false, locked = false, generating = false, generated = false }: {
+export function RoomInputForm({ state, controller, onGenerate, onCancel, onClear, quotaBlocked = false, recovering = false, locked = false, generating = false, generated = false }: {
   state: RoomInputState; controller: RoomInputController; onGenerate: () => Promise<void>; onCancel: () => void
-  locked?: boolean; generating?: boolean; generated?: boolean; recovering?: boolean; onClear?: () => void
+  quotaBlocked?: boolean; locked?: boolean; generating?: boolean; generated?: boolean; recovering?: boolean; onClear?: () => void
 }) {
   const registered = Boolean(useSiteActions()?.userId)
   const { limits, draft, photos, busy, accepted } = state
@@ -64,7 +69,7 @@ export function RoomInputForm({ state, controller, onGenerate, onCancel, onClear
   const set = controller.change
   const acceptedOptions = accepted?.options
   return <div className="input-workspace" id="room-input">
-    <form className="room-input-form glass-panel" aria-label="Create your room" onSubmit={event => { event.preventDefault(); void onGenerate() }}>
+    <form className="room-input-form glass-panel" aria-label="Create your room" onSubmit={event => { event.preventDefault(); if (!quotaBlocked) void onGenerate() }}>
       <fieldset className="input-edit-lock" disabled={locked}>
         <div className="input-columns">
           <section className="photo-section" aria-labelledby={`${photoInput}-heading`}>
@@ -124,7 +129,7 @@ export function RoomInputForm({ state, controller, onGenerate, onCancel, onClear
         <div className="input-actions">
           {busy || generating || locked ? <Button onClick={onCancel}>Cancel</Button> : (photos.length > 0 || accepted || state.dirty || state.uncertain) && <Button variant="quiet" onClick={onClear ?? (() => void controller.discard())} disabled={!photos.length && !accepted && !state.dirty && !state.uncertain}>Clear</Button>}
           {recovering && <Button onClick={onClear}>Discard &amp; clear inputs</Button>}
-          <Button variant="primary" type="submit" disabled={Boolean(busy) || locked || !limits || state.policyLoading || (generated && !state.dirty && !state.uncertain)}>
+          <Button variant="primary" type="submit" disabled={quotaBlocked || Boolean(busy) || locked || !limits || state.policyLoading || (generated && !state.dirty && !state.uncertain)}>
             {generating ? 'Creating room…' : busy === 'upload' ? 'Preparing photos…' : generated && !state.dirty && !state.uncertain ? 'Room created' : 'Create room'}<Icon name={generated && !state.dirty && !state.uncertain ? 'check' : 'arrow'} />
           </Button>
         </div>

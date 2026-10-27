@@ -12,6 +12,7 @@ import type { StartOptimizationRequest } from './optimization'
 import { SceneComparison, retainedImprovement } from './scene-comparison'
 import RoomAssessmentCards from '../components/room-analysis/RoomAssessmentCards'
 import ImprovementComparison from '../components/room-analysis/ImprovementComparison'
+import ReconstructionNotice from '../components/room-analysis/ReconstructionNotice'
 
 const directory = process.env.ROOMETRY_LIVE_ARTIFACTS
 it.skipIf(!directory)('opens saved live results and preserves independent original/improved/editable views without network calls', () => {
@@ -23,6 +24,9 @@ it.skipIf(!directory)('opens saved live results and preserves independent origin
   expect(['completed', 'partial']).toContain(source.status)
   expect(source.working_scene).not.toBeNull()
   expect(source.room_assessment).not.toBeNull()
+  const reconstructionNotice = renderToStaticMarkup(createElement(ReconstructionNotice, { run: source }))
+  if (source.proposal?.status === 'partial') expect(reconstructionNotice).toContain('Partial reconstruction')
+  else expect(reconstructionNotice).toBe('')
   const ratings = renderToStaticMarkup(createElement(RoomAssessmentCards, { assessment: source.room_assessment! }))
   expect(ratings).toContain('Space &amp; movement')
   expect(ratings).toContain('Storage &amp; organization')
@@ -60,7 +64,9 @@ it.skipIf(!directory || !existsSync(join(directory ?? '', 'refinement-run.json')
   const refined = parseOptimization(read('refinement-run.json'))
   const request = read('refinement-request.json') as StartOptimizationRequest
   checkOptimization(refined, source, request)
-  expect(refined.parent_run_id).toBe(parent.run_id)
+  const expectedParent = retainedImprovement(parent) ? parent.run_id : null
+  expect(request.context!.parent_run_id ?? null).toBe(expectedParent)
+  expect(refined.parent_run_id).toBe(expectedParent)
   expect(refined.source_scene).toEqual(request.context!.scene)
   const network = vi.fn(), comparison = new SceneComparison(source.working_scene!, network)
   comparison.offer(parent, parent.source_scene)

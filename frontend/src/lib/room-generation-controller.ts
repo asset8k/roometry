@@ -120,6 +120,13 @@ export class RoomGenerationController {
     this.schedule()
   }
   private failure(error: unknown) {
+    if (error instanceof AgentRunError && ['daily_session_limit', 'session_action_limit', 'guest_network_limit'].includes(error.code)) {
+      this.revision++; this.reading?.abort()
+      this.stopTimer(); this.stopStream(); this.startRequest = null; this.pendingAnswer = null
+      this.update({ phase: 'idle', run: null, recovery: false, cancelling: false, answering: false, connection: true,
+        notice: { kind: 'error', text: error.message, connected: true } })
+      return
+    }
     if (error instanceof AgentRunError && error.status === 404 && this.state.run) {
       this.pendingAnswer = null
       this.stopTimer(); this.stopStream()

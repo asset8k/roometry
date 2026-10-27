@@ -13,7 +13,10 @@ from roometry.scenes.schemas import (
     FiniteNumber,
     Identifier,
     MaterialColors,
+    NonnegativeDistance,
     RoomScene,
+    SupportSurfaceId,
+    Wall,
 )
 from roometry.scenes.scoring import Criterion
 from roometry.uploads.schemas import InputBudget, OpaqueId
@@ -69,6 +72,27 @@ class CatalogAddition(RunModel):
     position: FloorPosition
     rotation_y_rad: FiniteNumber
     color: Color | None = None
+    placement: Literal["floor", "wall", "surface"] = "floor"
+    wall: Wall | None = None
+    elevation_m: NonnegativeDistance | None = Field(
+        default=None, description="Wall object's bottom height; null for floor/surface."
+    )
+    support_object_id: Identifier | None = None
+    support_surface_id: SupportSurfaceId | None = None
+
+    @model_validator(mode="after")
+    def attachment(self) -> Self:
+        if self.placement == "wall":
+            if self.wall is None or self.elevation_m is None:
+                raise ValueError("Wall additions need a wall and bottom elevation.")
+        elif self.wall is not None or self.elevation_m is not None:
+            raise ValueError("Only wall additions use wall/elevation fields.")
+        if self.placement == "surface":
+            if self.support_object_id is None or self.support_object_id == self.object_id:
+                raise ValueError("Surface additions need a different support object.")
+        elif self.support_object_id is not None or self.support_surface_id is not None:
+            raise ValueError("Only surface additions use support references.")
+        return self
 
 
 class CatalogReplacement(RunModel):

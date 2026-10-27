@@ -148,7 +148,7 @@ async def test_each_goal_runs_propose_validate_review_retain_with_real_catalog_a
     elif focus == "openness":
         assert result.attempts[0].after_score >= result.attempts[0].before_score + 0.5
     payload = calls[0]
-    assert "catalog_floor_options" in payload["input"][0]["content"][0]["text"]
+    assert "catalog_addition_options" in payload["input"][0]["content"][0]["text"]
     assert '"budget"' not in payload["input"][0]["content"][0]["text"]
 
 

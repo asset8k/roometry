@@ -10,7 +10,12 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 
 from roometry.agents.budget import RunBudget
-from roometry.agents.checkpointing import RunCapacityReached, RunUnavailable, new_run_id
+from roometry.agents.checkpointing import (
+    RunBusy,
+    RunCapacityReached,
+    RunUnavailable,
+    new_run_id,
+)
 from roometry.agents.runs import AgentRuns
 from roometry.agents.state import AgentState, RunLimits, RunUsage
 from roometry.mcp.catalog import CatalogSearch
@@ -57,6 +62,7 @@ class OptimizationRuns:
         if not 1 <= max_runs <= 1024:
             raise ValueError("Temporary improvement capacity must be between 1 and 1024.")
         self.durable = getattr(reconstructions, "durable", None)
+        self.quotas = getattr(reconstructions, "quotas", None)
         self.reconstructions, self.max_runs = reconstructions, max_runs
         self.provider, self.catalog = provider, catalog
         if not 1 <= max_candidates <= 5: raise ValueError("Candidate limit must be between 1 and 5.")
@@ -157,8 +163,6 @@ class OptimizationRuns:
                     starting = await anyio.to_thread.run_sync(lambda: validate_context(base, request.context.scene))
                 except ValueError as error:
                     raise InvalidSceneContext(str(error)) from None
-            if request.instruction and sum(e.result.source_run_id == source_run_id and e.request.instruction is not None for e in self._runs.values()) >= 5:
-                raise InvalidSceneContext("This temporary room has reached its five chat refinements. Your scenes remain available.")
             await self.reconstructions.read(source_run_id, owner)
             if len(self._runs) >= self.max_runs:
                 raise RunCapacityReached()
@@ -204,16 +208,29 @@ class OptimizationRuns:
         entry = await self._owned(run_id, owner)
         # Reserve execution synchronously. Retry/read never replays paid work,
         # including a disconnected request with an ambiguous provider outcome.
-        if entry.execution_started or entry.result.status != "prepared":
+        if entry.busy or entry.execution_started or entry.result.status != "prepared":
             return await self.read(run_id, owner)
-        if self.durable and owner.startswith('account:'):
-            await anyio.to_thread.run_sync(self.durable.claim,owner,run_id,entry.result.limits.step_timeout_seconds)
+        entry.busy = True
+        try:
+            if self.quotas:
+                await anyio.to_thread.run_sync(lambda: self.quotas.reserve(owner, entry.result.source_run_id, run_id))
+            if self.durable and owner.startswith('account:'):
+                await anyio.to_thread.run_sync(self.durable.claim,owner,run_id,entry.result.limits.step_timeout_seconds)
+        except BaseException as error:
+            entry.busy = False
+            # A different driver may hold this same reservation when claim is busy.
+            if self.quotas and not isinstance(error, RunBusy):
+                with anyio.CancelScope(shield=True):
+                    await anyio.to_thread.run_sync(self.quotas.release_unused, run_id)
+            raise
         entry.execution_started, entry.busy = True, True
         entry.result = entry.result.model_copy(update={"status": "running", "stage": "proposing"})
         await self._persist(entry)
         entry.progress.publish(entry.result)
         async def authorize(): await self._owned(run_id, owner)
         async def persist_usage(usage):
+            if self.quotas:
+                await anyio.to_thread.run_sync(self.quotas.started, run_id)
             if self.durable and owner.startswith('account:'):
                 await anyio.to_thread.run_sync(self.durable.reserve,owner,run_id,usage,entry.result.limits.step_timeout_seconds)
         budget = entry.budget = RunBudget(entry.result.limits, entry.result.usage, authorize,
@@ -259,6 +276,8 @@ class OptimizationRuns:
             entry.busy = False
             with anyio.CancelScope(shield=True):
                 await self._persist(entry,release=True)
+                if self.quotas:
+                    await anyio.to_thread.run_sync(self.quotas.release_unused, run_id)
         current = await self.read(run_id, owner)
         entry.progress.publish(current, force=True)
         return current

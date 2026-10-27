@@ -9,6 +9,7 @@ import { RoomInputController } from '../../lib/room-input-controller'
 import { RoomGenerationController } from '../../lib/room-generation-controller'
 import RoomGenerationWorkspace from '../room-analysis/RoomGenerationWorkspace'
 import RoomImprovementWorkspace from '../room-analysis/RoomImprovementWorkspace'
+import ReconstructionNotice from '../room-analysis/ReconstructionNotice'
 import { Button, GlassPanel } from '../ui/primitives'
 import { useWorkspaceGuard } from './WorkspaceNavigation'
 
@@ -47,7 +48,7 @@ export default function SavedRoomPage({ id, kind, user, onSignIn, onConnectionCh
   const current = loaded?.owner === user.id && loaded.id === id && loaded.kind === kind ? loaded.value : null
   return <section className="saved-room-page">
     {kind === 'recover' && current ? <h1 className="visually-hidden">Your room</h1> : <div className="page-heading"><h1>{kind === 'saved' && current ? (current as OpenedProject).project.title : 'Your room'}</h1><a className="ui-button" href="#my-rooms">My rooms</a></div>}
-    {kind === 'saved' && current && <details className="source-inputs"><summary>Room photos</summary><ul className="photo-grid">{(current as OpenedProject).project.images.map((image, index) => <li key={image.id}><div className="photo-preview"><img loading="lazy" src={`${(import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '')}/projects/${id}/images/${image.id}`} crossOrigin="use-credentials" alt={`Saved room photo ${index + 1}`}/></div></li>)}</ul></details>}
+    {kind === 'saved' && current && <><details className="source-inputs"><summary>Room photos</summary><ul className="photo-grid">{(current as OpenedProject).project.images.map((image, index) => <li key={image.id}><div className="photo-preview"><img loading="lazy" src={`${(import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '')}/projects/${id}/images/${image.id}`} crossOrigin="use-credentials" alt={`Saved room photo ${index + 1}`}/></div></li>)}</ul></details><ReconstructionNotice run={(current as OpenedProject).run}/></>}
     {error ? <GlassPanel className="library-empty"><p role="alert">{error}</p><Button onClick={() => setRetry(value => value + 1)}>Retry opening</Button></GlassPanel>
       : current ? kind === 'saved' ? <RoomImprovementWorkspace key={`${user.id}-${id}-${retry}`} run={(current as OpenedProject).run} restored={current as OpenedProject} onConnectionChange={onConnectionChange}/>
         : <RecoveredRun key={`${user.id}-${id}-${retry}`} data={current as { run: unknown; input: unknown }} onConnectionChange={onConnectionChange}/>

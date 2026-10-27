@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { AuthController } from './lib/auth'
 import SavedRoomPage from './components/site/SavedRoomPage'
+import PublicRoomPage from './components/site/PublicRoomPage'
 import RoomInputWorkspace from './components/room-input/RoomInputWorkspace'
 import { Button } from './components/ui/primitives'
 import BrandMark from './components/ui/BrandMark'
@@ -15,8 +16,8 @@ import { WorkspaceNavigationContext } from './components/site/WorkspaceNavigatio
 import Dialog from './components/ui/Dialog'
 import { pageMotion } from './lib/motion'
 
-type Page = 'create' | 'explore' | 'my-rooms' | 'saved' | 'recover'
-const pageFromHash = (hash = typeof window === 'undefined' ? '#' : window.location.hash): Page => /^#room\/[a-f0-9-]{36}$/.test(hash) ? 'saved' : /^#run\/[a-f0-9-]{36}$/.test(hash) ? 'recover' : hash === '#explore' ? 'explore' : hash === '#my-rooms' ? 'my-rooms' : 'create'
+type Page = 'create' | 'explore' | 'my-rooms' | 'saved' | 'recover' | 'public'
+const pageFromHash = (hash = typeof window === 'undefined' ? '#' : window.location.hash): Page => /^#shared\/[a-f0-9-]{36}$/.test(hash) ? 'public' : /^#room\/[a-f0-9-]{36}$/.test(hash) ? 'saved' : /^#run\/[a-f0-9-]{36}$/.test(hash) ? 'recover' : hash === '#explore' ? 'explore' : hash === '#my-rooms' ? 'my-rooms' : 'create'
 
 export default function App() {
   const [auth] = useState(() => new AuthController())
@@ -25,7 +26,7 @@ export default function App() {
   const [page, setPage] = useState<Page>(() => pageFromHash())
   const [routeHash, setRouteHash] = useState(() => typeof window === 'undefined' ? '' : window.location.hash)
   const [account, setAccount] = useState<'signin' | 'save' | null>(null)
-  const [sharing, setSharing] = useState<RoomScene | null>(null)
+  const [sharing, setSharing] = useState<{ scene: RoomScene; sourceRunId?: string } | null>(null)
   const [workspaceKey, setWorkspaceKey] = useState(0)
   useEffect(() => { setSharing(null) }, [session.user?.id])
   const main = useRef<HTMLElement>(null)
@@ -58,7 +59,7 @@ export default function App() {
   // Connectivity errors remain at the operation that failed, rather than in global chrome.
   const onConnectionChange = useCallback((_online: boolean) => {}, [])
   const openAccount = useCallback((intent: 'signin' | 'save' = 'signin') => { setSharing(null); setAccount(intent) }, [])
-  const openShare = useCallback((scene: RoomScene) => { setAccount(null); setSharing(scene) }, [])
+  const openShare = useCallback((scene: RoomScene, sourceRunId?: string) => { setAccount(null); setSharing({ scene, sourceRunId }) }, [])
   useEffect(() => {
     window.history.replaceState({ roometryPosition: position.current }, '', window.location.href)
     const change = () => {
@@ -119,11 +120,12 @@ export default function App() {
         </div>}
         {page === 'my-rooms' && <MyRooms user={session.user} onSignIn={() => openAccount()} onCreate={goCreate}/>}
         {(page === 'saved' || page === 'recover') && <SavedRoomPage id={routeHash.split('/')[1]} kind={page} user={session.user} onSignIn={() => openAccount()} onConnectionChange={onConnectionChange}/>}
+        {page === 'public' && <PublicRoomPage key={routeHash} id={routeHash.split('/')[1]} onCreate={goCreate}/>}
         {page === 'explore' && <Explore onCreate={goCreate}/>}
       </main>
     </div>
     {account && <AccountDialog controller={auth} intent={account} onClose={() => setAccount(null)} onGuest={() => { setAccount(null); if (page !== 'create') navigation.request({ hash: '#' }) }}/>}
-    {sharing && <ShareDialog signedIn={!!session.user} scene={sharing} onClose={() => setSharing(null)} onSignIn={() => openAccount()}/>}
+    {sharing && <ShareDialog signedIn={!!session.user} scene={sharing.scene} sourceRunId={sharing.sourceRunId} onClose={() => setSharing(null)} onSignIn={() => openAccount()}/>}
     {nav.pending && (nav.dirty || nav.active || nav.saving || nav.error) && <Dialog title={nav.pending.fresh ? 'Start a new room?' : 'Leave this room?'} onClose={navigation.stay}>{dismiss => <>
       <p className="dialog-description">{nav.saving ? 'Wait for the save to finish before leaving.' : nav.active ? 'This will stop the current work and discard unsaved changes in this workspace. Saved rooms stay available.' : 'Unsaved changes will be discarded. Saved rooms stay available.'}</p>
       {nav.error && <p className="input-notice error" role="alert">{nav.error}</p>}

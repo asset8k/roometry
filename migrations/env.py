@@ -3,11 +3,18 @@
 from alembic import context
 from sqlalchemy import create_engine, pool
 
+from roometry.agents import persistence_model as runtime_models  # noqa: F401
 from roometry.config import Settings
 from roometry.database import Base, database_url
-from roometry.agents import persistence_model as runtime_models  # noqa: F401
-from roometry.projects import model as project_models  # noqa: F401 - register model metadata.
-from roometry.users.model import AuthSession, User  # noqa: F401 - register model metadata.
+from roometry.feed import model as feed_models  # noqa: F401
+from roometry.projects import (
+    model as project_models,  # noqa: F401 - register model metadata.
+)
+from roometry.quota import model as quota_models  # noqa: F401
+from roometry.users.model import (  # noqa: F401 - register model metadata.
+    AuthSession,
+    User,
+)
 
 config = context.config
 raw = config.attributes.get("database_url") or Settings().database_url

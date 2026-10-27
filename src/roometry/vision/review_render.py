@@ -90,8 +90,8 @@ def material_color(obj: SceneObject, role: str) -> str:
     return obj.color if role in {"primary", "primary_metal", "primary_ceramic"} else COLORS[role]
 
 
-def render_views(scene: RoomScene) -> list[ReviewView]:
-    """Three bounded 768px PNGs with world-axis labels and opening markers."""
+def render_views(scene: RoomScene, *, annotate: bool = True, view_ids: tuple[ViewId, ...] = VIEW_IDS) -> list[ReviewView]:
+    """Bounded 768px PNGs; public previews omit diagnostic labels and arrows."""
     width, length, height = scene.room.width_m, scene.room.length_m, scene.room.height_m
     faces = []
     for obj in scene.objects:
@@ -105,7 +105,7 @@ def render_views(scene: RoomScene) -> list[ReviewView]:
                 faces.append((tuple(world_point(obj, part, point) for point in mesh_face), color, obj.placement == "ceiling"))
     corners = [(x,y,z) for x in (0,width) for y in (0,height) for z in (0,length)]
     results = []
-    for view_id in VIEW_IDS:
+    for view_id in view_ids:
         # Orthographic camera basis: +north is -Z, functional model front +Z.
         if view_id == "top":
             right, up, toward = (1,0,0), (0,0,-1), (0,1,0)
@@ -123,8 +123,9 @@ def render_views(scene: RoomScene) -> list[ReviewView]:
         image = Image.new("RGB", (768,768), "#F5F3ED")
         draw = ImageDraw.Draw(image)
         font = ImageFont.load_default(size=14)
-        draw.text((16,12), f"{view_id} | {width:g}m X (W-E) x {length:g}m Z (N-S) x {height:g}m Y", fill="#26342D", font=font)
-        draw.text((16,34), "Approximate catalog geometry; textures/curves simplified; not photo-matched", fill="#526154", font=ImageFont.load_default(size=12))
+        if annotate:
+            draw.text((16,12), f"{view_id} | {width:g}m X (W-E) x {length:g}m Z (N-S) x {height:g}m Y", fill="#26342D", font=font)
+            draw.text((16,34), "Approximate catalog geometry; textures/curves simplified; not photo-matched", fill="#526154", font=ImageFont.load_default(size=12))
         floor = ((0,0,0),(width,0,0),(width,0,length),(0,0,length))
         draw.polygon([project(p) for p in floor], fill=scene.finishes.floor_color if scene.finishes and scene.finishes.floor_color else "#D6BEA0", outline="#697367")
         wall_faces = []
@@ -160,23 +161,24 @@ def render_views(scene: RoomScene) -> list[ReviewView]:
             norm=sqrt(sum(n*n for n in normal))
             shade=1 if not norm else .78+.22*abs(normal[1])/norm
             draw.polygon([project(p) for p in points], fill=tuple(round(channel*shade) for channel in _rgb(color)))
-        for wall,points in walls.items():
-            middle = tuple(sum(p[i] for p in points)/4 for i in range(3))
-            draw.text(project(middle), wall, fill="#425747", font=font, stroke_width=1, stroke_fill="#FFFFFF")
-        for index,obj in enumerate(scene.objects):
-            if index >= 40 or (view_id == "top" and obj.placement == "ceiling"):
-                continue
-            point = (obj.position.x,obj.position.y+obj.dimensions_m.height,obj.position.z)
-            draw.text(project(point), str(index+1), fill="#142D23", font=font, stroke_width=1, stroke_fill="#FFFFFF")
-            # Functional front arrows make 180-degree errors assessable even
-            # when stylized upholstery obscures the model's front.
-            if obj.type in {"sofa","chair","armchair","tv","bed"}:
-                start=(obj.position.x,.03,obj.position.z)
-                end=(start[0]+.4*sin(obj.rotation_y_rad),.03,start[2]+.4*cos(obj.rotation_y_rad))
-                a,b=project(start),project(end)
-                draw.line([a,b], fill="#A32E24", width=3)
-                draw.ellipse((b[0]-3,b[1]-3,b[0]+3,b[1]+3),fill="#A32E24")
-        draw.text((16,738), "Numbers = JSON object order (1-based); red arrows = functional front; north is -Z.", fill="#354A3C", font=ImageFont.load_default(size=12))
+        if annotate:
+            for wall,points in walls.items():
+                middle = tuple(sum(p[i] for p in points)/4 for i in range(3))
+                draw.text(project(middle), wall, fill="#425747", font=font, stroke_width=1, stroke_fill="#FFFFFF")
+            for index,obj in enumerate(scene.objects):
+                if index >= 40 or (view_id == "top" and obj.placement == "ceiling"):
+                    continue
+                point = (obj.position.x,obj.position.y+obj.dimensions_m.height,obj.position.z)
+                draw.text(project(point), str(index+1), fill="#142D23", font=font, stroke_width=1, stroke_fill="#FFFFFF")
+                # Functional front arrows make 180-degree errors assessable even
+                # when stylized upholstery obscures the model's front.
+                if obj.type in {"sofa","chair","armchair","tv","bed"}:
+                    start=(obj.position.x,.03,obj.position.z)
+                    end=(start[0]+.4*sin(obj.rotation_y_rad),.03,start[2]+.4*cos(obj.rotation_y_rad))
+                    a,b=project(start),project(end)
+                    draw.line([a,b], fill="#A32E24", width=3)
+                    draw.ellipse((b[0]-3,b[1]-3,b[0]+3,b[1]+3),fill="#A32E24")
+            draw.text((16,738), "Numbers = JSON object order (1-based); red arrows = functional front; north is -Z.", fill="#354A3C", font=ImageFont.load_default(size=12))
         buffer = BytesIO()
         image.save(buffer, format="PNG")
         image.close()

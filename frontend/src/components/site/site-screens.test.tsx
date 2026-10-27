@@ -5,7 +5,7 @@ import ShareDialog from './ShareDialog'
 import { Explore, MyRooms } from './LibraryPages'
 import { loadExampleScene } from '../../lib/test-support/scenes'
 
-describe('account and future sharing surfaces', () => {
+describe('account and explicit sharing surfaces', () => {
   it('offers real account forms while keeping guest creation available', () => {
     const html = renderToStaticMarkup(<AccountDialog onClose={vi.fn()} onGuest={vi.fn()}/>)
     expect(html).toContain('<dialog')
@@ -22,10 +22,9 @@ describe('account and future sharing surfaces', () => {
     const html = renderToStaticMarkup(<ShareDialog scene={loadExampleScene()} onClose={vi.fn()} onSignIn={vi.fn()}/>)
     expect(html).toContain('Private')
     expect(html).toContain('Photos and chat stay private')
-    expect(html).toContain('Nothing will be published')
-    expect(html).toContain('type="checkbox"')
-    expect(html).not.toContain('checked=""')
-    expect(html).toMatch(/disabled=""[^>]*>Share to Explore/)
+    expect(html).toContain('Sign in and save your room before sharing it')
+    expect(html).not.toContain('Share to Explore')
+    expect(html).not.toContain('type="checkbox"')
     expect(html).not.toContain('<img')
   })
   it('uses truthful empty states rather than invented saved or shared projects', () => {
@@ -33,8 +32,8 @@ describe('account and future sharing surfaces', () => {
     const feed = renderToStaticMarkup(<Explore onCreate={vi.fn()}/>)
     expect(saved).toContain('Sign in to your Roometry account')
     expect(saved).toContain('Private rooms and recoverable work')
-    expect(feed).toContain('Community rooms are coming soon')
-    expect(feed).toContain('Create your own')
+    expect(feed).toContain('Rooms shared by the community')
+    expect(feed).toContain('Loading shared rooms')
     expect(saved + feed).not.toContain('<img')
   })
 })

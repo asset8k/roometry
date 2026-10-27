@@ -9,6 +9,7 @@ import { parseRoomScene } from './scene'
 import { dimensionsFor, getCatalogAsset } from '../components/room-viewer/asset-catalog'
 import type { OptimizationRun } from './optimization-run.generated'
 import type { StartOptimizationRequest, OptimizationPreferences, Focus } from './optimization-request.generated'
+import { refreshAllowance } from './quota'
 
 export type { OptimizationRun, StartOptimizationRequest, OptimizationPreferences, Focus }
 export const improvementLabels: Record<Focus, string> = {
@@ -43,10 +44,10 @@ export function parseOptimization(data: unknown): OptimizationRun {
         const immutable = (item: typeof object) => ({ ...item, position: null, rotation_y_rad: null, color: null, material_colors: null, support_surface_id: null })
         if (old && canonicalJson(immutable(old)) === canonicalJson(immutable(object))) return false
         const asset = getCatalogAsset(object.asset_id)
-        if (!asset || object.placement !== 'floor' || object.fixed || object.locked
+        if (!asset || !asset.placements.includes(object.placement) || !['floor', 'wall', 'surface'].includes(object.placement) || object.fixed || object.locked
           || object.provenance !== 'agent_added' || object.measurements_source !== 'catalog'
-          || (old && (old.placement !== 'floor' || old.type !== object.type))) return true
-        const [width, height, depth] = dimensionsFor(asset, 'floor')
+          || (old && (old.placement !== 'floor' || object.placement !== 'floor' || old.type !== object.type))) return true
+        const [width, height, depth] = dimensionsFor(asset, object.placement)
         return object.dimensions_m.width !== width || object.dimensions_m.height !== height || object.dimensions_m.depth !== depth
       })) throw new AgentRunError('The improvement changed protected room data.')
   }
@@ -78,6 +79,7 @@ async function request(path: string, signal: AbortSignal, body?: unknown) {
   })
   let data: unknown
   try { data = await response.json() } catch { throw new AgentRunError('The service response was interrupted. Retry to recover the same improvement request.') }
+  if (body !== undefined) refreshAllowance()
   if (!response.ok) throw agentFailure(data, response.status)
   return parseOptimization(data)
 }

@@ -38,10 +38,10 @@ export function ComparisonControls({ comparison, views, onEdit, actions }: { com
   </div>
 }
 
-export default function SceneWorkspace({ initialScene, onConnectionChange, goals, improvement = null, objectLabels, comparison: suppliedComparison, overview, chat, saveAction }: {
+export default function SceneWorkspace({ initialScene, onConnectionChange, goals, improvement = null, objectLabels, comparison: suppliedComparison, overview, chat, saveAction, sourceRunId }: {
   goals?: ScoreLayoutRequest['goals']; initialScene: RoomScene; onConnectionChange: (online: boolean) => void
   improvement?: OptimizationRun | null; objectLabels?: Readonly<Record<string, string>>
-  comparison?: SceneComparison; overview?: ReactNode; chat?: ReactNode; saveAction?: ReactNode
+  comparison?: SceneComparison; overview?: ReactNode; chat?: ReactNode; saveAction?: ReactNode; sourceRunId?: string
 }) {
   const comparison = useMemo(() => suppliedComparison ?? new SceneComparison(initialScene), [initialScene, suppliedComparison])
   const views = useSyncExternalStore(comparison.subscribe, comparison.getSnapshot, comparison.getSnapshot)
@@ -157,7 +157,7 @@ export default function SceneWorkspace({ initialScene, onConnectionChange, goals
 
       <section className="viewer-card" aria-label="3D room viewer">
         <h2 className="visually-hidden">Room overview</h2>
-        <ComparisonControls comparison={comparison} views={views} onEdit={requestEdit} actions={siteActions && <>{saveAction ?? <Button onClick={() => siteActions.account('save')}><Icon name="save"/>Save</Button>}<Button onClick={() => siteActions.share(scene)}><Icon name="share"/>Share</Button></>} />
+        <ComparisonControls comparison={comparison} views={views} onEdit={requestEdit} actions={siteActions && <>{saveAction ?? <Button onClick={() => siteActions.account('save')}><Icon name="save"/>Save</Button>}<Button onClick={() => siteActions.share(scene, sourceRunId)}><Icon name="share"/>Share</Button></>} />
         {improvement && selectedImprovement && improvement.run_id !== selectedImprovement.run_id && <p className="comparison-history-note" role="status">
           {['prepared', 'running'].includes(improvement.status) ? 'A new improvement is in progress.' : 'This request produced no new retained candidate.'} The comparison still shows your earlier {selectedImprovement.instruction ? 'chat refinement' : improvementLabels[selectedImprovement.focus].toLowerCase()} candidate.
         </p>}

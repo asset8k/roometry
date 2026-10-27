@@ -62,7 +62,7 @@ export class WorkspaceNavigation {
 }
 
 export function isRoomRoute(hash: string): boolean {
-  return /^(#|#explore|#my-rooms|#(?:room|run)\/[a-f0-9-]{36})$/.test(hash)
+  return /^(#|#explore|#my-rooms|#(?:room|run|shared)\/[a-f0-9-]{36})$/.test(hash)
 }
 
 export function protectPageUnload(navigation: WorkspaceNavigation, event: BeforeUnloadEvent) {

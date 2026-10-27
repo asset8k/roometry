@@ -90,6 +90,6 @@ export default function GlassSelect({ label, value, options, onChange, disabled 
         data-index={index} data-active={index === active} className="glass-select-option" onPointerMove={() => setActive(index)} onClick={() => choose(index)}>
         <span>{option.label}</span>{option.value === value && <Icon name="check"/>}
       </div>)}
-    </div>, document.body)}
+    </div>, trigger.current?.closest('dialog') ?? document.body)}
   </div>
 }

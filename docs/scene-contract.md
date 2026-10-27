@@ -418,7 +418,7 @@ reviews a viable candidate against the retained scene using six diagnostic views
 Supported items follow their parent transforms. Room dimensions, openings,
 fixed/locked items and confirmed facing constraints are preserved. Generic photo
 placement relationships do not lock furniture during redesign. Patches can move,
-rotate or recolor existing items, add approved movable floor catalog models,
+rotate or recolor existing items, add approved movable floor, wall or surface catalog models,
 explicitly remove movable items, or replace floor furniture with a same-function
 catalog model. Replacement sizes come from catalog metadata; source measurements
 remain in Original. New/replacement items use `agent_added`/`catalog` provenance.
@@ -426,6 +426,17 @@ A replacement retains compatible material controls and supported children; missi
 or ill-fitting supports reject the candidate. Removing a host requires explicit
 removal of its movable children. Manual-edit ancestry validation stays stricter:
 users cannot smuggle inventory changes through a scene context or saved copy.
+
+Chat receives `catalog_addition_options` with placement-specific dimensions and
+support areas, plus the current scene's world-space support rectangles. Wall
+additions specify a host wall and bottom elevation; assembly sets the inward
+orientation and wall contact. Surface additions select an existing or newly added
+floor/wall support and its catalog area; assembly derives their height. Hosts are
+assembled before children regardless of proposal order. Existing fixed/locked hosts
+can support new objects without changing themselves. Nested supports, unsupported
+mounts, missing/ambiguous areas, and invalid fit/collision/opening placements are
+rejected atomically, preserving the earlier scene. Installed fixtures and ceiling
+additions remain outside this redesign contract. Floor replacements are unchanged.
 
 Functional gains require at least 0.5 points on the same displayed rubric. Openness
 also needs 0.5 m² more main walking area or a better checked route; storage needs

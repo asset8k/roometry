@@ -2,8 +2,10 @@
 
 from math import cos, sin
 
+from roometry.optimization.schemas import CatalogAddition
 from roometry.scenes.assets import ASSET_REGISTRY
 from roometry.scenes.catalog import ASSET_CATALOG, dimensions_for, object_surfaces
+from roometry.scenes.geometry import WALL_ROTATIONS_RAD, catalog_surface_bounds
 from roometry.scenes.schemas import (
     MaterialColors,
     ObjectDimensions,
@@ -24,39 +26,114 @@ def catalog_options():
             "dimensions_m": dict(
                 zip(
                     ("width", "height", "depth"),
-                    dimensions_for(a.asset_id, "floor"),
+                    a.dimensions_m,
                     strict=True,
                 )
             ),
             "color": a.color,
+            "placements": sorted(
+                ASSET_REGISTRY[a.asset_id].placements & {"floor", "wall", "surface"}
+            ),
+            "placement_dimensions_m": dict(a.placement_dimensions_m),
+            "support_surfaces": {
+                placement: [
+                    {
+                        "id": s.name,
+                        "y": s.y,
+                        "x_min": s.x_min,
+                        "x_max": s.x_max,
+                        "z_min": s.z_min,
+                        "z_max": s.z_max,
+                    }
+                    for s in object_surfaces(a.asset_id, placement)
+                ]
+                for placement in ("floor", "wall")
+                if object_surfaces(a.asset_id, placement)
+            },
         }
         for a in ASSET_CATALOG.values()
-        if "floor" in ASSET_REGISTRY[a.asset_id].placements
+        if ASSET_REGISTRY[a.asset_id].placements & {"floor", "wall", "surface"}
         and not ASSET_REGISTRY[a.asset_id].fixed_by_default
-        and a.category in {"furniture", "decor", "lighting"}
     ]
 
 
-def catalog_object(operation):
+def scene_supports(scene):
+    """Exact world-space support choices, without meshes or private observations."""
+    return {
+        obj.id: [
+            {
+                "surface_id": area.name,
+                "height_m": bounds.vertical[0],
+                "corners_xz": bounds.footprint.corners,
+            }
+            for area in object_surfaces(obj.asset_id, obj.placement)
+            for bounds in [
+                catalog_surface_bounds(
+                    area, obj.dimensions_m, obj.position, obj.rotation_y_rad
+                )
+            ]
+        ]
+        for obj in scene.objects
+        if object_surfaces(obj.asset_id, obj.placement)
+    }
+
+
+def catalog_object(operation: CatalogAddition, room, objects):
     asset = ASSET_CATALOG.get(operation.asset_id)
     if (
         asset is None
-        or "floor" not in ASSET_REGISTRY[asset.asset_id].placements
+        or operation.placement not in ASSET_REGISTRY[asset.asset_id].placements
         or ASSET_REGISTRY[asset.asset_id].fixed_by_default
     ):
-        raise ValueError("Choose a movable floor model from the approved catalog.")
-    width, height, depth = dimensions_for(asset.asset_id, "floor")
+        raise ValueError(
+            "Choose an approved movable catalog model and one of its supported placements."
+        )
+    width, height, depth = dimensions_for(asset.asset_id, operation.placement)
+    x, y, z, angle = (
+        operation.position.x,
+        0.0,
+        operation.position.z,
+        operation.rotation_y_rad,
+    )
+    surface_id = None
+    if operation.placement == "wall":
+        y, angle = operation.elevation_m, WALL_ROTATIONS_RAD[operation.wall]
+        if operation.wall == "north":
+            z = depth / 2
+        elif operation.wall == "south":
+            z = room.length_m - depth / 2
+        elif operation.wall == "west":
+            x = depth / 2
+        else:
+            x = room.width_m - depth / 2
+    elif operation.placement == "surface":
+        support = objects.get(operation.support_object_id)
+        if support is None or support.placement not in {"floor", "wall"}:
+            raise ValueError(
+                "A surface addition needs a retained floor or wall support; nested supports are not allowed."
+            )
+        areas = object_surfaces(support.asset_id, support.placement)
+        area = next((s for s in areas if s.name == operation.support_surface_id), None)
+        if operation.support_surface_id is None and len(areas) == 1:
+            area = areas[0]
+        if area is None:
+            raise ValueError(
+                "Choose an explicit approved support surface when the support has multiple areas."
+            )
+        y = support.position.y + area.y * support.dimensions_m.height
+        surface_id = area.name
     return SceneObject(
         id=operation.object_id,
         type=asset.object_type,
         asset_id=asset.asset_id,
-        position=Position(x=operation.position.x, y=0.0, z=operation.position.z),
-        rotation_y_rad=operation.rotation_y_rad,
+        position=Position(x=x, y=y, z=z),
+        rotation_y_rad=angle,
         dimensions_m=ObjectDimensions(width=width, height=height, depth=depth),
         color=operation.color or asset.color,
-        placement="floor",
-        support_object_id=None,
-        wall=None,
+        placement=operation.placement,
+        support_object_id=operation.support_object_id,
+        support_surface_id=surface_id,
+        wall=operation.wall,
         opening_id=None,
         fixed=False,
         locked=False,
@@ -87,16 +164,21 @@ def apply_inventory(base, proposal):
     candidate.objects = [o for o in candidate.objects if o.id not in removed]
     for replacement in proposal.replacements:
         old = objects[replacement.object_id]
-        operation = replacement.model_copy(
-            update={
-                "position": replacement.position or old.position,
+        operation = CatalogAddition.model_validate(
+            {
+                "object_id": replacement.object_id,
+                "asset_id": replacement.asset_id,
+                "position": {
+                    "x": (replacement.position or old.position).x,
+                    "z": (replacement.position or old.position).z,
+                },
                 "rotation_y_rad": old.rotation_y_rad
                 if replacement.rotation_y_rad is None
                 else replacement.rotation_y_rad,
                 "color": replacement.color or old.color,
             }
         )
-        new = catalog_object(operation)
+        new = catalog_object(operation, candidate.room, {})
         if old.type != new.type:
             raise ValueError(
                 "A replacement must preserve the item's function; use removal and addition for another function."
@@ -142,7 +224,14 @@ def apply_inventory(base, proposal):
         if addition.object_id in used:
             raise ValueError("New furniture needs a new unique scene ID.")
         used.add(addition.object_id)
-        candidate.objects.append(catalog_object(addition))
+    # Resolve hosts before their children regardless of provider list order.
+    available = {o.id: o for o in candidate.objects}
+    for addition in sorted(
+        proposal.additions, key=lambda item: item.placement == "surface"
+    ):
+        obj = catalog_object(addition, candidate.room, available)
+        candidate.objects.append(obj)
+        available[obj.id] = obj
     return RoomScene.model_validate(candidate)
 
 

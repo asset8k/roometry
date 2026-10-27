@@ -172,6 +172,11 @@ export class OptimizationController {
   private executionFailure(error: unknown) {
     if (this.state.result && !['prepared', 'running'].includes(this.state.result.status)) return
     this.stopPolling()
+    if (error instanceof AgentRunError && ['daily_session_limit', 'session_action_limit', 'guest_network_limit'].includes(error.code)) {
+      this.stopStream(); this.executionRequested = false; this.pending = null
+      this.update({ phase: 'error', result: null, recovery: false, error: error.message })
+      return
+    }
     const expired = error instanceof AgentRunError && error.status === 404
     this.update({ phase: expired ? 'expired' : 'error', recovery: !expired,
       error: error instanceof AgentRunError ? error.message : 'The connection was interrupted. Check the same improvement run to recover it.' })

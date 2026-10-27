@@ -4,6 +4,7 @@ from typing import cast
 
 from fastapi import APIRouter, Request, Response
 
+from roometry.agents.router import RunFailure
 from roometry.config import Settings
 from roometry.uploads.errors import UploadFailure
 from roometry.uploads.session import check_origin, session
@@ -32,6 +33,8 @@ router = APIRouter(prefix="/api/rooms", tags=["room analysis"])
 async def analyze_room(
     body: AnalyzeRoomRequest, request: Request, response: Response
 ) -> RoomAnalysisResponse:
+    if request.app.state.quotas.enabled:
+        raise RunFailure(409, "guided_generation_required", "Use Create room to start a quota-tracked AI session.")
     try:
         check_origin(request, cast(Settings, request.app.state.settings))
     except UploadFailure:
@@ -59,6 +62,8 @@ async def analyze_room(
 async def propose_scene(
     body: SceneProposalRequest, request: Request, response: Response
 ) -> SceneProposalResponse:
+    if request.app.state.quotas.enabled:
+        raise RunFailure(409, "guided_generation_required", "Use Create room to construct a scene within its AI session.")
     try:
         check_origin(request, cast(Settings, request.app.state.settings))
     except UploadFailure:

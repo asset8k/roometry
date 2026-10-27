@@ -4,6 +4,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { OptimizationController } from './optimization-controller'
 import type { OptimizationClient, OptimizationRun, StartOptimizationRequest } from './optimization'
 import { parseOptimization } from './optimization'
+import { AgentRunError } from './agent-run'
 import { ImprovementForm } from '../components/room-analysis/RoomImprovementWorkspace'
 import { finishedRun } from './test-support/agent-run'
 import { prepared } from './test-support/room-input'
@@ -32,6 +33,29 @@ function setup() {
   const render = () => renderToStaticMarkup(createElement(ImprovementForm, { state: controller.getSnapshot(), controller, partial: false }))
   return { source, client, controller, render }
 }
+
+it('shows quota exhaustion without locking the viewer into execution recovery', async () => {
+  const { controller, client } = setup()
+  vi.mocked(client.execute).mockRejectedValueOnce(new AgentRunError('This room has used its AI actions.', 429, 'session_action_limit'))
+  controller.select('aesthetics'); await controller.start()
+  expect(controller.getSnapshot()).toMatchObject({ phase: 'error', recovery: false, result: null, error: 'This room has used its AI actions.' })
+  expect(controller.locked()).toBe(false)
+  expect(client.execute).toHaveBeenCalledTimes(1)
+})
+
+it.each(['wall', 'surface'] as const)('accepts an authorized catalog TV with %s placement from the backend', placement => {
+  const source = finishedRun(prepared())
+  const run = preparedImprovement(source, { request_id: '77777777-7777-4777-8777-777777777777', focus: 'aesthetics' })
+  const result = structuredClone(run.source_scene)
+  const desk = result.objects.find(o => o.type === 'desk')!
+  result.objects.push({ ...result.objects[0], id: 'new_tv', type: 'tv', asset_id: 'tv_standard_01',
+    position: { x: 2, y: placement === 'wall' ? 1.2 : desk.dimensions_m.height, z: placement === 'wall' ? .03 : desk.position.z },
+    dimensions_m: { width: 1.2, height: placement === 'wall' ? .68 : .74, depth: placement === 'wall' ? .06 : .28 },
+    placement, wall: placement === 'wall' ? 'north' : null, support_object_id: placement === 'surface' ? desk.id : null,
+    support_surface_id: placement === 'surface' ? 'tabletop' : null, opening_id: null, fixed: false, locked: false,
+    provenance: 'agent_added', measurements_source: 'catalog' })
+  expect(parseOptimization({ ...run, status: 'completed', result_scene: result }).result_scene?.objects.at(-1)?.type).toBe('tv')
+})
 
 it('submits preferences and executes the same linked run over the real HTTP client', async () => {
   const source = finishedRun(prepared()), original = structuredClone(source)

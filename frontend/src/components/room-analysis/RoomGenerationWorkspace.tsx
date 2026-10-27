@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import RunWorkflow from './RunWorkflow'
 import RoomImprovementWorkspace from './RoomImprovementWorkspace'
+import ReconstructionNotice from './ReconstructionNotice'
 import { dimensionLabels } from '../../lib/room-analysis'
 import type { DimensionAxis } from '../../lib/room-analysis'
 import { generationProgress } from '../../lib/room-generation-controller'
@@ -130,7 +131,7 @@ export default function RoomGenerationWorkspace({ state, controller, onConnectio
   return <section ref={card} tabIndex={-1} className="analysis-workspace generation-workspace" aria-label="Room generation">
     {scene && run?.base_scene && <section className="reconstructed-room" aria-label="Your reconstructed room">
       {estimated.length > 0 && <p className="workspace-status" role="status">Approximate dimensions · {scene.room.width_m} × {scene.room.length_m} × {scene.room.height_m} m{run.proposal?.assumed_axes?.length ? ' · Includes assumed sizes' : ''}</p>}
-      {partial && <p className="workspace-status" role="status">Partial reconstruction · {omittedCount > 0 ? `${omittedCount} ${omittedCount === 1 ? 'observation' : 'observations'} unresolved` : 'Some room details remain approximate'}</p>}
+      <ReconstructionNotice run={run}/>
       <RoomImprovementWorkspace key={run.run_id} run={run} onConnectionChange={onConnectionChange} />
     </section>}
     {scene ? <details className="reconstruction-details"><summary>Reconstruction details{partial ? ' · Partial scene' : ''}</summary>{report}</details>

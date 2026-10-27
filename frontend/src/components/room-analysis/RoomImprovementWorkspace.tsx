@@ -16,6 +16,9 @@ import { retainedImprovement } from '../../lib/scene-comparison'
 import { Button, Icon } from '../ui/primitives'
 import { useSurfaceMotion } from '../ui/MotionRegion'
 import { conciseText, readableText } from '../../lib/display-text'
+import { useAllowance } from '../../lib/quota'
+import AllowanceNotice from './AllowanceNotice'
+import { useSiteActions } from '../site/SiteActions'
 
 export default function RoomImprovementWorkspace({ run, onConnectionChange, restored }: { run: AgentState; onConnectionChange: (online: boolean) => void; restored?: OpenedProject }) {
   const [controller] = useState(() => new OptimizationController(run))
@@ -27,6 +30,8 @@ export default function RoomImprovementWorkspace({ run, onConnectionChange, rest
   const transcript = useRef<HTMLDivElement>(null)
   useEffect(() => controller.connect(), [controller])
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot)
+  const allowance = useAllowance(run.run_id, `${useSiteActions()?.userId}:${state.phase}`)
+  const actionsUsed = allowance?.enabled && allowance.actions_remaining === 0
   const views = useSyncExternalStore(comparison.subscribe, comparison.getSnapshot, comparison.getSnapshot)
   const editor = useSyncExternalStore(views.editor.subscribe, views.editor.getSnapshot, views.editor.getSnapshot)
   useEffect(() => {
@@ -48,12 +53,14 @@ export default function RoomImprovementWorkspace({ run, onConnectionChange, rest
   useWorkspaceGuard({ dirty: !savedSignature || signature !== savedSignature || !!draft.trim() || unsentPreferences || editor.busy || editor.dragging,
     active, hasWork: true, priority: 10, leave: controller.leaveWorkspace })
   const overview = <>
-    <RoomAssessmentCards assessment={run.room_assessment ?? null} onImprove={controller.available() ? controller.select : undefined} disabled={busy} />
+    <AllowanceNotice allowance={allowance} room />
+    <RoomAssessmentCards assessment={run.room_assessment ?? null} onImprove={controller.available() ? controller.select : undefined} disabled={busy || actionsUsed} />
     {!state.instruction && <ImprovementForm state={state} controller={controller} partial={run.status === 'partial'}
       beforeStart={() => controller.setContext(comparison.currentContext())} />}
   </>
   const chat = <section className="scene-chat" aria-label="Room chat">
-    <h3>Refine your room</h3><p className="input-help">Starts from the visible layout, including edits and locks. Up to five requests per room.</p>
+    <h3>Refine your room</h3><p className="input-help">Starts from the visible layout, including edits and locks.</p>
+    <AllowanceNotice allowance={allowance} room />
     <div ref={transcript} className="chat-transcript" role="log" aria-label="Refinement conversation" aria-relevant="additions text">
       {messages.length === 0 && <p className="chat-empty">Try “Move the desk closer to the window” or “Use warmer colors”.</p>}
       {messages.map(message => <article key={message.id} className={`chat-message chat-message--${message.role}`}><span>{message.role === 'user' ? 'You' : 'Roometry'}</span><p>{message.role === 'assistant' ? readableText(message.text) : message.text}</p></article>)}
@@ -62,19 +69,19 @@ export default function RoomImprovementWorkspace({ run, onConnectionChange, rest
     {state.error && !state.instruction && <p className="input-notice error" role="alert">{state.error}</p>}
     <form className="chat-composer" onSubmit={event => {
       event.preventDefault()
-      if (busy || !draft.trim() || !controller.available()) return
+      if (busy || actionsUsed || !draft.trim() || !controller.available()) return
       const instruction = draft.trim(), context = comparison.currentContext()
       setMessages(history => [...history, { id: crypto.randomUUID(), role: 'user', text: instruction }])
       setDraft('')
       void controller.refine(instruction, context)
     }}>
       <label htmlFor="room-refinement">Your request</label>
-      <textarea id="room-refinement" value={draft} maxLength={1000} rows={3} disabled={busy || !controller.available()}
+      <textarea id="room-refinement" value={draft} maxLength={1000} rows={3} disabled={busy || actionsUsed || !controller.available()}
         placeholder="What would you like to change?" onChange={event => setDraft(event.target.value)} />
-      <Button variant="primary" type="submit" disabled={busy || !draft.trim() || !controller.available()}>Refine room<Icon name="arrow"/></Button>
+      <Button variant="primary" type="submit" disabled={busy || actionsUsed || !draft.trim() || !controller.available()}>Refine room<Icon name="arrow"/></Button>
     </form>
   </section>
-  return run.working_scene && <SceneWorkspace goals={run.input_options.goals} initialScene={run.working_scene}
+  return run.working_scene && <SceneWorkspace sourceRunId={run.run_id} goals={run.input_options.goals} initialScene={run.working_scene}
     comparison={comparison} saveAction={<SaveRoomControl run={run} comparison={comparison} messages={messages} initial={restored ? { id: restored.project.id, title: restored.project.title, revision: restored.project.revision,
       image_count: restored.project.images.length, version_count: restored.project.versions.length, visibility: 'private', saved_at: run.created_at } : undefined} onSaved={setSavedSignature} disabled={editor.busy || editor.dragging || ['preparing', 'prepared', 'running', 'cancelling'].includes(state.phase) || state.recovery} />} overview={overview} chat={chat} improvement={state.result}
     objectLabels={Object.fromEntries((run.analysis?.observations.objects ?? []).map(object => [object.id, object.label]))}

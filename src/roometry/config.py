@@ -7,8 +7,8 @@ from typing import Literal
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from roometry.uploads.schemas import MAX_IMAGES, MIB, UploadLimits
 from roometry.model_calls import ModelOperation, ModelRoute, ReasoningEffort
+from roometry.uploads.schemas import MAX_IMAGES, MIB, UploadLimits
 
 PROJECT_ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
 
@@ -27,6 +27,20 @@ class Settings(BaseSettings):
     auth_cookie_secure: bool = False
     auth_cookie_samesite: Literal["lax", "none", "strict"] = "lax"
     auth_attempts_per_minute: int = Field(default=10, ge=1, le=120)
+    generation_quota_enabled: bool | None = None
+    ai_sessions_per_day: int = Field(default=3, ge=1, le=100)
+    ai_actions_per_session: int = Field(default=3, ge=1, le=100)
+    ai_guest_sessions_per_ip_per_day: int = Field(default=12, ge=1, le=1000)
+
+    @property
+    def quota_enabled(self) -> bool:
+        return self.generation_quota_enabled if self.generation_quota_enabled is not None else self.app_environment == "production"
+
+    @model_validator(mode="after")
+    def quota_configuration(self):
+        if self.quota_enabled and (not self.database_url or not self.jwt_secret_key):
+            raise ValueError("Generation quotas require DATABASE_URL and JWT_SECRET_KEY.")
+        return self
 
     @field_validator("database_url", "jwt_secret_key", mode="before")
     @classmethod

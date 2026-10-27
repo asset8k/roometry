@@ -284,7 +284,7 @@ async def test_parser_closes_files_after_failure(client, photo, monkeypatch):
 
 
 async def test_secure_cookie_and_credentialed_cors(tmp_path, photo):
-    app = create_app(Settings(_env_file=None, app_environment="production", cors_origins=["https://frontend.example"],
+    app = create_app(Settings(_env_file=None, app_environment="production", generation_quota_enabled=False, cors_origins=["https://frontend.example"],
                               upload_storage_dir=tmp_path / "secure"))
     async with app.router.lifespan_context(app):
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="https://api.example") as client:

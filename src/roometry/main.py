@@ -11,30 +11,38 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from openai import AsyncOpenAI
 from pydantic import BaseModel
+from sqlalchemy.exc import SQLAlchemyError
 
 from roometry.agents.adapter import RoomAgent
-from roometry.assessment.service import RoomAssessor
+from roometry.agents.persistence import (
+    DurableCheckpoints,
+    RegisteredRuns,
+    WorkspaceInputs,
+)
 from roometry.agents.router import RunFailure
 from roometry.agents.router import router as agent_router
 from roometry.agents.runs import AgentRuns
 from roometry.agents.state import RunLimits
 from roometry.agents.tools import SceneTools
+from roometry.assessment.service import RoomAssessor
 from roometry.auth.errors import AuthFailure
 from roometry.auth.middleware import AuthBodyLimitMiddleware
 from roometry.auth.router import AuthAttempts, clear_cookie
 from roometry.auth.router import router as auth_router
 from roometry.auth.service import AuthService
 from roometry.config import Settings, get_settings
-from sqlalchemy.exc import SQLAlchemyError
 from roometry.database import Database
-from roometry.agents.persistence import RegisteredRuns, DurableCheckpoints, WorkspaceInputs
+from roometry.feed.service import FeedService
+from roometry.feed.router import router as feed_router
+from roometry.mcp.furniture_client import FurnitureCatalogClient
+from roometry.optimization.provider import OptimizationProvider
+from roometry.optimization.router import router as optimization_router
+from roometry.optimization.runs import OptimizationRuns
 from roometry.projects.router import router as projects_router
 from roometry.projects.service import ProjectService
 from roometry.projects.storage import ProjectPhotos
-from roometry.mcp.furniture_client import FurnitureCatalogClient
-from roometry.optimization.router import router as optimization_router
-from roometry.optimization.runs import OptimizationRuns
-from roometry.optimization.provider import OptimizationProvider
+from roometry.quota.router import router as quota_router
+from roometry.quota.service import NetworkScope, QuotaFailure, Quotas
 from roometry.scenes.router import router as scenes_router
 from roometry.uploads.errors import UploadFailure
 from roometry.uploads.middleware import UploadBodyLimitMiddleware
@@ -61,6 +69,7 @@ def create_app(
         Database(settings.database_url.get_secret_value())
         if settings.database_url else None
     )
+    quotas = Quotas(database, settings)
     service = UploadService(
         settings.public_upload_limits(), LocalInputStorage(settings.upload_storage_dir)
     )
@@ -80,6 +89,7 @@ def create_app(
         execute_tool=scene_tools,
         review_scene=scene_tools.review,
         assess_room=RoomAssessor(analysis_service),
+        quotas=quotas,
         # A scene tool may make an initial request and one repair. Its outer
         # deadline must allow both configured per-request deadlines to run.
         default_limits=RunLimits(
@@ -133,6 +143,9 @@ def create_app(
     application = FastAPI(title="Roometry API", version="0.1.0", lifespan=lifespan)
     application.state.settings = settings
     application.state.database = database
+    application.state.feed_service = FeedService(database)
+    application.state.feed_render_limiter = anyio.CapacityLimiter(2)
+    application.state.quotas = quotas
     application.state.registered_runs = registered
     application.state.auth_service = AuthService(database, settings)
     application.state.auth_hash_limiter = anyio.CapacityLimiter(2)
@@ -163,10 +176,19 @@ def create_app(
     application.include_router(scenes_router)
     application.include_router(auth_router)
     application.include_router(projects_router)
+    application.include_router(feed_router)
     application.include_router(uploads_router)
     application.include_router(analysis_router)
     application.include_router(agent_router)
     application.include_router(optimization_router)
+    application.include_router(quota_router)
+    application.add_middleware(NetworkScope)
+
+    @application.exception_handler(QuotaFailure)
+    async def quota_error(_request: Request, error: QuotaFailure):
+        headers = {"Cache-Control": "no-store"}
+        if error.retry_after is not None: headers["Retry-After"] = str(error.retry_after)
+        return JSONResponse({"detail": [{"code": error.code, "message": error.message}]}, status_code=429, headers=headers)
 
     @application.exception_handler(SQLAlchemyError)
     async def persistence_error(_request:Request,_error:SQLAlchemyError):
@@ -213,6 +235,8 @@ def create_app(
         _request: Request,
         error: RequestValidationError,
     ) -> JSONResponse:
+        if _request.url.path.endswith("/publication") or _request.url.path.endswith("/sharing-options"):
+            return await auth_error(_request, AuthFailure(422, "invalid_publication", "Choose a saved layout, a title, and explicit publishing consent."))
         if _request.url.path.startswith("/api/projects"):
             return await auth_error(_request, AuthFailure(422, "invalid_project", "Check the room title, scenes and conversation before saving."))
         if _request.url.path.startswith("/api/auth/"):

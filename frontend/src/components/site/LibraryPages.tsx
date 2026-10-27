@@ -48,7 +48,7 @@ export function MyRooms({ onSignIn, onCreate, user }: { onSignIn: () => void; on
         const operation = action.kind === 'rename' ? projectsClient.rename(action.room, title.trim(), AbortSignal.timeout(20000)) : projectsClient.delete(action.room, AbortSignal.timeout(20000))
         void operation.then(() => { dismiss(() => { setAction(null); setRefresh(value => value + 1) }) }).catch(reason => { dismiss(() => { setAction(null); setError((reason as Error).message) }) }).finally(() => setBusy(false))
       }}>
-        {action.kind === 'rename' ? <label>Room name<input data-initial-focus required maxLength={120} value={title} disabled={busy} onChange={event => setTitle(event.target.value)}/></label> : <p>Delete “{action.room.title}”, its photos and saved history? This can’t be undone.</p>}
+        {action.kind === 'rename' ? <label>Room name<input data-initial-focus required maxLength={120} value={title} disabled={busy} onChange={event => setTitle(event.target.value)}/></label> : <p>Delete “{action.room.title}”, its photos and saved history? Any shared layout will also leave Explore. This can’t be undone.</p>}
         <Button variant="primary" type="submit" disabled={busy || (action.kind === 'rename' && !title.trim())}>{busy ? action.kind === 'delete' ? 'Deleting…' : 'Saving…' : action.kind === 'rename' ? 'Save name' : 'Delete room'}</Button>
         <Button disabled={busy} onClick={() => dismiss()}>{action.kind === 'delete' ? 'Keep room' : 'Cancel'}</Button>
       </form>
@@ -56,9 +56,4 @@ export function MyRooms({ onSignIn, onCreate, user }: { onSignIn: () => void; on
   </section>
 }
 
-export function Explore({ onCreate }: { onCreate: () => void }) {
-  return <section className="library-page" aria-labelledby="explore-title">
-    <div className="page-heading"><div><h1 id="explore-title">Explore</h1><p>Real rooms. Fresh perspectives.</p></div></div>
-    <GlassPanel className="library-empty"><span className="empty-symbol"><Icon name="globe"/></span><h2>A little inspiration is on its way.</h2><p>Community rooms are coming soon.</p><Button variant="primary" onClick={onCreate}>Create your own<Icon name="arrow"/></Button></GlassPanel>
-  </section>
-}
+export { default as Explore } from './ExplorePage'
