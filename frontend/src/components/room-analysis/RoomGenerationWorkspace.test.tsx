@@ -108,10 +108,27 @@ describe('guided generation workspace', () => {
     run.pending_question!.choices[1] = { id: 'leave_unknown', label: "I don't know — finish without a complete scene" }
     const html = render({ phase: 'awaiting_answer', run })
     expect(html).toContain('Use estimated dimensions')
-    expect(html).toContain('Unclear sizes start at 4 × 4 × 2.6 m')
+    expect(html).toContain('Only sizes the photos cannot establish use a labeled starting size')
+    expect(html).not.toContain('4 × 4 × 2.6 m')
     expect(html).toContain('Enter what you know, or use photo estimates')
     expect(html).not.toContain('finish without a complete scene')
     expect(html.match(/type="radio"/g)).toHaveLength(3)
+  })
+  it('separates a failed support from its dependent items even when no scene can be shown', () => {
+    const run = finishedRun(input)
+    run.status = 'incomplete'; run.working_scene = null; run.base_scene = null
+    run.proposal!.status = 'incomplete'; run.proposal!.scene = null
+    run.proposal!.unresolved_entities = [
+      { entity_id: 'desk_observed', kind: 'object', reason: { code: 'geometry', entity_ids: ['desk_observed'], message: 'Supporting furniture needs a valid position.' } },
+      { entity_id: 'computer_observed', kind: 'object', reason: { code: 'dependency_unresolved', entity_ids: ['computer_observed', 'desk_observed'], message: 'Resolve its support first.' } },
+    ]
+    const html = render({ phase: 'incomplete', run })
+    expect(html).toContain('Unresolved items · 2')
+    expect(html).toContain('Direct issues · 1')
+    expect(html).toContain('Dependent items · 1')
+    expect(html).toContain('Waiting for')
+    expect(html).not.toContain('desk_observed')
+    expect(html).not.toContain('computer_observed')
   })
   it('shows estimated and assumed sizes next to the viewer rather than only inside details', () => {
     const run = finishedRun(input)

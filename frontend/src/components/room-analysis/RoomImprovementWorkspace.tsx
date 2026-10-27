@@ -126,7 +126,7 @@ export function ImprovementForm({ state, controller, partial, beforeStart, compa
     {(state.phase === 'running' || state.phase === 'cancelling') && state.result && <div role="status">
       <RunWorkflow kind="optimization" run={state.result} progress={state.progress} streamMode={state.streamMode} message={state.phase === 'cancelling' ? 'Stopping further improvement work…' : state.progress && state.streamMode === 'streaming' ? progressLabels[state.progress.stage] : state.result.stage === 'reviewing' ? 'Reviewing the proposed layout and your preferences…' : state.result.stage === 'validating' ? 'Checking placement, walking space and goal scores…' : compact ? 'Working on your request…' : 'Exploring a better arrangement for your chosen focus…'}/>
       <p>{state.result.attempts.length} candidates checked · up to {state.result.max_candidates} candidates.</p>
-      <button type="button" disabled={state.phase === 'cancelling'} onClick={() => void controller.cancel()}>{compact ? 'Cancel refinement' : 'Cancel improvement'}</button>
+      <Button variant="quiet" className="refinement-cancel" disabled={state.phase === 'cancelling'} onClick={() => void controller.cancel()}>{compact ? 'Cancel refinement' : 'Cancel improvement'}</Button>
     </div>}
     {state.result && !['prepared', 'running', 'cancelled'].includes(state.result.status) && <div className="improvement-outcome" role="status">
       {!compact && <h3>{state.result.result_scene ? 'Candidate ready' : 'Previous layout kept'}</h3>}

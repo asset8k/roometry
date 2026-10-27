@@ -37,6 +37,7 @@ from roometry.vision.evidence import apply_constraints
 from roometry.vision.wall_axes import resolve_wall_axes
 from roometry.vision.fidelity import evaluate_fidelity
 from roometry.vision.partial import assemble_partial
+from roometry.vision.reconstruction_diagnostics import omission_diagnostics
 from roometry.vision.importance import partial_quality
 from roometry.vision.proposal_request import build_proposal_request
 from roometry.vision.recovery import merge_repair, actionable_repair
@@ -519,6 +520,7 @@ class AnalysisService:
             "expires_at": analysis.expires_at,
             "warnings": [
                 "This is an approximate base scene; review estimated sizes, layout, and uncertain identities.",
+                *measurements.estimate_notes,
                 *measurements.assumption_notes,
             ],
         }
@@ -615,6 +617,7 @@ class AnalysisService:
         images = await anyio.to_thread.run_sync(self._load_images, prepared, owner)
         draft, report, scene = None, None, None
         best_partial = None
+        best_partial_draft = None
         best_quality = (-1, -1, -10000, -1, -1)
         observed = {item.id: item for item in [*analysis.observations.objects, *analysis.observations.openings]}
         problems = []
@@ -707,6 +710,7 @@ class AnalysisService:
                             quality = (major_high, major, -failures, secondary, total)
                             if quality > best_quality:
                                 best_partial = candidate
+                                best_partial_draft = draft.model_copy(deep=True)
                                 best_quality = quality
                             if not candidate[2] and not candidate[3]:
                                 scene, report, problems = candidate[:3]
@@ -807,6 +811,7 @@ class AnalysisService:
         if scene is None and best_partial is not None:
             final_problems = problems
             scene, report, problems, unresolved = best_partial
+            draft = best_partial_draft
             if repair_failure is not None:
                 problems = [
                     issue(
@@ -851,4 +856,9 @@ class AnalysisService:
             }
         )
         state.proposal_key, state.proposal = cache_key, result.model_copy(deep=True)
+        if unresolved:
+            logging.getLogger(__name__).warning(
+                "Reconstruction omissions: %s",
+                json.dumps(omission_diagnostics(analysis, draft, scene, unresolved), ensure_ascii=True),
+            )
         return result

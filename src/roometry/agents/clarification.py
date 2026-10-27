@@ -62,7 +62,7 @@ def question_for(
         return ClarificationQuestion.model_validate(
             {
                 **common,
-                "question": f"What {'is' if len(missing) == 1 else 'are'} the room's {names} in meters? Enter the values you know; photos could not establish these dimensions.",
+                "question": f"What {'is' if len(missing) == 1 else 'are'} the room's {names} in meters? Enter what you know, or continue with clearly labeled approximate sizes.",
                 "dimension_axes": missing,
                 "choices": [
                     {"id": "enter_measurements", "label": "Enter the measurements"},
@@ -274,7 +274,7 @@ def answer_updates(state: AgentState, answer: ClarificationAnswer) -> dict[str, 
             message = "User-supplied measurements are now authoritative; reuse cached photo observations."
         elif answer.choice_id == "leave_unknown":
             message = (
-                "Continue with photo estimates; for missing sizes use the disclosed "
+                "Continue with photo estimates and supported wall-span scale estimates; for missing sizes use the disclosed "
                 "4 × 4 × 2.6 m starting size only on unknown axes. Keep supplied "
                 "measurements authoritative, all other axes estimated, and reuse cached photo observations."
             )

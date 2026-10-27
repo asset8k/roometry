@@ -1,6 +1,7 @@
 """Partial reconstruction preserves evidence, dependencies and paid-call limits."""
 
 from copy import deepcopy
+import json
 
 import anyio
 import httpx
@@ -192,7 +193,7 @@ async def test_api_can_build_the_rest_when_one_observation_has_no_model(harness,
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("failure", ["json", "timeout", "rate_limit", "refusal", "output_limit", "worse"])
-async def test_failed_or_worse_repair_preserves_best_partial_and_cached_observations(harness, failure):
+async def test_failed_or_worse_repair_preserves_best_partial_and_cached_observations(harness, failure, caplog):
     app, client, calls, actions = harness
     analysis = await analyzed(harness)
     state = app.state.analysis_service._states[analysis["input_id"]]
@@ -231,6 +232,14 @@ async def test_failed_or_worse_repair_preserves_best_partial_and_cached_observat
     assert state.scene_attempts == 2 and len(calls) == 3
     assert (await client.post("/api/rooms/propose-scene", json=req)).json() == result
     assert len(calls) == 3
+    diagnostics = [record.getMessage().removeprefix('Reconstruction omissions: ') for record in caplog.records
+                   if record.getMessage().startswith('Reconstruction omissions: ')]
+    assert len(diagnostics) == 1  # Cached reads do not repeat diagnostics or paid calls.
+    diagnostic = json.loads(diagnostics[0])
+    assert diagnostic['unresolved'] == diagnostic['direct_failures'] == 1
+    assert diagnostic['entities'][0]['root_entity_ids'] == ['bed_observed']
+    assert diagnostic['entities'][0]['catalog_type_models'] > 0
+    assert 'PRIVATE' not in diagnostics[0]
     parsed = SceneProposalResponse.model_validate_json(response.content)
     for patch in ({"status": "ready"}, {"unresolved_entities": []}, {"scene": None}, {"issues": []}):
         with pytest.raises(ValidationError):

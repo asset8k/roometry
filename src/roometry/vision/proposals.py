@@ -23,6 +23,7 @@ from roometry.vision.proposal_schemas import (
     SceneDraft,
 )
 from roometry.vision.schemas import RoomAnalysisResponse
+from roometry.vision.scale import photo_span_estimates
 
 
 @dataclass(frozen=True)
@@ -31,6 +32,7 @@ class Measurements:
     to_confirm: list[DimensionName]
     estimated: list[DimensionName]
     assumed: list[DimensionName] = field(default_factory=list)
+    estimate_notes: list[str] = field(default_factory=list)
 
     @property
     def assumption_notes(self) -> list[str]:
@@ -55,6 +57,10 @@ def resolve_measurements(
 ) -> Measurements:
     original = analysis.input_options.dimensions
     estimates = analysis.observations.estimated_dimensions
+    span_estimates, estimate_notes = (
+        ({}, []) if any(axis in confirmed for axis in ("width_m", "length_m"))
+        else photo_span_estimates(analysis)
+    )
     values: dict[str, object] = {}
     trusted: set[DimensionName] = set()
     assumed: list[DimensionName] = []
@@ -71,6 +77,8 @@ def resolve_measurements(
             trusted.add(axis)
         if value is None:
             value = getattr(estimates, axis, None)
+        if value is None and axis not in confirmed:
+            value = span_estimates.get(axis)
         if value is None and allow_estimates and assume_missing:
             value = ASSUMED_ROOM_DIMENSIONS[axis]
             assumed.append(axis)
@@ -86,7 +94,8 @@ def resolve_measurements(
     values["measurements_source"] = (
         "estimated" if estimated or not trusted else "user_confirmed"
     )
-    return Measurements(InputDimensions.model_validate(values), pending, estimated, assumed)
+    used_notes = estimate_notes if any(axis in estimated and axis in span_estimates for axis in AXES) else []
+    return Measurements(InputDimensions.model_validate(values), pending, estimated, assumed, used_notes)
 
 
 def issue(code: str, message: str, *ids: str) -> ProposalIssue:
@@ -296,6 +305,7 @@ def assemble(
     if issues:
         return None, None, issues[:50]
     assumptions = [
+        *measurements.estimate_notes,
         *measurements.assumption_notes,
         "Positions, orientations, and opening geometry are approximate photo estimates. Object sizes use recorded estimates, supported model estimates, or catalog defaults."
     ]

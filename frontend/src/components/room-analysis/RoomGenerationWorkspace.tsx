@@ -55,6 +55,9 @@ export default function RoomGenerationWorkspace({ state, controller, onConnectio
   const scene = terminal ? run?.working_scene : null
   const partial = run?.proposal?.status === 'partial'
   const omittedCount = run?.proposal?.unresolved_entities?.length ?? 0
+  const omissions = run?.proposal?.unresolved_entities ?? []
+  const directOmissions = omissions.filter(item => item.reason.code !== 'dependency_unresolved')
+  const dependentOmissions = omissions.filter(item => item.reason.code === 'dependency_unresolved')
   const needsDimensions = state.phase === 'incomplete' && run?.proposal?.status === 'needs_dimensions'
   const needsWall = state.phase === 'incomplete' && run?.proposal?.status === 'needs_wall_assignment'
   const preview = partial && omittedCount === 0
@@ -82,6 +85,14 @@ export default function RoomGenerationWorkspace({ state, controller, onConnectio
       {terminal && run?.proposal?.status === 'incomplete' && <details className="analysis-notes"><summary>Construction details</summary><ul>{run.proposal.issues.map((issue, index) => <li key={index}>{issue.entity_ids.length > 0 && <strong>{issue.entity_ids.map(entityName).join(', ')}: </strong>}{issue.message}</li>)}</ul></details>}
       {terminal && estimated.length > 0 && <p className="analysis-caution">Estimated room dimensions: {estimated.map(axis => dimensionLabels[axis].toLowerCase()).join(', ')}. These have not been supplied by you.</p>}
       {terminal && !!run?.proposal?.assumed_axes?.length && <p className="analysis-caution">Some dimensions use an assumed starting size because photo scale was unclear. Check the room measurements before planning changes.</p>}
+      {terminal && omittedCount > 0 && <details className="analysis-notes"><summary>Unresolved items · {omittedCount}</summary>
+        <p>{omittedCount} observations are unresolved and absent from the 3D scene.</p>
+        <h3>Direct issues · {directOmissions.length}</h3>
+        <ul>{directOmissions.map(item => <li key={item.entity_id}><strong>{entityName(item.entity_id)}</strong>: {item.reason.message}</li>)}</ul>
+        {dependentOmissions.length > 0 && <><h3>Dependent items · {dependentOmissions.length}</h3>
+          <p>These items need their supporting furniture or opening resolved first.</p>
+          <ul>{dependentOmissions.map(item => <li key={item.entity_id}><strong>{entityName(item.entity_id)}</strong> · Waiting for {item.reason.entity_ids.filter(id => id !== item.entity_id).map(entityName).join(', ')}</li>)}</ul></>}
+      </details>}
       {run?.analysis && <details className="analysis-notes photo-observations"><summary>Photo observations and uncertainties</summary>
         <h3>Observed objects · {objects.length}</h3>
         <dl className="observation-list">{objects.slice(0, 6).map(obj => <div key={obj.id}><dt>{displayText(obj.label)}</dt><dd>{obj.relative_location || 'Location uncertain'}</dd></div>)}</dl>
@@ -120,10 +131,6 @@ export default function RoomGenerationWorkspace({ state, controller, onConnectio
         {(scene.estimate_corrections?.length ?? 0) > 0 && <details className="analysis-notes"><summary>Revised photo estimates</summary><ul>{scene.estimate_corrections?.map((c, i) => <li key={i}>{entityName(c.entity_id)} · {c.field}: {c.previous_m} → {c.revised_m} m. {c.reason}</li>)}</ul></details>}
         {(scene.interpretation_corrections?.length ?? 0) > 0 && <details className="analysis-notes"><summary>Revised photo interpretations</summary><ul>{scene.interpretation_corrections?.map((c, i) => <li key={i}><strong>{entityName(c.entity_id)}</strong>: {c.reason}</li>)}</ul></details>}
         {(scene.appearance_corrections?.length ?? 0) > 0 && <details className="analysis-notes"><summary>Revised colors and finishes</summary><ul>{scene.appearance_corrections?.map((c, i) => <li key={i}><strong>{c.entity_id ? entityName(c.entity_id) : 'Room'}</strong>: {c.reason}</li>)}</ul></details>}
-        {partial && omittedCount > 0 && <div className="analysis-caution" role="status"><h3>Some observations still need resolving</h3>
-          <p>{run.proposal?.unresolved_entities?.length} observations are unresolved and absent from the 3D scene.</p>
-          <ul>{run.proposal?.unresolved_entities?.map(item => <li key={item.entity_id}><strong>{entityName(item.entity_id)}</strong>: {item.reason.message}</li>)}</ul>
-        </div>}
         {state.phase !== 'completed' && state.phase !== 'partial' && <p className="analysis-caution">This run did not finish successfully. The viewer contains only the geometry validated before it stopped.</p>}
         <details className="analysis-notes"><summary>Scene estimates, assumptions, and cautions</summary><ul>{[...scene.assumptions, ...scene.warnings].map((note, index) => <li key={index}>{note}</li>)}</ul></details>
       </>}
@@ -166,7 +173,7 @@ export function ClarificationForm({ run, disabled, onAnswer }: {
   return <form className="clarification-form" onSubmit={event => { event.preventDefault(); submit() }}>
     <fieldset disabled={disabled}>
       <legend><span className="section-label">Question {run.questions.length} of 3 max</span><strong>{question.kind === 'room_dimensions' ? 'What are the room dimensions?' : displayText(question.question)}</strong></legend>
-      {question.kind === 'room_dimensions' && <p className="input-help">Enter what you know, or use photo estimates. Unclear sizes start at 4 × 4 × 2.6 m and stay labeled approximate.</p>}
+      {question.kind === 'room_dimensions' && <p className="input-help">Enter what you know, or use photo estimates. Only sizes the photos cannot establish use a labeled starting size.</p>}
       <div className="clarification-choices">{question.choices.map(option => <label key={option.id}>
         <input type="radio" name={`answer-${question.id}`} value={option.id} checked={choice === option.id} onChange={() => setChoice(option.id)} required /><span>{displayText(question.kind === 'room_dimensions' && option.id === 'leave_unknown' ? 'Use estimated dimensions' : option.label)}</span><Icon name="check" className="choice-check" />
       </label>)}</div>

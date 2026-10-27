@@ -146,6 +146,7 @@ def build_proposal_request(
         "estimated_axes": measurements.estimated,
         "assumed_axes": measurements.assumed,
         "dimension_assumptions": measurements.assumption_notes,
+        "dimension_estimate_evidence": measurements.estimate_notes,
         "wall_axes": analysis.wall_axes.model_dump(mode="json") if analysis.wall_axes else None,
         "asset_bindings": bindings,
         "hypothesis_alternatives": alternatives,

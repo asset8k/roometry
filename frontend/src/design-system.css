@@ -521,6 +521,7 @@ select option { color: var(--text); background: var(--surface); }
 .unified-workspace .improvement-request { margin: 20px 0; }
 .unified-workspace .improvement-request h2 { font-size: 16px; }
 .unified-workspace .improvement-request h3 { font-size: 14px; }
+.improvement-request .refinement-cancel { min-height: 40px; padding: 8px 12px; font-size: 12px; }
 .unified-workspace .improvement-request :is(p, li, legend) { font-size: 12px; line-height: 1.6; }
 .unified-workspace .input-actions { flex-wrap: wrap; }
 .unified-workspace .input-actions button { min-height: 44px; }

@@ -72,6 +72,16 @@ When visible room boundaries, familiar-size furniture or openings provide a
 reasonable scale reference, include rough estimated_dimensions rounded to 0.5 m.
 Do not omit a defensible approximation just because exact measurement is impossible.
 Leave an axis null when no such evidence exists; never invent hidden room extents.
+Estimate each axis independently: a visible floor-to-ceiling reference may establish
+height even when the far end of the room is hidden. Reconcile scale across all
+views using familiar-size furniture, openings, visible corners and full wall spans;
+never use a standard room size or assume every room is square. When neither plan
+axis is supplied, use width for the shorter horizontal span and length for the
+longer one. Explain the visible scale references, supporting views and uncertain
+or cropped boundaries briefly in assumptions. Record approximate object widths
+and wall_coverage only when the whole wall span can be judged, not the fraction
+of the photograph or the visible cropped part of a wall. Do not use catalogue
+sizes as though they were measured from the photos.
 Build a view-independent inventory before returning: match the same item across
 views using its shape, wall, neighboring furniture and supports. Use all views,
 not just the first photo; include important objects visible in secondary views.

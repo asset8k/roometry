@@ -17,7 +17,7 @@ from roometry.vision.schemas import EstimatedRoomDimensions
 from tests import test_vision_api
 from tests.test_agent_clarification import paused_dimensions
 from tests.test_agent_tools import photo, prepared
-from tests.test_scene_proposals import scene_action, source
+from tests.test_scene_proposals import draft_data, scene_action, source
 
 anyio_backend = test_vision_api.anyio_backend
 isolated_environment = test_vision_api.isolated_environment
@@ -128,6 +128,63 @@ async def test_photo_estimates_build_directly_and_never_override_a_user_axis(har
     assert final['proposal']['estimated_axes'] == ['length_m', 'height_m']
     assert final['proposal']['assumed_axes'] == []
     assert not any(note.startswith('Assumed room ') for note in final['working_scene']['assumptions'])
+    assert len(calls) == 2
+
+
+@pytest.mark.anyio
+async def test_visible_wall_scale_resumes_unknown_height_without_reanalysis(harness, monkeypatch):
+    app, client, calls, actions = harness
+    app.state.settings.agent_deterministic_routing = True
+    observations_for = test_vision_api.observations_for
+
+    def observed_scale(payload):
+        observed = observations_for(payload)
+        observed['estimated_dimensions'] = None
+        for wall, role in zip(observed['walls'], ('shorter', 'longer')):
+            wall['span'] = {'role': role, 'confidence': 'high',
+                            'source_image_ids': wall['source_image_ids'],
+                            'evidence': 'Full wall extents are visible across the supplied views.'}
+        for opening, width, coverage in zip(observed['openings'], (2.4, 1.2), (.6, .2)):
+            opening.update(confidence='high', estimated_width_m=width, wall_coverage=coverage)
+        return observed
+
+    monkeypatch.setattr(test_vision_api, 'observations_for', observed_scale)
+    data = BytesIO()
+    with Image.new('RGB', (256, 256), 'gray') as image:
+        image.save(data, 'PNG')
+    response = await client.post('/api/rooms/inputs', files=[
+        ('options', (None, json.dumps({'room_type': 'bedroom'}))),
+        ('images', ('room.png', data.getvalue(), 'image/png')),
+    ])
+    assert response.status_code == 201
+    actions.append(photo)
+    paused = await client.post('/api/agent-runs', json={
+        'input_id': response.json()['input_id'], 'request_id': str(uuid4()),
+    })
+    assert paused.status_code == 200, paused.text
+    initial = paused.json()
+    question = initial['pending_question']
+    assert question['kind'] == 'room_dimensions' and question['dimension_axes'] == ['height_m']
+    assert len(calls) == 1
+    draft = draft_data()
+    for opening, width in zip(draft['openings'], (2.4, 1.2)):
+        opening['width_m'] = width
+    actions.append(scene_action(draft))
+    path = f"/api/agent-runs/{initial['run_id']}/answer"
+    answer = {'question_id': question['id'], 'choice_id': 'leave_unknown'}
+    resumed = await client.post(path, json=answer)
+    assert resumed.status_code == 200, resumed.text
+    final = resumed.json()
+    assert final['status'] == 'completed', final
+    assert final['analysis'] == initial['analysis']
+    assert final['proposal']['assumed_axes'] == ['height_m']
+    assert final['working_scene']['room']['width_m'] == 4.
+    assert final['working_scene']['room']['length_m'] == 6.
+    assert final['working_scene']['room']['height_m'] == 2.6
+    context = json.loads(calls[-1]['input'][0]['content'][0]['text'])
+    assert len(context['dimension_estimate_evidence']) == 2
+    assert any('full-wall coverage' in note for note in final['working_scene']['assumptions'])
+    assert (await client.post(path, json=answer)).json() == final
     assert len(calls) == 2
 
 

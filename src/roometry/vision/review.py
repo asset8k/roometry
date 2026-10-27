@@ -35,6 +35,7 @@ from roometry.vision.review_schemas import VisualReviewResult
 from roometry.vision.review_validation import parse_judgment, validate_judgment as validate_judgment
 from roometry.vision.review_policy import appearance_controls, finding_progress, review_targets, same_values, select_findings
 from roometry.vision.schemas import ReconstructionConstraints, RoomAnalysisResponse
+from roometry.vision.scale import photo_span_estimates
 
 if TYPE_CHECKING:
     from roometry.vision.service import AnalysisService
@@ -273,7 +274,14 @@ class VisualReviewer:
         if judgment.verdict == "needs_correction" and actionable:
             problems = [issue("fidelity", f.description, *f.entity_ids) for f in actionable if f.entity_ids]
             previous = draft_from_scene(proposal.scene)
-            measurements = Measurements(proposal.dimensions, [], proposal.estimated_axes, proposal.assumed_axes)
+            span_estimates, span_notes = photo_span_estimates(analysis)
+            # Preserve provenance during visual repair without deriving new sizes
+            # or relabeling any user-confirmed axis as a photo estimate.
+            scale_notes = span_notes if span_estimates and all(
+                axis in proposal.estimated_axes and value == getattr(proposal.dimensions, axis)
+                for axis, value in span_estimates.items()
+            ) else []
+            measurements = Measurements(proposal.dimensions, [], proposal.estimated_axes, proposal.assumed_axes, scale_notes)
             wall_ids = {item.id for item in analysis.observations.walls}
             room_appearance = any(f.kind == "color" and (not f.entity_ids or set(f.entity_ids) <= wall_ids) for f in actionable)
             try:
