@@ -22,6 +22,15 @@ A support_object_id requires placement="surface" and must name an existing objec
 wall_id must name an entry in walls. Never create dangling references or cycles.
 An unrecognized object uses type=null and a short
 descriptive label. Confidence is qualitative, not a calibrated probability.
+Use countertop for a separately visible worktop slab, faucet for an independent
+tap, shower_fixture for a wall shower rail/head/mixer set, wall_panel for an
+accent panel or backsplash, and ceiling_detail for a cove or ceiling trim frame.
+Keep these distinct from furniture and ordinary pictures. When a sink, tap and
+cabinet clearly form one visible fitted assembly, describe the integrated unit;
+do not duplicate its own built-in parts as separate freestanding furniture.
+For an integrated unit, size estimates describe the whole visible assembly,
+including its tap, headboard or hutch. A worktop's usable height is not the same
+as the total height of a cabinet-plus-faucet assembly.
 
 Use one stable observation ID for a physical object confidently seen in several
 photos, with all relevant evidence IDs. Distinct similar objects retain separate
@@ -162,12 +171,27 @@ Correct uncertain opening estimates with evidence rather than omitting windows.
 asset_bindings.models are references into asset_models, which defines each eligible
 asset's placement dimensions, support surfaces and visible appearance controls.
 Choose a fitting supplied model; never invent an asset/type/placement.
-asset_id=null requests the server's standard model; select an explicit asset_id
+asset_id=null requests an evidence-ranked compatible model; select an explicit asset_id
 when a variant's form matters. Support-surface coordinates are normalized to the
 host's local width/height/depth; attachment_constraints are already in metres.
 Composite models require a whole observed item, not separately observed components. A desk
 with connected side shelving/hutch can use desk_shelved_01; use its worktop for
 devices, not its hutch, and do not add duplicate shelving. Keep distinct IDs.
+Use included_components to identify integrated worktops, basins and taps. A
+sink-counter or vanity model already containing a basin/tap must not receive a
+second overlapping basin/tap. Choose separate supported fixtures only when the
+observations identify separate units and their declared support areas fit. Never
+merge or delete distinct observed IDs to hide a mismatch; correct a genuinely
+uncertain interpretation with evidence, or retain its unresolved limitation.
+Follow construction_order.object_sequence: establish each support before placing
+its dependents. For fitted runs, align adjoining top heights and rear wall planes;
+use corner/L models for observed returns. Worktops span cabinets, not empty floor.
+Keep an inset sink's cutout empty; do not bury a basin in a solid worktop. Shower
+screens/trays and a separately observed wall shower fixture are distinct units.
+In repairs component_conflicts gives the actual overlapping solid parts and their
+world-axis intervals in metres. Move the affected group or choose a compatible
+model from the supplied choices; do not shrink confirmed sizes, ignore solids,
+or scatter connected fixtures to make the validator pass.
 When bindings have no compatible model, omit the object and retain the limitation,
 unless an evidence-supported hypothesis_alternatives entry is used with an audited
 interpretation_corrections entry. Never fabricate a type to force representation.
@@ -251,7 +275,7 @@ height. Do not drop a visible window because an uncertain size/offset is wrong;
 correct the estimate with photo evidence. After the shell, construct major anchors
 and supports before secondary furniture, then dependent accessories.
 Choose asset_id from that observation's asset_bindings models, using its label,
-shape and placement. null uses an eligible standard model. A composite model is
+shape and placement. null uses an evidence-ranked compatible model. A composite model is
 only suitable when the observation already describes that whole item; never
 double-count separately observed appliances, basins, or furniture components.
 Use desk_shelved_01 for a whole observed desk with connected side shelving/hutch;

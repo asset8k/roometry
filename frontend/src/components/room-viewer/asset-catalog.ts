@@ -1,13 +1,15 @@
 import equipment from '../../data/equipment.generated.json'
 import fixtures from '../../data/fixtures.generated.json'
 import decor from '../../data/decor.generated.json'
+import expanded from '../../data/expanded.generated.json'
 import { FURNITURE_CATALOG } from './furniture-catalog'
 import type { AssetPlacement, FurnitureAsset, FurniturePoint } from './furniture-catalog'
 
 export const EQUIPMENT_CATALOG = equipment as unknown as readonly FurnitureAsset[]
 export const FIXTURE_CATALOG = fixtures as unknown as readonly FurnitureAsset[]
 export const DECOR_CATALOG = decor as unknown as readonly FurnitureAsset[]
-export const ASSET_CATALOG: readonly FurnitureAsset[] = [...FURNITURE_CATALOG, ...EQUIPMENT_CATALOG, ...FIXTURE_CATALOG, ...DECOR_CATALOG]
+export const EXPANSION_CATALOG = expanded as unknown as readonly FurnitureAsset[]
+export const ASSET_CATALOG: readonly FurnitureAsset[] = [...FURNITURE_CATALOG, ...EQUIPMENT_CATALOG, ...FIXTURE_CATALOG, ...DECOR_CATALOG, ...EXPANSION_CATALOG]
 const byId = new Map(ASSET_CATALOG.map(asset => [asset.asset_id, asset]))
 const equipmentById = new Map(EQUIPMENT_CATALOG.map(asset => [asset.asset_id, asset]))
 const fixturesById = new Map(FIXTURE_CATALOG.map(asset => [asset.asset_id, asset]))

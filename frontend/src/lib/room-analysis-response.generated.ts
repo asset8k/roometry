@@ -217,6 +217,11 @@ export type Type =
       | "towel_rack"
       | "water_heater"
       | "drying_rack"
+      | "countertop"
+      | "faucet"
+      | "shower_fixture"
+      | "wall_panel"
+      | "ceiling_detail"
     )
   | null;
 export type Label1 = string;
@@ -306,6 +311,11 @@ export type AlternativeType =
       | "towel_rack"
       | "water_heater"
       | "drying_rack"
+      | "countertop"
+      | "faucet"
+      | "shower_fixture"
+      | "wall_panel"
+      | "ceiling_detail"
     )
   | null;
 export type Wood = string | null;
@@ -422,6 +432,11 @@ export type AlternativeType1 =
       | "towel_rack"
       | "water_heater"
       | "drying_rack"
+      | "countertop"
+      | "faucet"
+      | "shower_fixture"
+      | "wall_panel"
+      | "ceiling_detail"
     )
   | null;
 export type WallCoverage1 = number | null;

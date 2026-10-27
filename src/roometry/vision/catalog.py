@@ -20,6 +20,7 @@ from roometry.vision.proposal_schemas import (
     SceneDraft,
 )
 from roometry.vision.schemas import ObjectObservation, RoomAnalysisResponse
+from roometry.vision.context_budget import shortlist
 
 BindingIssue = Literal[
     "identity_mismatch",
@@ -69,8 +70,16 @@ def bind_catalog(
             )
             continue
         if obj.asset_id is None:
-            default_id = f"{source.type}_standard_01"
-            asset = next((a for a in options if a.asset_id == default_id), options[0])
+            # A support must actually offer object areas. Some legacy standard
+            # fixtures contain a visible top but deliberately declare no support.
+            children = [item for item in draft.objects if item.support_object_id == obj.id]
+            supporting = [a for a in options if object_surfaces(a.asset_id, obj.placement)]
+            eligible = supporting if children and supporting else options
+            ranked = shortlist([
+                {"asset_id": a.asset_id, "label": a.label,
+                 "configurations": {obj.placement: {}}} for a in eligible
+            ], source)
+            asset = ASSET_CATALOG[ranked[0]["asset_id"]]
         else:
             asset = ASSET_CATALOG.get(obj.asset_id)
         if asset is None or asset.object_type != source.type:
@@ -144,8 +153,6 @@ def bind_catalog(
             # A desk's work surface stays below an integrated hutch. Default
             # tabletop devices to that surface, not the highest shelf board.
             worktops = [area for area in surfaces if area.part == "worktop"] if ASSET_CATALOG[support.asset_id].object_type == "desk" else []
-            top_height = max(area.y for area in surfaces)
-            top = worktops or [area for area in surfaces if area.y == top_height]
 
             def fits(area: SupportSurface) -> bool:
                 width = (area.x_max - area.x_min) * host_size.width
@@ -160,7 +167,10 @@ def bind_catalog(
                 center_z = (area.z_min + area.z_max) / 2 * host_size.depth
                 return -area.y, (x - center_x) ** 2 + (z - center_z) ** 2, area.name
 
-            chosen = min([area for area in top if fits(area)] or top, key=rank)
+            # Never choose an undersized top ledge while a lower shelf fits.
+            # Keep desks on their worktop rather than their integrated hutch.
+            usable = [area for area in surfaces if fits(area)]
+            chosen = min([area for area in worktops if fits(area)] or usable or worktops or surfaces, key=rank)
             obj.support_surface_id = chosen.name
     if issues:
         return None, issues[:50]

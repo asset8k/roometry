@@ -28,6 +28,7 @@ from roometry.vision.schemas import RoomAnalysisResponse
 from roometry.vision.wall_axes import AXIS_WALLS
 from roometry.vision.context_budget import compact_context, compact_schema, select_photo_ids, photo_references, photo_reference_schema
 from roometry.vision.prompts import COMPACT_SCENE_INSTRUCTIONS
+from roometry.vision.assembly_context import assembly_features, component_feedback, construction_sequence
 
 
 def build_proposal_request(
@@ -57,7 +58,9 @@ def build_proposal_request(
             fields = roles & {"wood", "metal", "linen", "inset", "rubber", "enamel"}
             if roles & {"primary", "primary_dark", "primary_metal", "primary_ceramic"}:
                 fields.add("color")
+            features = assembly_features(asset)
             models.append({"asset_id": asset.asset_id, "label": asset.label, "configurations": configurations,
+                           **({"included_components": features} if features else {}),
                            "appearance_fields": sorted(fields),
                            "appearance_regions": {field: [p.name for p in asset.parts if
                                (p.material.startswith("primary") if field == "color" else p.material == field)
@@ -159,6 +162,7 @@ def build_proposal_request(
             "opening_rules": "offset_m + width_m <= wall span; sill_height_m + height_m <= room height; doors have sill_height_m=0",
         },
         "construction_order": {
+            "object_sequence": construction_sequence(analysis),
             "anchors": [item.id for item in [*analysis.observations.openings, *analysis.observations.objects] if importance(item) == 0],
             "secondary": [item.id for item in analysis.observations.objects if importance(item) == 1],
             "accessories": [item.id for item in analysis.observations.objects if importance(item) > 1],
@@ -173,6 +177,7 @@ def build_proposal_request(
             "instruction": "Return only changed or restored observed entries. Omitted entries remain unchanged. Keep unaffected entries byte-for-byte if repeated. raw_previous_draft is the merge base; previous_draft shows attachment-adjusted coordinates used by geometry checks.",
         } if operation == "scene_repair" and draft is not None else None,
         "attachment_constraints": attachment_constraints,
+        "component_conflicts": component_feedback(normalized.objects, issues) if normalized else [],
         "validation_feedback": [item.model_dump(mode="json") for item in issues],
     }
     schema = strict_schema(SceneDraft)

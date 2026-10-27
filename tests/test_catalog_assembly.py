@@ -42,7 +42,7 @@ def single_object_case(object_type="sofa", placement="floor"):
 
 
 @pytest.mark.parametrize("asset", ASSET_CATALOG.values(), ids=lambda asset: asset.asset_id)
-def test_all_100_models_are_bindable_in_each_of_their_approved_configurations(asset):
+def test_all_models_are_bindable_in_each_of_their_approved_configurations(asset):
     for placement in ASSET_REGISTRY[asset.asset_id].placements:
         analysis, data = single_object_case(asset.object_type, placement)
         data["objects"][0]["asset_id"] = asset.asset_id
@@ -177,7 +177,9 @@ def test_provider_context_has_only_relevant_catalog_choices_and_strict_nullable_
     payload = build_proposal_request(Settings(_env_file=None), analysis, measurements(analysis), None, [])
     context = json.loads(payload["input"][0]["content"][0]["text"])
     options = context["asset_bindings"][0]["models"]
-    assert {model["asset_id"] for model in options} == {"plant_standard_01", "plant_palm_01"}
+    assert {model["asset_id"] for model in options} == {
+        "plant_standard_01", "plant_palm_01", "plant_monstera_01", "plant_trailing_surface_01",
+    }
     assert all(model['placements'] == ['surface'] for model in options)
     options = [context['asset_models'][model['asset_id']] for model in options]
     assert all('surface' in model['configurations'] for model in options)

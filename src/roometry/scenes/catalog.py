@@ -6,6 +6,7 @@ from roometry.scenes.assets import ASSET_REGISTRY, ObjectType, Placement
 from roometry.scenes.decor import DECOR_CATALOG
 from roometry.scenes.equipment import EQUIPMENT_CATALOG
 from roometry.scenes.fixture_models import FIXTURE_CATALOG
+from roometry.scenes.expanded_models import EXPANSION_CATALOG
 from roometry.scenes.furniture import (
     FURNITURE_CATALOG,
     FurnitureAsset,
@@ -14,7 +15,7 @@ from roometry.scenes.furniture import (
 )
 
 ASSET_CATALOG = MappingProxyType(
-    {**FURNITURE_CATALOG, **EQUIPMENT_CATALOG, **FIXTURE_CATALOG, **DECOR_CATALOG}
+    {**FURNITURE_CATALOG, **EQUIPMENT_CATALOG, **FIXTURE_CATALOG, **DECOR_CATALOG, **EXPANSION_CATALOG}
 )
 
 

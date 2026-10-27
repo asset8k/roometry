@@ -756,7 +756,8 @@ async def test_scene_assembly_fixed_flags_and_models_remain_backend_authority():
     assert scene and report and report.valid and not issues
     assert scene.objects[0].fixed is True
     assert scene.objects[0].locked is False
-    assert all(obj.asset_id == f"{obj.type}_standard_01" for obj in scene.objects)
+    from roometry.scenes.assets import ASSET_REGISTRY
+    assert all(ASSET_REGISTRY[obj.asset_id].object_type == obj.type for obj in scene.objects)
     assert preflight(analysis) == []
 
 

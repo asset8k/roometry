@@ -1,6 +1,7 @@
 """Catalog-only redesign operations, separate from stricter manual-edit ancestry."""
 
 from math import cos, sin
+from types import SimpleNamespace
 
 from roometry.optimization.schemas import CatalogAddition
 from roometry.scenes.assets import ASSET_REGISTRY
@@ -14,11 +15,16 @@ from roometry.scenes.schemas import (
     SceneObject,
 )
 from roometry.vision.review_policy import appearance_controls
+from roometry.vision.context_budget import shortlist
 
 
-def catalog_options():
-    """Compact authoritative choices; no meshes, invented sizes or prices."""
-    return [
+def catalog_options(query="", *, required_ids=()):
+    """Relevant variants of every movable type, retaining mounts and current IDs.
+
+    The complete catalogue stays searchable through MCP; growing its size must
+    not force every chat request to carry every variant's support metadata.
+    """
+    options = [
         {
             "asset_id": a.asset_id,
             "type": a.object_type,
@@ -55,6 +61,16 @@ def catalog_options():
         if ASSET_REGISTRY[a.asset_id].placements & {"floor", "wall", "surface"}
         and not ASSET_REGISTRY[a.asset_id].fixed_by_default
     ]
+    groups = {}
+    for option in options:
+        groups.setdefault(option['type'], []).append({
+            'asset_id': option['asset_id'], 'label': option['label'],
+            'configurations': {p: {} for p in option['placements']},
+        })
+    context = SimpleNamespace(label=query, estimated_dimensions_m=None)
+    chosen = {m['asset_id'] for models in groups.values()
+              for m in shortlist(models, context, limit=2, required=required_ids)}
+    return [option for option in options if option['asset_id'] in chosen]
 
 
 def scene_supports(scene):

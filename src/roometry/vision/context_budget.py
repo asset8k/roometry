@@ -3,6 +3,7 @@
 from copy import deepcopy
 from itertools import combinations
 import re
+from math import log
 
 from roometry.scenes.catalog import dimensions_for
 
@@ -43,13 +44,36 @@ def _terms(text):
     return set(re.findall(r"[a-z]+", text.lower().replace('_', ' '))) - {"a", "the", "with", "and", "on", "of", "in", "standard"}
 
 
-def shortlist(models, observation, limit=4):
-    # Retain all uncertain interpretations. Only redundant variant choices for
-    # confidently classified objects are narrowed; server binding stays exact.
-    if len(models) <= limit or observation.confidence != "high" or observation.alternative_type:
-        return models
+def shortlist(models, observation, limit=4, *, required=()):
+    """Bound variant context, keeping every mount and explicitly selected model.
+
+    Uncertainty about type or placement is represented separately; it does not
+    require sending every redundant model of that type. MCP still exposes all.
+    """
     words = _terms(observation.label)
-    return sorted(models, key=lambda m: (-len(words & _terms(m['label'] + ' ' + m['asset_id'])), m['asset_id']))[:limit]
+    def rank(model):
+        key = model['asset_id']
+        configurations = model.get('configurations') or {model['placement']: {}}
+        estimated = observation.estimated_dimensions_m
+        distances = []
+        for placement in configurations:
+            nominal = dimensions_for(key, placement)
+            ratios = [abs(log(value / size)) for axis, size in zip(('width', 'height', 'depth'), nominal)
+                      if (value := getattr(estimated, axis, None)) is not None]
+            distances.append(sum(ratios) / len(ratios) if ratios else 0)
+        return (-len(words & _terms(model['label'] + ' ' + key)), min(distances),
+                not key.endswith('_standard_01'), key)
+    ranked = sorted(models, key=rank)
+    chosen = ranked[:limit]
+    # Keep the best representative of any mounting configuration absent above.
+    mounts = {p for model in models for p in (model.get('configurations') or {model['placement']: {}})}
+    for mount in sorted(mounts):
+        if not any(mount in (m.get('configurations') or {m['placement']: {}}) for m in chosen):
+            chosen.append(next(m for m in ranked if mount in (m.get('configurations') or {m['placement']: {}})))
+    for model in ranked:
+        if model['asset_id'] in required and model not in chosen:
+            chosen.append(model)
+    return chosen
 
 
 def compact_context(context, analysis, *, editable=None):
@@ -77,11 +101,17 @@ def compact_context(context, analysis, *, editable=None):
         return {'asset_id': key, 'placements': sorted(model['configurations'])}
 
     for binding in result['asset_bindings']:
-        options = shortlist(binding['models'], observed[binding['id']])
+        selected = previous.get(binding['id'], {}).get('asset_id')
+        options = shortlist(binding['models'], observed[binding['id']], required=[selected] if selected else [])
         if editable is not None and binding['id'] not in editable and binding['id'] in previous:
             selected = previous[binding['id']]['asset_id']
             options = [model for model in options if model['asset_id'] == selected] or binding['models']
         binding['models'] = [register(model) for model in options]
+    groups = {}
+    for alternative in result['hypothesis_alternatives']:
+        groups.setdefault((alternative['id'], alternative['type'], alternative['placement']), []).append(alternative)
+    result['hypothesis_alternatives'] = [model for (key, _, _), models in groups.items()
+                                       for model in shortlist(models, observed[key], required=[previous.get(key, {}).get('asset_id')])]
     for alternative in result['hypothesis_alternatives']:
         key, placement = alternative['asset_id'], alternative['placement']
         register({'asset_id': key, 'label': alternative['label'], 'configurations': {placement: {

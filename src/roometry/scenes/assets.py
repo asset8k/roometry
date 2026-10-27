@@ -75,6 +75,11 @@ ObjectType = Literal[
     "towel_rack",
     "water_heater",
     "drying_rack",
+    "countertop",
+    "faucet",
+    "shower_fixture",
+    "wall_panel",
+    "ceiling_detail",
 ]
 
 _SURFACE_TYPES: set[ObjectType] = {
@@ -244,5 +249,14 @@ _assets.update(
         ),
     }
 )
+
+# Expansion metadata has no dependency on mesh builders. All reserved IDs must
+# have a shared renderer/geometry recipe before being exposed to the model.
+from roometry.scenes.expansion_specs import EXPANSION_SPECS
+
+for _spec in EXPANSION_SPECS:
+    _assets[_spec.asset_id] = AssetDefinition(
+        _spec.object_type, frozenset(_spec.placements), _spec.support, _spec.fixed
+    )
 
 ASSET_REGISTRY = MappingProxyType(_assets)

@@ -8,6 +8,7 @@ from typing import get_args
 import pytest
 
 from roometry.scenes.assets import ASSET_REGISTRY
+from roometry.scenes.expansion_specs import EXPANSION_IDS
 from roometry.scenes.fixture_models import FIXTURE_CATALOG
 from roometry.scenes.furniture import MaterialRole, Shape
 from roometry.scenes.validation import validate_geometry
@@ -25,7 +26,7 @@ CONFIGURATIONS = [(asset, placement) for asset in FIXTURE_CATALOG.values()
 
 def test_twenty_types_and_every_reserved_fixture_variant_are_covered():
     assert {a.object_type for a in FIXTURE_CATALOG.values()} == FIXTURE_TYPES
-    assert set(FIXTURE_CATALOG) == {key for key, a in ASSET_REGISTRY.items() if a.object_type in FIXTURE_TYPES}
+    assert set(FIXTURE_CATALOG) == {key for key, a in ASSET_REGISTRY.items() if a.object_type in FIXTURE_TYPES and key not in EXPANSION_IDS}
 
 
 @pytest.mark.parametrize("asset,placement", CONFIGURATIONS,

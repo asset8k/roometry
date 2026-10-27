@@ -54,6 +54,15 @@ def facing_case(wall="north"):
     return analysis, data
 
 
+def block_local_turn(data):
+    # The north-facing diagonal would extend outside the west boundary. Unlike
+    # a simple 180-degree flip, this needs a model-led translation and must keep
+    # exercising bounded repair / provisional-scene fallback.
+    data['objects'][0].update(rotation_y_rad=0.,
+        position={'x': .5, 'y': 0., 'z': 2.},
+        dimensions_m={'width': .8, 'height': .85, 'depth': 2.2})
+
+
 @pytest.mark.parametrize("wall", ["north", "south", "east", "west"])
 def test_wrong_facing_is_rejected_even_without_any_collision(wall):
     analysis, data = facing_case(wall)
@@ -185,7 +194,8 @@ async def test_fidelity_feedback_reaches_one_bounded_repair_without_deleting_the
     _runs, _owner, uploaded = await prepared(harness)
     example, good = facing_case()
     bad = deepcopy(good)
-    bad["objects"][0]["rotation_y_rad"] = 0.
+    block_local_turn(bad)
+    good['objects'][0]['dimensions_m'] = deepcopy(bad['objects'][0]['dimensions_m'])
 
     async def photo(request, payload):
         response = test_vision_api.provider_response(payload)
@@ -242,7 +252,7 @@ def test_partial_fallback_keeps_valid_geometry_with_both_omissions_and_a_facing_
     # also needs correction. This is the failed-partial path in the screenshot.
     accessory = analysis.observations.objects[0].model_copy(update={"id": "plant", "type": "plant", "wall_id": None, "placement": "floor"})
     analysis.observations.objects.append(accessory)
-    data["objects"][0]["rotation_y_rad"] = 0.
+    block_local_turn(data)
     data["objects"].append({**deepcopy(data["objects"][0]), "id": "plant", "asset_id": "plant_standard_01", "position": {"x": -10., "y": 0., "z": 2.}})
     original = analysis.model_dump()
     scene, geometry, issues, unresolved = assemble_partial(analysis, measurements(analysis), SceneDraft.model_validate(data))
@@ -270,7 +280,7 @@ async def test_graph_exposes_a_provisional_scene_instead_of_stopping_empty(harne
     _app, client, calls, actions = harness
     runs, owner, uploaded = await prepared(harness)
     example, data = facing_case()
-    data["objects"][0]["rotation_y_rad"] = 0.
+    block_local_turn(data)
 
     async def photo(request, payload):
         response = test_vision_api.provider_response(payload)

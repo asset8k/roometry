@@ -8,6 +8,7 @@ from typing import get_args
 import pytest
 
 from roometry.scenes.assets import ASSET_REGISTRY
+from roometry.scenes.expansion_specs import EXPANSION_IDS
 from roometry.scenes.equipment import EQUIPMENT_CATALOG
 from roometry.scenes.furniture import MaterialRole, Shape
 
@@ -23,7 +24,7 @@ CONFIGURATIONS = [(asset, placement) for asset in EQUIPMENT_CATALOG.values()
 def test_all_sixteen_equipment_types_and_their_approved_ids_have_models():
     assert {a.object_type for a in EQUIPMENT_CATALOG.values()} == EQUIPMENT_TYPES
     assert set(EQUIPMENT_CATALOG) == {key for key, asset in ASSET_REGISTRY.items()
-                                      if asset.object_type in EQUIPMENT_TYPES}
+                                      if asset.object_type in EQUIPMENT_TYPES and key not in EXPANSION_IDS}
 
 
 @pytest.mark.parametrize("asset,placement", CONFIGURATIONS,

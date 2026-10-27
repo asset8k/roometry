@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from roometry.scenes.assets import ASSET_REGISTRY
+from roometry.scenes.expansion_specs import EXPANSION_IDS
 from roometry.scenes.furniture import FURNITURE_CATALOG, FurnitureAsset
 
 CORE_TYPES = {
@@ -20,7 +21,7 @@ CORE_TYPES = {
 def test_core_types_and_all_their_reserved_variants_have_models():
     assert {a.object_type for a in FURNITURE_CATALOG.values()} == CORE_TYPES
     assert set(FURNITURE_CATALOG) == {
-        key for key, asset in ASSET_REGISTRY.items() if asset.object_type in CORE_TYPES
+        key for key, asset in ASSET_REGISTRY.items() if asset.object_type in CORE_TYPES and key not in EXPANSION_IDS
     }
 
 

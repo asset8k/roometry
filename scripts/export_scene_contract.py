@@ -12,6 +12,7 @@ from roometry.scenes.decor import DECOR_CATALOG
 from roometry.scenes.equipment import EQUIPMENT_CATALOG
 from roometry.scenes.fixture_models import FIXTURE_CATALOG
 from roometry.scenes.furniture import FURNITURE_CATALOG
+from roometry.scenes.expanded_models import EXPANSION_CATALOG
 from roometry.scenes.materials import DEFAULT_MATERIAL_COLORS
 from roometry.scenes.schemas import RoomScene
 from roometry.scenes.scoring import LayoutScoreReport, ScoreLayoutRequest, score_layout
@@ -109,6 +110,7 @@ def main() -> None:
         ("equipment.generated.json", EQUIPMENT_CATALOG),
         ("fixtures.generated.json", FIXTURE_CATALOG),
         ("decor.generated.json", DECOR_CATALOG),
+        ("expanded.generated.json", EXPANSION_CATALOG),
     ):
         # One compact entry per asset avoids excessive generated-file churn.
         catalog_path = ROOT / "frontend/src/data" / filename

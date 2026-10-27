@@ -32,6 +32,9 @@ supported children only if the new catalog support can fit them. Attachments are
 not new floor objects. Use the catalog_addition_options IDs and allowed placements;
 these include electronics such as TVs, not only floor furniture. These are design concepts,
 not purchases, verified stock or price quotes. No budget or regional pricing is used.
+The addition options are shortlisted edit-compatible variants, not the complete
+catalogue. Explain a mounting/edit restriction rather than claiming the catalogue
+lacks an object simply because no applicable addition is offered here.
 For additions choose placement=floor, wall or surface. Never add a TV as a console
 or claim it is unavailable when a compatible TV exists in the supplied catalog.
 For floor use x/z, rotation, and null attachment fields. For wall specify wall and
@@ -145,7 +148,10 @@ class OptimizationProvider:
             "confirmed_facing": source.reconstruction_constraints.facing_targets,
             "feedback": [a.model_dump(mode="json") for a in run.attempts],
             "remaining_candidates": run.max_candidates - len(run.attempts), "catalog": catalog,
-            "catalog_addition_options": catalog_options(),
+            "catalog_addition_options": catalog_options(
+                run.instruction or run.preferences.style or "",
+                required_ids=[o.asset_id for o in scene.objects],
+            ),
             "scene_support_surfaces": scene_supports(scene),
         }, PROPOSE)
 

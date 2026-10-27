@@ -8,7 +8,7 @@ Observation = ObjectObservation | OpeningObservation
 _PRIMARY = frozenset({
     "bed", "sofa", "table", "desk", "wardrobe", "kitchen_cabinet",
     "kitchen_counter", "wall_cabinet", "refrigerator", "cooker", "sink",
-    "toilet", "bathtub", "shower", "vanity", "washing_machine", "dryer",
+    "toilet", "bathtub", "shower", "vanity", "washing_machine", "dryer", "countertop",
 })
 _FURNITURE = frozenset({
     "armchair", "chair", "stool", "bench", "ottoman", "dresser", "shelf",

@@ -394,7 +394,12 @@
                 "vanity",
                 "towel_rack",
                 "water_heater",
-                "drying_rack"
+                "drying_rack",
+                "countertop",
+                "faucet",
+                "shower_fixture",
+                "wall_panel",
+                "ceiling_detail"
               ],
               "type": "string"
             },
@@ -501,7 +506,12 @@
                 "vanity",
                 "towel_rack",
                 "water_heater",
-                "drying_rack"
+                "drying_rack",
+                "countertop",
+                "faucet",
+                "shower_fixture",
+                "wall_panel",
+                "ceiling_detail"
               ],
               "type": "string"
             },
@@ -798,7 +808,12 @@
                 "vanity",
                 "towel_rack",
                 "water_heater",
-                "drying_rack"
+                "drying_rack",
+                "countertop",
+                "faucet",
+                "shower_fixture",
+                "wall_panel",
+                "ceiling_detail"
               ],
               "type": "string"
             },

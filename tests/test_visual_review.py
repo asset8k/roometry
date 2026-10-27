@@ -276,7 +276,11 @@ async def test_unobserved_missing_item_is_reported_without_inventing_an_object_o
 async def test_appearance_revision_is_audited_and_source_observations_remain_immutable(harness):
     app, _, _, actions = harness
     runs, owner, uploaded = await enabled(harness)
-    construction(actions)
+    data = draft_data()
+    # This test exercises an exposed primary color, independent of variant
+    # ranking (some bed frames expose wood/linen controls instead of primary).
+    data['objects'][0]['asset_id'] = 'bed_standard_01'
+    construction(actions, data)
     async def repair(request,payload):
         context = json.loads(payload["input"][0]["content"][0]["text"])
         obj = context["observations"]["objects"][0]

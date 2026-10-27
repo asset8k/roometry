@@ -450,6 +450,9 @@ def assemble(
             ],
         )
     report = validate_geometry(scene)
+    if recover_local:
+        from roometry.vision.evidence_placement import recover_evidence_placements
+        scene, report = recover_evidence_placements(analysis, scene, report)
     if recover_local and report.errors:
         from roometry.vision.local_placement import recover_local_placements
         scene, report = recover_local_placements(analysis, scene, report)

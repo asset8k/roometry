@@ -1,5 +1,5 @@
 import { getFurnitureAsset } from './furniture-catalog'
-import { getDecorAsset, getEquipmentAsset, getFixtureAsset } from './asset-catalog'
+import { getCatalogAsset, getDecorAsset, getEquipmentAsset, getFixtureAsset } from './asset-catalog'
 
 export type ModelKind = 'furniture' | 'equipment' | 'fixture' | 'decor' | 'placeholder'
 
@@ -11,5 +11,12 @@ export function getModelKind(assetId: string): ModelKind {
   if (getEquipmentAsset(assetId)) return 'equipment'
   if (getFixtureAsset(assetId)) return 'fixture'
   if (getDecorAsset(assetId)) return 'decor'
+  const asset = getCatalogAsset(assetId)
+  if (asset) {
+    if (asset.category === 'furniture') return 'furniture'
+    if (['kitchen', 'bathroom', 'utility'].includes(asset.category)) return 'fixture'
+    if (['electronics', 'lighting', 'climate'].includes(asset.category)) return 'equipment'
+    return 'decor'
+  }
   return 'placeholder'
 }
