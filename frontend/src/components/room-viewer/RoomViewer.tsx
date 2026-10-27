@@ -1,6 +1,7 @@
 import { Component, useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Canvas, useThree } from '@react-three/fiber'
+import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import type { RoomScene } from '../../lib/scene.generated'
 import RoomShell from './RoomShell'
 import SceneObjects from './SceneObjects'
@@ -14,6 +15,8 @@ import TransformGizmo from './TransformGizmo'
 import GlassSelect from '../ui/GlassSelect'
 import HelpTip from '../ui/HelpTip'
 import { Icon } from '../ui/primitives'
+import StudioLighting from './StudioLighting'
+import { SurfaceTextureProvider } from './SurfaceTextures'
 
 function ViewerUnavailable({ onRetry }: { onRetry: () => void }) {
   return (
@@ -107,7 +110,9 @@ export default function RoomViewer({ scene, editor, state, onSelect }: {
           {contextLost ? <ViewerUnavailable onRetry={retry} /> : (
             <Canvas
               frameloop="demand"
-              dpr={[1, 1.75]}
+              dpr={[1, 1.5]}
+              shadows={{ type: PCFShadowMap }}
+              gl={{ antialias: true, toneMapping: ACESFilmicToneMapping, toneMappingExposure: 1 }}
               camera={{ fov: 42, near: 0.01, far: 2000 }}
               fallback={<span aria-hidden="true">A WebGL browser is required to display the room.</span>}
               onPointerMissed={() => {
@@ -116,12 +121,13 @@ export default function RoomViewer({ scene, editor, state, onSelect }: {
               }}
             >
               <ContextMonitor onLost={onLost} />
-              <ambientLight intensity={1.5} />
-              <directionalLight position={[scene.room.width_m + 2, 8, scene.room.length_m + 2]} intensity={2} />
-              <WallModeContext.Provider value={wallMode}>
-                <RoomShell scene={scene} />
-                <SceneObjects scene={scene} selectedId={state.selectedId} onSelect={onSelect} />
-              </WallModeContext.Provider>
+              <StudioLighting room={scene.room} />
+              <SurfaceTextureProvider>
+                <WallModeContext.Provider value={wallMode}>
+                  <RoomShell scene={scene} />
+                  <SceneObjects scene={scene} selectedId={state.selectedId} onSelect={onSelect} />
+                </WallModeContext.Provider>
+              </SurfaceTextureProvider>
               <CameraControls room={scene.room} command={command} zoom={zoom} enabled={!state.dragging} />
               {selected && editable && <TransformGizmo key={selected.id} object={selected} editor={editor} state={state} onInteraction={onInteraction} />}
             </Canvas>
