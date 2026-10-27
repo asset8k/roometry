@@ -201,6 +201,10 @@ summary { cursor: pointer; }
 .measurement-help { font-size: 11px; margin: 10px 0 20px; }
 .input-form-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding-top: 22px; margin-top: 24px; border-top: 1px solid var(--line); }
 .input-actions { margin: 0; gap: 10px; }
+.generation-time-estimate { display: inline-flex; align-items: center; color: var(--muted); }
+.generation-time-estimate .help-tip > button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; width: auto; min-height: 40px; padding: 8px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--control-glass); box-shadow: var(--control-shadow); color: var(--muted); font-size: 12px; font-weight: 500; white-space: nowrap; }
+.generation-time-estimate .ui-icon { width: 15px; height: 15px; color: var(--lime); }
+.generation-time-estimate .help-tip-content { top: auto; bottom: calc(100% + 10px); right: auto; left: 50%; transform: translateX(-50%); }
 .privacy-note { max-width: 360px; margin: 0; color: var(--muted); font-size: 11px; line-height: 1.7; }
 .privacy-note summary { display: flex; align-items: center; gap: 7px; min-height: 44px; width: fit-content; }
 .privacy-note summary::after { content: '+'; font-size: 15px; margin-left: 3px; }
@@ -309,6 +313,7 @@ select option { color: var(--text); background: var(--surface); }
   .room-preferences .dimension-inputs input { font-size: 16px; padding: 12px 10px; }
   .input-form-footer { flex-direction: column-reverse; gap: 12px; margin-top: 20px; padding-top: 20px; }
   .input-form-footer .input-actions { width: 100%; flex-wrap: wrap; }
+  .input-form-footer .generation-time-estimate { flex-basis: 100%; justify-content: center; }
   .input-form-footer .ui-button--primary { flex: 1; }
   .input-form-footer .privacy-note { width: 100%; max-width: none; }
   .privacy-note summary { justify-content: center; width: 100%; }

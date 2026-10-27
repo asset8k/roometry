@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, ComponentPropsWithoutRef, ReactNode } from 'react'
 
-export function Icon({ name, className = '' }: { name: 'arrow' | 'upload' | 'spark' | 'room' | 'lock' | 'close' | 'check' | 'refresh' | 'folder' | 'globe' | 'eye' | 'eyeOff' | 'share' | 'save'; className?: string }) {
+export function Icon({ name, className = '' }: { name: 'arrow' | 'upload' | 'spark' | 'room' | 'lock' | 'close' | 'check' | 'refresh' | 'folder' | 'globe' | 'eye' | 'eyeOff' | 'share' | 'save' | 'clock'; className?: string }) {
   const paths = {
     arrow: <path d="M5 12h14m-6-6 6 6-6 6" />,
     upload: <><path d="M12 16V4m-4 4 4-4 4 4M5 15v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4" /></>,
@@ -16,6 +16,7 @@ export function Icon({ name, className = '' }: { name: 'arrow' | 'upload' | 'spa
     eyeOff: <><path d="m3 3 18 18M10 5h2c6.5 0 10 7 10 7a19 19 0 0 1-3 4M6 6a22 22 0 0 0-4 6s3.5 7 10 7a12 12 0 0 0 5-1M10 10a3 3 0 0 0 4 4"/></>,
     share: <><path d="M12 16V3m-4 4 4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></>,
     save: <><path d="M5 3h12l4 4v14H3V3h2Zm2 0v6h10V3M7 21v-8h10v8"/></>,
+    clock: <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>,
   }
   return <svg className={`ui-icon ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">{paths[name]}</svg>
 }

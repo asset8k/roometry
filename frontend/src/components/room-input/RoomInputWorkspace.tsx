@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useSyncExternalStore } from 'react'
 import RoomGenerationWorkspace from '../room-analysis/RoomGenerationWorkspace'
 import { Button, Icon } from '../ui/primitives'
 import GlassSelect from '../ui/GlassSelect'
+import HelpTip from '../ui/HelpTip'
 import { useSiteActions } from '../site/SiteActions'
 import { useWorkspaceGuard } from '../site/WorkspaceNavigation'
 import { RoomGenerationController } from '../../lib/room-generation-controller'
@@ -68,6 +69,7 @@ export function RoomInputForm({ state, controller, onGenerate, onCancel, onClear
   }, [state.notice])
   const set = controller.change
   const acceptedOptions = accepted?.options
+  const showTimeEstimate = !busy && !generating && !recovering && !locked && (!generated || state.dirty || state.uncertain)
   return <div className="input-workspace" id="room-input">
     <form className="room-input-form glass-panel" aria-label="Create your room" onSubmit={event => { event.preventDefault(); if (!quotaBlocked) void onGenerate() }}>
       <fieldset className="input-edit-lock" disabled={locked}>
@@ -127,9 +129,10 @@ export function RoomInputForm({ state, controller, onGenerate, onCancel, onClear
       <div className="input-form-footer">
         <details className="privacy-note"><summary><Icon name="lock" />Private photos · {registered ? 'Recoverable run' : 'Temporary session'}</summary><p>{registered ? 'Signed-in runs can be resumed for seven days. Save your finished room to keep it. Nothing is shared publicly.' : 'Refresh clears this form. Uploaded copies expire automatically. Nothing is shared publicly.'}</p></details>
         <div className="input-actions">
+          {showTimeEstimate && <span id={`${photoInput}-time`} className="generation-time-estimate"><HelpTip label="Estimated generation time" trigger={<><Icon name="clock"/><span>~3 min</span></>}>Usually around 3 minutes. Answering questions or extra checks can take longer.</HelpTip></span>}
           {busy || generating || locked ? <Button onClick={onCancel}>Cancel</Button> : (photos.length > 0 || accepted || state.dirty || state.uncertain) && <Button variant="quiet" onClick={onClear ?? (() => void controller.discard())} disabled={!photos.length && !accepted && !state.dirty && !state.uncertain}>Clear</Button>}
           {recovering && <Button onClick={onClear}>Discard &amp; clear inputs</Button>}
-          <Button variant="primary" type="submit" disabled={quotaBlocked || Boolean(busy) || locked || !limits || state.policyLoading || (generated && !state.dirty && !state.uncertain)}>
+          <Button variant="primary" type="submit" aria-describedby={showTimeEstimate ? `${photoInput}-time` : undefined} disabled={quotaBlocked || Boolean(busy) || locked || !limits || state.policyLoading || (generated && !state.dirty && !state.uncertain)}>
             {generating ? 'Creating room…' : busy === 'upload' ? 'Preparing photos…' : generated && !state.dirty && !state.uncertain ? 'Room created' : 'Create room'}<Icon name={generated && !state.dirty && !state.uncertain ? 'check' : 'arrow'} />
           </Button>
         </div>
