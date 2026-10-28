@@ -141,6 +141,7 @@ class OptimizationAttempt(RunModel):
     issues: Annotated[list[Annotated[str, Field(max_length=500)]], Field(max_length=16)]
     summary: Annotated[str, Field(max_length=500)]
     review: CandidateReview | None = None
+    proposal: CandidateProposal | None = None
 
 
 class OptimizationRun(RunModel):

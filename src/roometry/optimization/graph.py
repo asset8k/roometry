@@ -87,7 +87,7 @@ async def propose(state, runtime: Runtime[OptimizationContext]):
 
 def attempt(run, proposal, *, outcome, issues, before=None, after=None, changed=(), review=None):
     entry = OptimizationAttempt(number=len(run.attempts)+1, outcome=outcome, before_score=before, after_score=after,
-        changed_object_ids=list(changed), issues=[i[:500] for i in issues[:16]], summary=proposal.summary, review=review)
+        changed_object_ids=list(changed), issues=[i[:500] for i in issues[:16]], summary=proposal.summary, review=review, proposal=proposal)
     return [*[a.model_dump() for a in run.attempts], entry.model_dump()]
 
 
@@ -105,7 +105,8 @@ async def validate(state, runtime: Runtime[OptimizationContext]):
     try:
         evaluation = await anyio.to_thread.run_sync(lambda: evaluate(run, proposal, context.source))
     except (ValueError, ValidationError, EditRejected) as error:
-        message = str(error) if type(error) is ValueError else "The candidate could not be assembled using the allowed edits."
+        message = (f"{error.code} [{', '.join(error.entity_ids)}]: {error}" if isinstance(error, EditRejected)
+                   else str(error) if type(error) is ValueError else "The candidate could not be assembled using the allowed edits.")
         return {**saved(run, context, stage="proposing", attempts=attempt(run, proposal, outcome="rejected", issues=[message])), "candidate": None}
     await context.authorize()
     if context.cancelled(): return await stopped(run, context)
@@ -117,7 +118,8 @@ async def validate(state, runtime: Runtime[OptimizationContext]):
             before=evaluation.before_score, after=evaluation.after_score)), "candidate": None}
     return {**saved(run, context, stage="reviewing"), "candidate": {
         "scene": evaluation.scene.model_dump(), "assessment": evaluation.assessment.model_dump(),
-        "before": evaluation.before_score, "after": evaluation.after_score, "changed": evaluation.changed}}
+        "before": evaluation.before_score, "after": evaluation.after_score, "changed": evaluation.changed,
+        "tradeoffs": evaluation.tradeoffs}}
 
 
 async def review(state, runtime: Runtime[OptimizationContext]):
@@ -147,6 +149,7 @@ async def review(state, runtime: Runtime[OptimizationContext]):
         changed=raw['changed'] if accepted else (), review=judgment), "stage": "proposing"}
     if accepted:
         updates.update(result_scene=raw['scene'], result_assessment=raw['assessment'])
+        updates['limitations'] = list(dict.fromkeys([*run.limitations, *raw.get('tradeoffs', [])]))[:12]
     return {**saved(run, context, **updates), "candidate": None}
 
 

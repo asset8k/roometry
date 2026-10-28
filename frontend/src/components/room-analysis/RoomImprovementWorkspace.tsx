@@ -102,6 +102,7 @@ export function ImprovementForm({ state, controller, partial, beforeStart, compa
   }, [state.focus, state.phase])
   if (!state.focus) return state.error ? <p className="input-notice error" role="alert">{state.error}</p> : null
   const ready = state.result?.status === 'prepared'
+  const lastIssue = [...(state.result?.attempts ?? [])].reverse().find(attempt => attempt.issues.length)?.issues[0]
   return <section ref={form} tabIndex={-1} className="improvement-request" aria-labelledby={compact ? undefined : 'improvement-heading'} aria-label={compact ? 'Refinement status' : undefined}>
     {!compact && <h2 id="improvement-heading">{state.instruction ? 'Room refinement' : improvementLabels[state.focus]}</h2>}
     {partial && <p className="analysis-caution">Partial reconstruction · Some items remain unresolved.</p>}
@@ -131,8 +132,10 @@ export function ImprovementForm({ state, controller, partial, beforeStart, compa
     {state.result && !['prepared', 'running', 'cancelled'].includes(state.result.status) && <div className="improvement-outcome" role="status">
       {!compact && <h3>{state.result.result_scene ? 'Candidate ready' : 'Previous layout kept'}</h3>}
       {!compact && <p>{conciseText(state.result.message)}</p>}
-
-
+      {state.result.result_scene && state.result.limitations.filter(note => note.startsWith('Trade-off:')).map((note, i) =>
+        <p key={i} className="muted">{conciseText(note)}</p>)}
+      {!state.result.result_scene && lastIssue &&
+        <p className="muted">{conciseText(lastIssue.replace(/^[a-z_]+(?:\s+\[[^\]]*\])?:\s*/, '').replace(/\[[^\]]*\]/g, ''))}</p>}
       {!compact && state.result.suggestions.length > 0 && <><h4>Suggestions to consider</h4><ul>{state.result.suggestions.slice(0, 3).map((note, i) => <li key={i}>{conciseText(note)}</li>)}</ul></>}
       <details><summary>Checks and limitations</summary><p>{state.result.usage.model_calls} model calls · {state.result.attempts.length} candidates checked.</p><ul>{state.result.attempts.map(attempt => <li key={attempt.number}>
         Candidate {attempt.number}: {attempt.outcome === 'accepted' ? 'retained' : 'not applied'}. {attempt.before_score !== null && attempt.after_score !== null && <>Focus estimate: {attempt.before_score} → {attempt.after_score} / 10. </>}

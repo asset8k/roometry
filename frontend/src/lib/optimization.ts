@@ -20,12 +20,14 @@ const valid = ajv.compile<OptimizationRun>(schema)
 const validRequest = ajv.compile<StartOptimizationRequest>(requestSchema)
 export function parseOptimization(data: unknown): OptimizationRun {
   if (data && typeof data === 'object') data = { instruction: null, parent_run_id: null, ...data }
-  // Historical review responses predate the optional rendered rubric. Normalize
-  // only that absent field before enforcing the complete serialized contract.
+  // Saved runs may predate repair proposals and the rendered review rubric.
+  // Fill only absent optional fields before enforcing the full contract.
   if (data && typeof data === 'object' && Array.isArray((data as { attempts?: unknown }).attempts)) {
     const source = data as { attempts: { review?: Record<string, unknown> | null }[] }
-    data = { ...source, attempts: source.attempts.map(attempt => attempt?.review && attempt.review.aesthetics === undefined
-      ? { ...attempt, review: { ...attempt.review, aesthetics: null } } : attempt) }
+    data = { ...source, attempts: source.attempts.map(attempt => attempt && typeof attempt === 'object' ? {
+      proposal: null, ...attempt,
+      ...(attempt.review && attempt.review.aesthetics === undefined ? { review: { ...attempt.review, aesthetics: null } } : {}),
+    } : attempt) }
   }
   if (!valid(data) || Date.parse(data.created_at) >= Date.parse(data.expires_at)
     || (data.baseline_assessment && data.baseline_assessment.scene_hash !== data.source_scene_hash)) {

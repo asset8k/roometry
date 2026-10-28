@@ -19,7 +19,7 @@ function retained(run: OptimizationRun): OptimizationRun {
   result.usage.model_calls = 2
   result.message = 'A validated improvement candidate is ready for review.'
   result.attempts = [{ number: 1, outcome: 'accepted', before_score: null, after_score: null, changed_object_ids: [result.result_scene.objects[0].id],
-    issues: [], summary: 'Coordinate upholstery.', review: { preferred: 'candidate', confidence: 'medium', constraints_satisfied: true, explanation: 'The materials are more cohesive.', aesthetics: null } }]
+    issues: [], summary: 'Coordinate upholstery.', proposal: null, review: { preferred: 'candidate', confidence: 'medium', constraints_satisfied: true, explanation: 'The materials are more cohesive.', aesthetics: null } }]
   return result
 }
 function setup() {
@@ -33,6 +33,25 @@ function setup() {
   const render = () => renderToStaticMarkup(createElement(ImprovementForm, { state: controller.getSnapshot(), controller, partial: false }))
   return { source, client, controller, render }
 }
+
+it('reopens historical improvement attempts that predate stored repair proposals', () => {
+  const source = finishedRun(prepared())
+  const saved = retained(preparedImprovement(source, { request_id: crypto.randomUUID(), focus: 'aesthetics' }))
+  const historical = JSON.parse(JSON.stringify(saved))
+  delete historical.attempts[0].proposal
+  expect(parseOptimization(historical).attempts[0]?.proposal).toBeNull()
+})
+
+it('shows accepted trade-offs outside the collapsed diagnostics', async () => {
+  const { controller, client, render } = setup()
+  controller.select('workspace'); await controller.prepare()
+  const result = retained(controller.getSnapshot().result!)
+  result.limitations = ['Trade-off: storage changes from 8.0 to 7.0/10 to improve workspace.']
+  vi.mocked(client.execute).mockResolvedValueOnce(result)
+  await controller.execute()
+  const html = render()
+  expect(html.slice(0, html.indexOf('<details>'))).toContain('Trade-off: storage changes')
+})
 
 it('shows quota exhaustion without locking the viewer into execution recovery', async () => {
   const { controller, client } = setup()

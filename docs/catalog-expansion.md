@@ -1,6 +1,8 @@
-# Catalogue expansion: 106 → 212 models
+# Catalogue expansion: 106 → 214 models
 
-The expansion adds 106 models across four batches. The complete catalogue now covers 73 semantic object types; variants share types when their purpose is the same. Existing asset IDs remain valid.
+The expansion adds 108 models across four batches, including the follow-up low and medium open shelving variants. The complete catalogue now covers 73 semantic object types; variants share types when their purpose is the same. Existing asset IDs remain valid.
+
+Follow-up variants: `shelf_low_metal_01` (1.05 × 0.8 × 0.35 m, two tiers) and `shelf_medium_metal_01` (0.65 × 1.1 × 0.32 m, three tiers). Both provide actual shelf support areas and are searchable through the same MCP catalogue.
 
 New types: `countertop`, `faucet`, `shower_fixture`, `wall_panel`, `ceiling_detail`.
 

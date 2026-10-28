@@ -400,6 +400,8 @@ export type AssetId =
   | "wall_shelf_offset_01"
   | "shelf_room_divider_01"
   | "shelf_corner_01"
+  | "shelf_low_metal_01"
+  | "shelf_medium_metal_01"
   | "wardrobe_sliding_01"
   | "bed_upholstered_01"
   | "desk_l_shaped_01"
@@ -651,10 +653,119 @@ export type VisualOrder = number;
 export type LightingComposition = number;
 export type Confidence2 = "low" | "medium" | "high";
 export type Explanation2 = string;
+export type ObjectId = string;
+export type X1 = number;
+export type Z1 = number;
+export type RotationYRad1 = number | null;
+export type Color1 = string | null;
+/**
+ * @maxItems 24
+ */
+export type Changes = ObjectChange[];
+/**
+ * @maxItems 8
+ */
+export type Additions =
+  | []
+  | [CatalogAddition]
+  | [CatalogAddition, CatalogAddition]
+  | [CatalogAddition, CatalogAddition, CatalogAddition]
+  | [CatalogAddition, CatalogAddition, CatalogAddition, CatalogAddition]
+  | [CatalogAddition, CatalogAddition, CatalogAddition, CatalogAddition, CatalogAddition]
+  | [CatalogAddition, CatalogAddition, CatalogAddition, CatalogAddition, CatalogAddition, CatalogAddition]
+  | [
+      CatalogAddition,
+      CatalogAddition,
+      CatalogAddition,
+      CatalogAddition,
+      CatalogAddition,
+      CatalogAddition,
+      CatalogAddition
+    ]
+  | [
+      CatalogAddition,
+      CatalogAddition,
+      CatalogAddition,
+      CatalogAddition,
+      CatalogAddition,
+      CatalogAddition,
+      CatalogAddition,
+      CatalogAddition
+    ];
+export type ObjectId1 = string;
+export type AssetId1 = string;
+export type RotationYRad2 = number;
+export type Color2 = string | null;
+export type Placement1 = "floor" | "wall" | "surface";
+export type Wall3 = ("north" | "south" | "west" | "east") | null;
+/**
+ * Wall object's bottom height; null for floor/surface.
+ */
+export type ElevationM = number | null;
+export type SupportObjectId1 = string | null;
+export type SupportSurfaceId1 = string | null;
+/**
+ * @maxItems 24
+ */
+export type Removals = string[];
+/**
+ * @maxItems 8
+ */
+export type Replacements =
+  | []
+  | [CatalogReplacement]
+  | [CatalogReplacement, CatalogReplacement]
+  | [CatalogReplacement, CatalogReplacement, CatalogReplacement]
+  | [CatalogReplacement, CatalogReplacement, CatalogReplacement, CatalogReplacement]
+  | [CatalogReplacement, CatalogReplacement, CatalogReplacement, CatalogReplacement, CatalogReplacement]
+  | [
+      CatalogReplacement,
+      CatalogReplacement,
+      CatalogReplacement,
+      CatalogReplacement,
+      CatalogReplacement,
+      CatalogReplacement
+    ]
+  | [
+      CatalogReplacement,
+      CatalogReplacement,
+      CatalogReplacement,
+      CatalogReplacement,
+      CatalogReplacement,
+      CatalogReplacement,
+      CatalogReplacement
+    ]
+  | [
+      CatalogReplacement,
+      CatalogReplacement,
+      CatalogReplacement,
+      CatalogReplacement,
+      CatalogReplacement,
+      CatalogReplacement,
+      CatalogReplacement,
+      CatalogReplacement
+    ];
+export type ObjectId2 = string;
+export type AssetId2 = string;
+export type RotationYRad3 = number | null;
+export type Color3 = string | null;
+export type Summary1 = string;
 /**
  * @maxItems 6
  */
 export type Suggestions =
+  | []
+  | [string]
+  | [string, string]
+  | [string, string, string]
+  | [string, string, string, string]
+  | [string, string, string, string, string]
+  | [string, string, string, string, string, string];
+export type Finish = boolean;
+/**
+ * @maxItems 6
+ */
+export type Suggestions1 =
   | []
   | [string]
   | [string, string]
@@ -703,7 +814,7 @@ export interface OptimizationRun {
   attempts: Attempts;
   result_scene: RoomScene | null;
   result_assessment: RoomAssessment | null;
-  suggestions: Suggestions;
+  suggestions: Suggestions1;
   message: Message;
   limitations: Limitations;
 }
@@ -889,6 +1000,7 @@ export interface OptimizationAttempt {
   issues: Issues;
   summary: Summary;
   review: CandidateReview | null;
+  proposal: CandidateProposal | null;
 }
 export interface CandidateReview {
   preferred: Preferred;
@@ -909,4 +1021,46 @@ export interface AestheticScores {
   visual_balance: VisualBalance;
   visual_order: VisualOrder;
   lighting_composition: LightingComposition;
+}
+export interface CandidateProposal {
+  changes: Changes;
+  additions: Additions;
+  removals: Removals;
+  replacements: Replacements;
+  summary: Summary1;
+  suggestions: Suggestions;
+  finish: Finish;
+}
+export interface ObjectChange {
+  object_id: ObjectId;
+  position: FloorPosition | null;
+  rotation_y_rad: RotationYRad1;
+  color: Color1;
+  material_colors: MaterialColors | null;
+}
+/**
+ * Absolute world coordinates. Floor elevation cannot be edited.
+ */
+export interface FloorPosition {
+  x: X1;
+  z: Z1;
+}
+export interface CatalogAddition {
+  object_id: ObjectId1;
+  asset_id: AssetId1;
+  position: FloorPosition;
+  rotation_y_rad: RotationYRad2;
+  color: Color2;
+  placement: Placement1;
+  wall: Wall3;
+  elevation_m: ElevationM;
+  support_object_id: SupportObjectId1;
+  support_surface_id: SupportSurfaceId1;
+}
+export interface CatalogReplacement {
+  object_id: ObjectId2;
+  asset_id: AssetId2;
+  position: FloorPosition | null;
+  rotation_y_rad: RotationYRad3;
+  color: Color3;
 }

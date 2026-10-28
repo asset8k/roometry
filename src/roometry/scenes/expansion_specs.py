@@ -1,4 +1,4 @@
-"""The 106-model expansion inventory, independent of renderer and registry imports.
+"""The model expansion inventory, independent of renderer and registry imports.
 
 Dimensions are nominal width/height/depth in metres. Variants describe geometry
 and mounting changes; colour alone never creates another catalogue entry.
@@ -100,7 +100,7 @@ EXPANSION_SPECS = (
     bathroom("towel_rack", "heated", "Wall heated towel ladder", (.5, 1., .1), "heated_towel", placements=("wall",)),
     bathroom("mirror", "round_backlit", "Round backlit bathroom mirror", (.75, .75, .05), "round_mirror", placements=("wall",)),
     bathroom("wall_cabinet", "medicine_mirror", "Mirrored medicine cabinet with shelves", (.6, .75, .16), "medicine_cabinet", placements=("wall",), support=True),
-    # Furniture — 34 models. New silhouettes, mechanisms and mounting options.
+    # Furniture — 36 models. New silhouettes, mechanisms and mounting options.
     furniture("sofa", "modular_straight", "Low modular sofa with broad cushions", (2.6, .85, 1.), "modular_sofa", color="#E1DCD1"),
     furniture("sofa", "modular_corner_left", "Modular sectional with left return", (3., .85, 2.), "modular_left", color="#E1DCD1"),
     furniture("sofa", "modular_corner_right", "Modular sectional with right return", (3., .85, 2.), "modular_right", color="#E1DCD1"),
@@ -131,6 +131,8 @@ EXPANSION_SPECS = (
     furniture("wall_shelf", "offset", "Offset floating wall shelves", (1.5, .55, .24), "offset_shelves", placements=("wall",), support=True, fixed=True),
     furniture("shelf", "room_divider", "Open cubby room-divider shelving", (1.4, 1.6, .35), "divider", support=True),
     furniture("shelf", "corner", "Corner open shelving unit", (.55, 1.8, .55), "corner_shelf", support=True),
+    furniture("shelf", "low_metal", "Low waist-height open metal and wood shelving console, two tiers", (1.05, .8, .35), "low_metal_shelf", support=True),
+    furniture("shelf", "medium_metal", "Medium-height open metal and wood shelving, three tiers", (.65, 1.1, .32), "medium_metal_shelf", support=True),
     furniture("wardrobe", "sliding", "Sliding-door wardrobe with mirrored panel", (1.8, 2.2, .6), "sliding_wardrobe"),
     furniture("bed", "upholstered", "Upholstered bed with padded headboard", (1.65, 1.05, 2.15), "padded_bed"),
     furniture("desk", "l_shaped", "L-shaped desk with side return", (1.6, .75, 1.3), "l_desk", support=True),

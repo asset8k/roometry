@@ -8,6 +8,8 @@ from pydantic import ValidationError
 
 from roometry.assessment.schemas import AESTHETIC_INSTRUCTIONS, AestheticComparison
 from roometry.optimization.inventory import catalog_options, scene_supports
+from roometry.optimization.policy import MAX_OTHER_SCORE_DROP, REPORT_SCORE_DROP
+from roometry.optimization.planning import planning_context
 from roometry.optimization.schemas import CandidateProposal, CandidateReview
 from roometry.vision.analyzer import response_json
 from roometry.vision.errors import AnalysisFailure
@@ -66,7 +68,18 @@ For storage, add usable capacity or unlock inaccessible fronts; do not just reco
 For workspace, create a catalog desk/chair group when missing, or fix the working
 side/desk placement. For aesthetics, coordinate visible material colors, suitable
 furniture proportions and visual groupings, not an unrelated tiny decor move.
-Avoid substantial regressions in other practical ratings. If the focus is already
+Trade-offs are allowed: another practical rating may decrease by up to 1.5/10
+in total from this request's starting layout, not per candidate iteration,
+when the selected goal improves. Explain decreases above 0.5/10, rather than
+requiring every category to improve simultaneously. Larger losses, lost essential
+functions, blocked access and locked-object changes remain disallowed.
+Use previous_rejected_proposal and object IDs in feedback to change the actual
+conflicting positions/rotations/supports. Never repeat the same rejected edits.
+Use planning_geometry to identify entrance problems and narrow gaps. When a
+single move cannot fit, coordinate two or more movable furniture groups in the
+same candidate. Keep desk/chair and TV/seating groups functional. Bounding gaps
+are approximate hints, not independent violations or permission to move locks.
+Avoid dramatic regressions in other practical ratings. If the focus is already
 strong or no safe meaningful change fits, return honest suggestions, not fake gains.
 Return finish=true when done or no useful proposal remains. Summarize concrete
 changes briefly; do not claim an improvement has passed checks before evaluation.
@@ -146,13 +159,18 @@ class OptimizationProvider:
             "appearance_controls": {o.id: appearance_controls(o) for o in scene.objects},
             "description": source.input_options.description,
             "confirmed_facing": source.reconstruction_constraints.facing_targets,
-            "feedback": [a.model_dump(mode="json") for a in run.attempts],
+            "feedback": [a.model_dump(mode="json", exclude={"proposal"}) for a in run.attempts],
+            "previous_rejected_proposal": run.attempts[-1].proposal.model_dump(mode='json')
+                if run.attempts and run.attempts[-1].outcome != 'accepted' and run.attempts[-1].proposal else None,
+            "tradeoff_policy": {"maximum_other_practical_score_drop": MAX_OTHER_SCORE_DROP,
+                                "report_drop_above": REPORT_SCORE_DROP},
             "remaining_candidates": run.max_candidates - len(run.attempts), "catalog": catalog,
             "catalog_addition_options": catalog_options(
                 run.instruction or run.preferences.style or "",
                 required_ids=[o.asset_id for o in scene.objects],
             ),
             "scene_support_surfaces": scene_supports(scene),
+            "planning_geometry": await anyio.to_thread.run_sync(lambda: planning_context(scene)),
         }, PROPOSE)
 
     async def review(self, run, evaluation):

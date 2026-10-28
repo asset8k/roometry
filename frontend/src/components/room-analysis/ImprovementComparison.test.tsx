@@ -24,7 +24,7 @@ function result(): OptimizationRun {
   desk.position.x -= .4; desk.rotation_y_rad = Math.PI / 2; desk.color = '#AA8877'
   run.result_scene.objects.find(obj => obj.id === 'computer_observed')!.position.x -= .4
   run.attempts = [{ number: 1, outcome: 'accepted', before_score: 6, after_score: 8, changed_object_ids: ['desk_observed', 'computer_observed'],
-    issues: [], summary: 'Reposition the desk.', review: { preferred: 'candidate', confidence: 'medium', constraints_satisfied: true, explanation: 'The desk has more usable approach space.', aesthetics: null } }]
+    issues: [], summary: 'Reposition the desk.', proposal: null, review: { preferred: 'candidate', confidence: 'medium', constraints_satisfied: true, explanation: 'The desk has more usable approach space.', aesthetics: null } }]
   return run
 }
 

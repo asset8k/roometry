@@ -31,6 +31,10 @@ do not duplicate its own built-in parts as separate freestanding furniture.
 For an integrated unit, size estimates describe the whole visible assembly,
 including its tap, headboard or hutch. A worktop's usable height is not the same
 as the total height of a cabinet-plus-faucet assembly.
+Distinguish low open console shelving from full-height bookcases. Similar black
+frames and wood boards do not establish equal height or identity. Compare each
+unit with the desk, bed and window sill; record separate estimated heights when
+supported by the views, and do not copy one tall shelf hypothesis to every unit.
 
 Use one stable observation ID for a physical object confidently seen in several
 photos, with all relevant evidence IDs. Distinct similar objects retain separate

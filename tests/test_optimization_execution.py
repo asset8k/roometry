@@ -85,6 +85,12 @@ async def test_invalid_candidate_receives_feedback_then_valid_patch_is_reviewed_
     result = await service.read(child.run_id, owner)
     assert result.status == 'completed', result.message
     assert [a.outcome for a in result.attempts] == ['rejected', 'accepted']
+    retry = json.loads(calls[before + 1]['input'][0]['content'][0]['text'])
+    assert retry['previous_rejected_proposal']['changes'][0]['position']['x'] == 5.
+    assert 'bed_observed' in retry['feedback'][0]['issues'][0]
+    assert retry['tradeoff_policy']['maximum_other_practical_score_drop'] == 1.5
+    assert retry['planning_geometry']['walking_space']['policy']['minimum_width_m'] == .6
+    assert result.attempts[0].proposal.changes[0].position.x == 5.
     assert result.result_scene.room == source.working_scene.room
     assert result.result_scene.openings == source.working_scene.openings
     assert result.result_scene.objects[0].color == '#746A5B'
@@ -229,7 +235,9 @@ async def test_no_candidate_proposal_returns_suggestions_without_a_review_call(h
 
 async def test_step_deadline_and_cancelled_execution_keep_ambiguous_usage_without_replay(harness):
     _, _, calls, actions = harness
-    service, owner, _, child = await prepared_execution(harness, limits=RunLimits(step_timeout_seconds=.02))
+    # Allow bounded local geometry preparation; this case tests cancellation
+    # after a paid request has started, rather than a pre-request deadline.
+    service, owner, _, child = await prepared_execution(harness, limits=RunLimits(step_timeout_seconds=.25))
     async def waiting(request, payload): await anyio.sleep_forever()
     actions.append(waiting)
     before = len(calls)

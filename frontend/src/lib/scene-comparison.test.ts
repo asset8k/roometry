@@ -12,7 +12,7 @@ import type { PreviewEditResponse } from './edit-response.generated'
 function candidate(id = '88888888-8888-4888-8888-888888888888'): OptimizationRun {
   const result = preparedImprovement(finishedRun(prepared()), { request_id: id, focus: 'workspace' })
   return { ...result, run_id: id, source_scene: loadExampleScene(), result_scene: loadAlternativeScene(), status: 'completed', stage: 'finished',
-    attempts: [{ number: 1, outcome: 'accepted', before_score: 6, after_score: 8, changed_object_ids: ['desk_1'], issues: [], summary: 'Place the desk with more usable space.', review: null }] }
+    attempts: [{ number: 1, outcome: 'accepted', before_score: 6, after_score: 8, changed_object_ids: ['desk_1'], issues: [], summary: 'Place the desk with more usable space.', proposal: null, review: null }] }
 }
 const move = { operation: 'move' as const, object_id: 'desk_1', position: { x: .85, z: 2 } }
 const deskX = (comparison: SceneComparison) => comparison.getSnapshot().editor.getSnapshot().scene.objects.find(obj => obj.id === 'desk_1')!.position.x

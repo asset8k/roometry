@@ -25,7 +25,7 @@ function setup() {
   execute: vi.fn(async () => {
    run.status = 'completed'; run.stage = 'finished'; run.result_scene = structuredClone(run.source_scene)
    run.result_scene.objects.find(o => !o.fixed && !o.locked)!.color = '#CC8866'
-   run.attempts = [{number:1,outcome:'accepted',before_score:null,after_score:null,changed_object_ids:[],issues:[],summary:'A warmer palette.',review:null}]
+   run.attempts = [{number:1,outcome:'accepted',before_score:null,after_score:null,changed_object_ids:[],issues:[],summary:'A warmer palette.',proposal: null, review:null}]
    return structuredClone(run)
   }), read: vi.fn(async () => structuredClone(run)), cancel: vi.fn(async () => ({...run,status:'cancelled' as const})),
  }

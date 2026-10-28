@@ -50,7 +50,7 @@ describe('unified workspace journey',()=>{
      if(requests===3){run.status='no_improvement';run.message='The placement was rejected.';return structuredClone(run)}
      run.status='completed';run.result_scene=structuredClone(run.source_scene)
      run.result_scene.objects.find(o=>o.id==='chair_a')!.color=requests===1?'#887766':'#556677'
-     run.attempts=[{number:1,outcome:'accepted',before_score:null,after_score:null,changed_object_ids:['chair_a'],issues:[],summary:'Update the chair palette.',review:null}]
+     run.attempts=[{number:1,outcome:'accepted',before_score:null,after_score:null,changed_object_ids:['chair_a'],issues:[],summary:'Update the chair palette.',proposal: null, review:null}]
      return structuredClone(run)
     }),read:vi.fn(async()=>structuredClone(run)),cancel:vi.fn(),
    }

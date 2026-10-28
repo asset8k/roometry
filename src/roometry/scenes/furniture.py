@@ -406,7 +406,9 @@ def cabinet(kind: str) -> tuple[list[FurniturePart], list[SupportSurface]]:
     low, top_y = (0.04 if wardrobe else 0.14), 0.97
     p = [] if wardrobe else legs(0.14, thickness=0.055)
     p += [
-        part("bottom", (1, 0.06, 0.96), (0, low + 0.03, 0), "wood"),
+        # Fit between the side panels. Full-width bottoms had coplanar outer
+        # faces with the colored sides, causing blue/wood depth flicker.
+        part("bottom", (0.91, 0.06, 0.96), (0, low + 0.03, 0), "wood"),
         part("left_side", (0.045, top_y - low, 0.96), (-0.4775, (top_y + low) / 2, 0)),
         part("right_side", (0.045, top_y - low, 0.96), (0.4775, (top_y + low) / 2, 0)),
         part(
@@ -793,7 +795,9 @@ def low_futon(*, seated: bool) -> tuple[list[FurniturePart], list[SupportSurface
 def office_chair() -> tuple[list[FurniturePart], list[SupportSurface]]:
     seat = part("seat", (.8, .12, .65), (0, .46, .05), radius=.035)
     p = [seat, part("gas_lift", (.075, .3, .075), (0, .27, 0), "metal", shape="cylinder"),
-         part("high_back", (.65, .48, .12), (0, .76, -.28), "inset", radius=.04),
+         # The separate headrest begins at .92; do not draw both colors on
+         # identical front/back/top faces across the headrest band.
+         part("high_back", (.65, .40, .12), (0, .72, -.28), "inset", radius=.04),
          part("headrest", (.42, .08, .12), (0, .96, -.28), radius=.025)]
     for side in (-1, 1):
         p += [part(f"back_color_{side}", (.09, .4, .025), (side * .25, .76, -.205), collision=False),
@@ -809,10 +813,10 @@ def office_chair() -> tuple[list[FurniturePart], list[SupportSurface]]:
     return p, [surface(seat, purpose="seating")]
 
 
-def metal_shelf() -> tuple[list[FurniturePart], list[SupportSurface]]:
+def metal_shelf(levels: int = 4) -> tuple[list[FurniturePart], list[SupportSurface]]:
     p = [part(f"upright_{i}", (.035, 1, .035), (x, .5, z), "metal", radius=.003)
          for i, (x, z) in enumerate(((-.47, -.47), (.47, -.47), (-.47, .47), (.47, .47)))]
-    boards = [part(f"board_{i}", (.93, .025, .93), (0, .1 + i * .285, 0), "wood", radius=.004) for i in range(4)]
+    boards = [part(f"board_{i}", (.93, .025, .93), (0, .1 + i * .855 / (levels - 1), 0), "wood", radius=.004) for i in range(levels)]
     # A narrow front edge follows the main color; open sides and back stay open.
     p.append(part("front_rail", (.91, .018, .02), (0, .97, .47), radius=.003))
     return p + boards, [surface(board, inset=.015) for board in boards]

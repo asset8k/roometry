@@ -11,7 +11,7 @@ from types import MappingProxyType
 from roometry.scenes.expansion_specs import EXPANSION_SPECS, ExpansionSpec
 from roometry.scenes.furniture import (
     FURNITURE_CATALOG, FurnitureAsset, SupportSurface, part, surface, legs,
-    sofa, chair, table, bed,
+    sofa, chair, table, bed, metal_shelf,
 )
 from roometry.scenes.fixture_models import (
     FIXTURE_CATALOG, base_cabinet, sink_counter, basin,
@@ -498,6 +498,8 @@ def foliage(style):
 
 def build(spec: ExpansionSpec):
     style = spec.recipe
+    if style in {"low_metal_shelf", "medium_metal_shelf"}:
+        return metal_shelf(2 if style == "low_metal_shelf" else 3)
     if style in {"drawer_base", "single_base", "corner_base_left", "corner_base_right", "counter_run", "counter_l_left", "counter_l_right", "peninsula", "waterfall", "butcher_block", "upper_corner"}:
         return worktop_base(style)
     if style in {"tall_pantry", "tall_appliance", "glass_pantry", "upper_single", "upper_glass", "upper_open", "medicine_cabinet"}:

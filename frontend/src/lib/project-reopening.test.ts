@@ -18,7 +18,7 @@ function savedWorkspace(): OpenedProject {
   const baseline = preparedImprovement(run, { request_id: id, focus: 'aesthetics' })
   const candidate = structuredClone(original); candidate.objects[0].color = '#AABBCC'
   const improved: OptimizationRun = { ...baseline, status: 'completed' as const, result_scene: candidate,
-    attempts: [{ number: 1, outcome: 'accepted' as const, before_score: 4, after_score: 8, changed_object_ids: [candidate.objects[0].id], issues: [], summary: 'Warmer colors.', review: null }] }
+    attempts: [{ number: 1, outcome: 'accepted' as const, before_score: 4, after_score: 8, changed_object_ids: [candidate.objects[0].id], issues: [], summary: 'Warmer colors.', proposal: null, review: null }] }
   comparison.offer(improved, improved.source_scene); comparison.editCopy()
   const object = candidate.objects.find(item => !item.fixed && !item.locked)!
   comparison.setColor(object.id, '#123456'); comparison.toggleLock(object.id)

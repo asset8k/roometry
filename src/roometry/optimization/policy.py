@@ -1,6 +1,6 @@
 """Atomic candidate assembly and deterministic acceptance; observations stay intact."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from roometry.assessment.evidence import evidence_for_run
 from roometry.assessment.metrics import measure_room
@@ -14,6 +14,22 @@ from roometry.scenes.validation import validate_geometry
 from roometry.vision.review_policy import appearance_controls
 from roometry.vision.spatial import relationship_error, relationship_limit
 
+MAX_OTHER_SCORE_DROP = 1.5
+REPORT_SCORE_DROP = .5
+
+
+def practical_tradeoffs(before, after, focus):
+    issues, warnings = [], []
+    for key in ("openness", "storage", "workspace"):
+        a, b = getattr(before, key).score, getattr(after, key).score
+        if key == focus or a is None:
+            continue
+        if b is None or b < a - MAX_OTHER_SCORE_DROP - 1e-8:
+            issues.append(f"The {key} rating would decrease too far ({a:.1f} to {b if b is not None else 'unassessed'}); allow at most {MAX_OTHER_SCORE_DROP:.1f} points of trade-off.")
+        elif b < a - REPORT_SCORE_DROP - 1e-8:
+            warnings.append(f"Trade-off: {key} changes from {a:.1f} to {b:.1f}/10 to improve {focus}.")
+    return issues, warnings
+
 
 @dataclass
 class Evaluation:
@@ -23,6 +39,7 @@ class Evaluation:
     after_score: float | None
     changed: list[str]
     issues: list[str]
+    tradeoffs: list[str] = field(default_factory=list)
 
 
 def evaluate(run, proposal, source):
@@ -66,8 +83,8 @@ def evaluate(run, proposal, source):
         if (obj.fixed or obj.locked) and retained.get(obj.id) != obj:
             raise ValueError("A protected object or supported child would change.")
     before, after = validate_geometry(base), validate_geometry(candidate)
-    issues = [f"{i.code}: {i.message}" for i in after.errors]
-    issues.extend(i.message for i in clearance_regressions(before, after))
+    issues = [f"{i.code} [{', '.join(i.entity_ids)}]: {i.message}" for i in after.errors]
+    issues.extend(f"{i.code} [{', '.join(i.entity_ids)}]: {i.message}" for i in clearance_regressions(before, after))
     issues.extend(utility_issues(run.source_scene, candidate))
     # Human-confirmed facing constraints remain hard intent during redesign;
     # generic photo positions are reconstruction evidence, not redesign locks.
@@ -80,10 +97,11 @@ def evaluate(run, proposal, source):
             issues.append("A user-confirmed facing relationship would be lost.")
     evidence = evidence_for_run(source)
     measured_before, measured_after = measure_room(base, evidence=evidence), measure_room(candidate, evidence=evidence)
-    for key in ("openness", "storage", "workspace"):
-        a, b = getattr(measured_before, key).score, getattr(measured_after, key).score
-        if key != run.focus and a is not None and (b is None or b < a - .5):
-            issues.append(f"The {key} rating would decrease substantially.")
+    # Bound the total trade-off across the run, not 1.5 points per accepted
+    # iteration (which could otherwise accumulate into a dramatic loss).
+    original_measures = measure_room(run.source_scene, evidence=evidence) if run.result_scene is not None else measured_before
+    regressions, tradeoffs = practical_tradeoffs(original_measures, measured_after, run.focus)
+    issues.extend(regressions)
     base_objects = {o.id: o for o in base.objects}
     def visible_colors(obj):
         return {key: control["value"].upper() for key, control in appearance_controls(obj).items()}
@@ -95,7 +113,7 @@ def evaluate(run, proposal, source):
                or visible_colors(o) != visible_colors(base_objects[o.id])]
     changed.extend(o.id for o in base.objects if o.id not in retained)
     return Evaluation(candidate, measured_after, getattr(measured_before, run.focus).score,
-                      getattr(measured_after, run.focus).score, changed, issues[:16])
+                      getattr(measured_after, run.focus).score, changed, issues[:16], tradeoffs)
 
 
 def meaningful_gain(run, evaluation, source):

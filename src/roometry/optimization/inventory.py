@@ -70,6 +70,13 @@ def catalog_options(query="", *, required_ids=()):
     context = SimpleNamespace(label=query, estimated_dimensions_m=None)
     chosen = {m['asset_id'] for models in groups.values()
               for m in shortlist(models, context, limit=2, required=required_ids)}
+    # Two text matches alone hid low/medium shelves behind tall bookcases in
+    # broad "improve storage" requests. Keep one per practical height band.
+    shelves = [option for option in options if option['type'] == 'shelf']
+    for low, high in ((0., 1.), (1., 1.4), (1.4, float('inf'))):
+        band = [m for m in groups.get('shelf', []) if any(
+            o['asset_id'] == m['asset_id'] and low < o['dimensions_m']['height'] <= high for o in shelves)]
+        chosen.update(m['asset_id'] for m in shortlist(band, context, limit=1))
     return [option for option in options if option['asset_id'] in chosen]
 
 

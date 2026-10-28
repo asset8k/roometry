@@ -78,105 +78,28 @@ def artwork(
     def at(x: float, y: float, offset: float = 0) -> Point:
         return x, bottom + y * height, z + offset
 
-    if style == "portrait":
-        return [
-            disc(
-                "arch_top",
-                (0.50, 0.50 * height, 0.008),
-                at(0, 0.58),
-                "primary_dark",
-                collision=False,
-            ),
-            part(
-                "arch_base",
-                (0.50, 0.40 * height, 0.008),
-                at(0, 0.38),
-                "primary_dark",
-                collision=False,
-            ),
-            disc(
-                "arch_inner",
-                (0.27, 0.29 * height, 0.01),
-                at(0, 0.57, 0.006),
-                "paper",
-                collision=False,
-            ),
-            part(
-                "arch_inner_base",
-                (0.27, 0.31 * height, 0.01),
-                at(0, 0.43, 0.006),
-                "paper",
-                collision=False,
-            ),
-            disc(
-                "sun",
-                (0.14, 0.14 * height, 0.008),
-                at(0.26, 0.81),
-                "wood",
-                collision=False,
-            ),
-        ]
+    # Nature artwork uses dedicated foliage roles, so recoloring its frame
+    # never turns the green print into the same color as the surrounding frame.
     if style == "landscape":
         return [
-            disc(
-                "sun",
-                (0.18, 0.24 * height, 0.008),
-                at(0.22, 0.70),
-                "wood",
-                collision=False,
-            ),
-            disc(
-                "far_hill",
-                (0.72, 0.30 * height, 0.01),
-                at(-0.05, 0.39),
-                "primary",
-                collision=False,
-            ),
-            part(
-                "ground",
-                (0.74, 0.12 * height, 0.01),
-                at(0, 0.28, 0.003),
-                "primary",
-                collision=False,
-            ),
-            disc(
-                "near_hill",
-                (0.48, 0.22 * height, 0.01),
-                at(0.14, 0.32, 0.012),
-                "primary_dark",
-                collision=False,
-            ),
-            part(
-                "foreground",
-                (0.74, 0.12 * height, 0.01),
-                at(0, 0.22, 0.018),
-                "primary_dark",
-                collision=False,
-            ),
+            disc("sun", (.14, .18 * height, .008), at(.22, .73), "paper", collision=False),
+            disc("far_hill", (.74, .30 * height, .01), at(-.01, .42), "foliage", collision=False),
+            disc("near_hill", (.55, .23 * height, .01), at(.10, .31, .012), "foliage_dark", collision=False),
+            part("forest_ground", (.74, .13 * height, .01), at(0, .22, .018), "foliage_dark", collision=False),
+            *[part(f"pine_{i}", (.10, .25 * height, .009), at(x, .48, .022),
+                   "foliage_dark", shape="frustum", top_scale=0, collision=False)
+              for i, x in enumerate((-.25, -.13, -.02))],
         ]
-    return [
-        part(
-            "color_block",
-            (0.28, 0.56 * height, 0.008),
-            at(-0.20, 0.47),
-            "primary_dark",
-            collision=False,
-        ),
-        disc(
-            "circle",
-            (0.40, 0.40 * height, 0.01),
-            at(0.12, 0.60, 0.006),
-            "wood",
-            collision=False,
-        ),
-        part(
-            "underline",
-            (0.58, 0.035 * height, 0.01),
-            at(0, 0.23, 0.012),
-            "primary",
-            collision=False,
-        ),
-    ]
+    p = [part("botanical_stem", (.012, .54 * height, .008), at(0, .48), "foliage_dark", collision=False)]
+    count = 4 if style == "portrait" else 3
+    for i in range(count):
+        y = .32 + i * .13
+        for side in (-1, 1):
+            p.append(part(f"leaf_{i}_{side}", (.22, .10 * height, .01),
+                          at(side * .10, y, .01 + i * .002),
+                          "foliage" if i % 2 else "foliage_dark", shape="ellipsoid",
+                          rotation=(0, 0, side * .45), collision=False))
+    return p
 
 
 def picture(style: str, placement: Placement) -> list[FurniturePart]:
@@ -948,9 +871,9 @@ def register(
 
 register("rug", "Woven bordered rug", (2.0, 0.015, 1.4), rug(), color="#B9AA91")
 for suffix, label, style, size in (
-    ("standard", "Framed arch print", "portrait", (0.45, 0.60, 0.05)),
-    ("square", "Framed geometric print", "square", (0.50, 0.50, 0.05)),
-    ("rectangular", "Framed landscape print", "landscape", (0.80, 0.50, 0.05)),
+    ("standard", "Framed green botanical print", "portrait", (0.45, 0.60, 0.05)),
+    ("square", "Framed green leaf study", "square", (0.50, 0.50, 0.05)),
+    ("rectangular", "Framed green woodland landscape", "landscape", (0.80, 0.50, 0.05)),
 ):
     register(
         "picture",
@@ -1076,6 +999,6 @@ register("plant", "Potted palm", (.85, 1.6, .85), configurations(tuple((placemen
 register("vase", "Slim cylinder vase", (.13, .32, .13), [part("body", (1, 1, 1), (0, .5, 0), "primary_ceramic", shape="tube", wall_thickness=.045), part("bottom", (.94, .035, .94), (0, .0175, 0), "primary_ceramic", shape="cylinder")], asset_id="vase_cylinder_01", color="#B18468")
 register("book_stack", "Upright books with bookends", (.34, .25, .18), upright_books(), asset_id="book_stack_upright_01", color="#6B837D")
 register("clock", "Square wall clock", (.30, .30, .045), square_clock(), asset_id="clock_square_01", color="#BA9863")
-register("picture", "Three-panel wall print", (1.2, .55, .05), triptych(), asset_id="picture_triptych_01", color="#8C7660")
+register("picture", "Three-panel green nature prints", (1.2, .55, .05), triptych(), asset_id="picture_triptych_01", color="#8C7660")
 
 DECOR_CATALOG = MappingProxyType(_assets)

@@ -397,6 +397,8 @@ export type AssetId =
   | "wall_shelf_offset_01"
   | "shelf_room_divider_01"
   | "shelf_corner_01"
+  | "shelf_low_metal_01"
+  | "shelf_medium_metal_01"
   | "wardrobe_sliding_01"
   | "bed_upholstered_01"
   | "desk_l_shaped_01"

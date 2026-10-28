@@ -234,6 +234,77 @@
       "title": "AssessmentCard",
       "type": "object"
     },
+    "CandidateProposal": {
+      "additionalProperties": false,
+      "properties": {
+        "changes": {
+          "items": {
+            "$ref": "#/$defs/ObjectChange"
+          },
+          "maxItems": 24,
+          "title": "Changes",
+          "type": "array"
+        },
+        "additions": {
+          "items": {
+            "$ref": "#/$defs/CatalogAddition"
+          },
+          "maxItems": 8,
+          "title": "Additions",
+          "type": "array"
+        },
+        "removals": {
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "type": "string"
+          },
+          "maxItems": 24,
+          "title": "Removals",
+          "type": "array"
+        },
+        "replacements": {
+          "items": {
+            "$ref": "#/$defs/CatalogReplacement"
+          },
+          "maxItems": 8,
+          "title": "Replacements",
+          "type": "array"
+        },
+        "summary": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "suggestions": {
+          "items": {
+            "maxLength": 400,
+            "type": "string"
+          },
+          "maxItems": 6,
+          "title": "Suggestions",
+          "type": "array"
+        },
+        "finish": {
+          "default": false,
+          "title": "Finish",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "changes",
+        "additions",
+        "removals",
+        "replacements",
+        "summary",
+        "suggestions",
+        "finish"
+      ],
+      "title": "CandidateProposal",
+      "type": "object"
+    },
     "CandidateReview": {
       "additionalProperties": false,
       "properties": {
@@ -285,6 +356,195 @@
         "aesthetics"
       ],
       "title": "CandidateReview",
+      "type": "object"
+    },
+    "CatalogAddition": {
+      "additionalProperties": false,
+      "properties": {
+        "object_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Object Id",
+          "type": "string"
+        },
+        "asset_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Asset Id",
+          "type": "string"
+        },
+        "position": {
+          "$ref": "#/$defs/FloorPosition"
+        },
+        "rotation_y_rad": {
+          "title": "Rotation Y Rad",
+          "type": "number"
+        },
+        "color": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Color"
+        },
+        "placement": {
+          "default": "floor",
+          "enum": [
+            "floor",
+            "wall",
+            "surface"
+          ],
+          "title": "Placement",
+          "type": "string"
+        },
+        "wall": {
+          "anyOf": [
+            {
+              "enum": [
+                "north",
+                "south",
+                "west",
+                "east"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Wall"
+        },
+        "elevation_m": {
+          "anyOf": [
+            {
+              "maximum": 30.0,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Wall object's bottom height; null for floor/surface.",
+          "title": "Elevation M"
+        },
+        "support_object_id": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Support Object Id"
+        },
+        "support_surface_id": {
+          "anyOf": [
+            {
+              "maxLength": 96,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Support Surface Id"
+        }
+      },
+      "required": [
+        "object_id",
+        "asset_id",
+        "position",
+        "rotation_y_rad",
+        "color",
+        "placement",
+        "wall",
+        "elevation_m",
+        "support_object_id",
+        "support_surface_id"
+      ],
+      "title": "CatalogAddition",
+      "type": "object"
+    },
+    "CatalogReplacement": {
+      "additionalProperties": false,
+      "properties": {
+        "object_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Object Id",
+          "type": "string"
+        },
+        "asset_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Asset Id",
+          "type": "string"
+        },
+        "position": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FloorPosition"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "rotation_y_rad": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rotation Y Rad"
+        },
+        "color": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Color"
+        }
+      },
+      "required": [
+        "object_id",
+        "asset_id",
+        "position",
+        "rotation_y_rad",
+        "color"
+      ],
+      "title": "CatalogReplacement",
       "type": "object"
     },
     "EstimateCorrection": {
@@ -348,6 +608,30 @@
         "source_image_ids"
       ],
       "title": "EstimateCorrection",
+      "type": "object"
+    },
+    "FloorPosition": {
+      "additionalProperties": false,
+      "description": "Absolute world coordinates. Floor elevation cannot be edited.",
+      "properties": {
+        "x": {
+          "maximum": 100.0,
+          "minimum": -100.0,
+          "title": "X",
+          "type": "number"
+        },
+        "z": {
+          "maximum": 100.0,
+          "minimum": -100.0,
+          "title": "Z",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "z"
+      ],
+      "title": "FloorPosition",
       "type": "object"
     },
     "InputBudget": {
@@ -532,6 +816,70 @@
         }
       },
       "title": "MaterialColors",
+      "type": "object"
+    },
+    "ObjectChange": {
+      "additionalProperties": false,
+      "properties": {
+        "object_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Object Id",
+          "type": "string"
+        },
+        "position": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FloorPosition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rotation_y_rad": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Rotation Y Rad"
+        },
+        "color": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Color"
+        },
+        "material_colors": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MaterialColors"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "object_id",
+        "position",
+        "rotation_y_rad",
+        "color",
+        "material_colors"
+      ],
+      "title": "ObjectChange",
       "type": "object"
     },
     "ObjectDimensions": {
@@ -750,6 +1098,17 @@
             }
           ],
           "default": null
+        },
+        "proposal": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CandidateProposal"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -760,7 +1119,8 @@
         "changed_object_ids",
         "issues",
         "summary",
-        "review"
+        "review",
+        "proposal"
       ],
       "title": "OptimizationAttempt",
       "type": "object"
@@ -1500,6 +1860,8 @@
             "wall_shelf_offset_01",
             "shelf_room_divider_01",
             "shelf_corner_01",
+            "shelf_low_metal_01",
+            "shelf_medium_metal_01",
             "wardrobe_sliding_01",
             "bed_upholstered_01",
             "desk_l_shaped_01",
