@@ -104,5 +104,7 @@ npm --prefix frontend run contracts:generate
 Live verification requires `--allow-paid`, local photos, dimensions, a reference
 case, and an unused output folder under `artifacts/`. It records results, renders,
 timing, and usage. Run it only with explicit authorization; cost estimates are not
-billing invoices. Private artifacts stay ignored. Existing reference cases and
-regression fixtures are retained for the upcoming evaluation work.
+billing invoices. Private artifacts stay ignored. The public dataset structure
+and privacy boundaries are documented in [the dataset guide](../data/evals/GUIDE.md).
+Code-only reference fixtures live in `data/fixtures/evaluation/`; personal
+regressions stay under the ignored `data/evals/private/` folder.

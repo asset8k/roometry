@@ -111,6 +111,8 @@ recipes under `frontend/src/data/`, and validated fixtures under
 `frontend/src/lib/test-support/fixtures/`. Keep these generated files tracked for
 reproducible builds; edit their Python/data sources rather than generated copies.
 
-`data/fixtures/` exercises rendering, geometry, and regressions. `data/evals/`
-contains independent reconstruction annotations and reference scenes; the source
-room photos remain local and untracked. Neither dataset is a user-facing demo.
+`data/fixtures/` exercises rendering, geometry, and code-only reconstruction
+regressions. `data/evals/` holds the public benchmark manifest and folders for
+approved images and annotations; see [the dataset guide](../data/evals/GUIDE.md).
+Personal photos, annotations, and scenes stay in its ignored `private/` folder.
+Neither dataset is a user-facing demo.

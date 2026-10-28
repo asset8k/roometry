@@ -190,7 +190,7 @@ async def test_cache_policy_is_configurable_and_older_models_keep_supported_para
     assert record.prompt_cache_mode == mode and record.cache_write_tokens is None
 
 
-@pytest.mark.parametrize('name', ['bedroom_multiview', 'living_room_tv'])
+@pytest.mark.parametrize('name', ['synthetic_study', 'living_room_tv'])
 def test_compaction_preserves_regression_inventory_relations_supports_and_measurements(name):
     from tests.test_reconstruction_evaluation import load
     _, analysis, _ = load(name)

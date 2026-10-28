@@ -1,7 +1,7 @@
 """Evaluate a saved agent response against a fixed photo annotation; no API calls.
 
-Example: python scripts/run_evals.py --case data/evals/bedroom_multiview.json --run /tmp/run.json
-Photo files are local references, not copied into the repository or transmitted.
+Example: python scripts/run_evals.py --case data/fixtures/evaluation/synthetic_study.json --run /tmp/run.json
+Photo references are not opened or transmitted by this offline command.
 """
 
 import argparse

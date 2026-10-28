@@ -1,4 +1,4 @@
-"""Captured collision failures recover through the real policy and graph."""
+"""Synthetic and non-personal failures recover through the real policy and graph."""
 
 from pathlib import Path
 from types import SimpleNamespace
@@ -48,8 +48,8 @@ def source(scene):
 @pytest.fixture(
     scope="module",
     params=[
-        ("bedroom_blocked", "openness"),
-        ("bedroom_storage", "storage"),
+        ("synthetic_openness", "openness"),
+        ("synthetic_storage", "storage"),
         ("living_room", "openness"),
     ],
 )
@@ -133,7 +133,7 @@ async def test_rejected_model_coordinates_recover_without_another_proposal_call(
 
 
 def test_search_never_repurposes_chat_instructions_or_movable_locks():
-    scene = RoomScene.model_validate_json((ROOT / "bedroom_blocked.json").read_text())
+    scene = RoomScene.model_validate_json((ROOT / "synthetic_openness.json").read_text())
     run, observed = policy_run(scene), source(scene)
     assert not plan_placements(
         run.model_copy(update={"instruction": "Add a television"}), observed

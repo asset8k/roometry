@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "dataset_id": "roometry-reconstruction-v1",
+  "status": "preparing",
+  "target_case_count": 25,
+  "target_splits": {
+    "development": 5,
+    "held_out": 20
+  },
+  "target_room_types": {
+    "living_room": 7,
+    "bedroom": 6,
+    "kitchen": 5,
+    "bathroom": 4,
+    "office": 3
+  },
+  "target_sources": {
+    "generated": 20,
+    "photographed_with_publication_permission": 5
+  },
+  "public_paths": {
+    "annotations": "cases",
+    "images": "images"
+  },
+  "execution_requirements": {
+    "authentication": "signed_in",
+    "save_to_my_rooms": true,
+    "room_title": "primary_image_stem",
+    "improvements": "versions_of_the_same_saved_room",
+    "publish_to_explore": false,
+    "outputs": "artifacts/evaluations"
+  },
+  "cases": []
+}

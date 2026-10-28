@@ -39,6 +39,15 @@ playwright-report/
 artifacts/*
 !artifacts/.gitkeep
 
+# Personal evaluation inputs, annotations, scenes, and exports
+/data/evals/private/
+# Legacy personal fixtures must not be reintroduced at their former paths.
+/data/evals/bedroom_multiview.json
+/data/evals/reference/bedroom_multiview.json
+/data/fixtures/placement-regressions/bedroom_blocked.json
+/data/fixtures/placement-regressions/bedroom_storage.json
+IMG_220[1-5].*
+
 # Local uploads and OS files
 /uploads/
 /.local/

@@ -1,0 +1,187 @@
+{
+  "id": "synthetic_study",
+  "photo_files": [],
+  "annotation_notes": [
+    "Independently authored fictional square study for code tests. No actual room photos or personal annotations are used."
+  ],
+  "room_finishes": {
+    "floor_color": "#C9AF89",
+    "wall_color": "#E7DFD1",
+    "floor_pattern": "wood"
+  },
+  "objects": [
+    {
+      "id": "window",
+      "types": [],
+      "opening_type": "window",
+      "label_terms": [],
+      "color": null,
+      "material_colors": {},
+      "allowed_assets": [],
+      "wall_span_fraction": null,
+      "width_depth_ratio": null
+    },
+    {
+      "id": "door",
+      "types": [],
+      "opening_type": "door",
+      "label_terms": [],
+      "color": null,
+      "material_colors": {},
+      "allowed_assets": [],
+      "wall_span_fraction": null,
+      "width_depth_ratio": null
+    },
+    {
+      "id": "radiator",
+      "types": [
+        "radiator"
+      ],
+      "opening_type": null,
+      "label_terms": [],
+      "color": "#EAE4D8",
+      "material_colors": {},
+      "allowed_assets": [],
+      "wall_span_fraction": null,
+      "width_depth_ratio": null
+    },
+    {
+      "id": "wardrobe",
+      "types": [
+        "wardrobe"
+      ],
+      "opening_type": null,
+      "label_terms": [],
+      "color": "#76533B",
+      "material_colors": {},
+      "allowed_assets": [],
+      "wall_span_fraction": [
+        0.22,
+        0.4
+      ],
+      "width_depth_ratio": null
+    },
+    {
+      "id": "desk",
+      "types": [
+        "desk"
+      ],
+      "opening_type": null,
+      "label_terms": [],
+      "color": null,
+      "material_colors": {
+        "wood": "#D7C6AB",
+        "metal": "#555555"
+      },
+      "allowed_assets": [],
+      "wall_span_fraction": null,
+      "width_depth_ratio": null
+    },
+    {
+      "id": "bed",
+      "types": [
+        "bed"
+      ],
+      "opening_type": null,
+      "label_terms": [],
+      "color": "#BC795D",
+      "material_colors": {},
+      "allowed_assets": [
+        "bed_standard_01"
+      ],
+      "wall_span_fraction": null,
+      "width_depth_ratio": null
+    },
+    {
+      "id": "chair",
+      "types": [
+        "chair"
+      ],
+      "opening_type": null,
+      "label_terms": [],
+      "color": "#717C49",
+      "material_colors": {},
+      "allowed_assets": [
+        "chair_standard_01"
+      ],
+      "wall_span_fraction": null,
+      "width_depth_ratio": null
+    },
+    {
+      "id": "shelf_a",
+      "types": [
+        "shelf"
+      ],
+      "opening_type": null,
+      "label_terms": [
+        "window"
+      ],
+      "color": null,
+      "material_colors": {},
+      "allowed_assets": [
+        "shelf_standard_01"
+      ],
+      "wall_span_fraction": null,
+      "width_depth_ratio": null
+    },
+    {
+      "id": "shelf_b",
+      "types": [
+        "shelf"
+      ],
+      "opening_type": null,
+      "label_terms": [
+        "window"
+      ],
+      "color": null,
+      "material_colors": {},
+      "allowed_assets": [
+        "shelf_standard_01"
+      ],
+      "wall_span_fraction": null,
+      "width_depth_ratio": null
+    },
+    {
+      "id": "lighting",
+      "types": [
+        "ceiling_light"
+      ],
+      "opening_type": null,
+      "label_terms": [],
+      "color": null,
+      "material_colors": {},
+      "allowed_assets": [
+        "ceiling_light_standard_01"
+      ],
+      "wall_span_fraction": null,
+      "width_depth_ratio": null
+    }
+  ],
+  "relationships": [
+    {
+      "kind": "opposite_end",
+      "subject": "wardrobe",
+      "target": "window"
+    },
+    {
+      "kind": "near",
+      "subject": "desk",
+      "target": "window"
+    },
+    {
+      "kind": "near",
+      "subject": "shelf_a",
+      "target": "window"
+    },
+    {
+      "kind": "near",
+      "subject": "shelf_b",
+      "target": "window"
+    },
+    {
+      "kind": "faces",
+      "subject": "chair",
+      "target": "desk"
+    }
+  ]
+}

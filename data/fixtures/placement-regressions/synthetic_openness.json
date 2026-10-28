@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "room": {
+    "room_type": "bedroom",
+    "width_m": 6.0,
+    "length_m": 6.0,
+    "height_m": 3.0,
+    "measurements_source": "estimated"
+  },
+  "finishes": null,
+  "wall_axis_bindings": [],
+  "wall_mapping": [],
+  "estimate_corrections": [],
+  "interpretation_corrections": [],
+  "appearance_corrections": [],
+  "openings": [],
+  "objects": [
+    {
+      "id": "barrier",
+      "type": "wardrobe",
+      "asset_id": "wardrobe_standard_01",
+      "position": {
+        "x": 3.0,
+        "y": 0.0,
+        "z": 3.0
+      },
+      "rotation_y_rad": 0.0,
+      "dimensions_m": {
+        "width": 5.4,
+        "depth": 0.4,
+        "height": 2.0
+      },
+      "color": "#808080",
+      "material_colors": null,
+      "placement": "floor",
+      "support_object_id": null,
+      "support_surface_id": null,
+      "wall": null,
+      "opening_id": null,
+      "fixed": false,
+      "locked": false,
+      "provenance": "user_added",
+      "measurements_source": "estimated"
+    }
+  ],
+  "assumptions": [],
+  "warnings": []
+}

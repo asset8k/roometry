@@ -97,7 +97,7 @@ def test_an_unresolved_observed_desk_is_unknown_instead_of_no_workspace():
 
 def evidence_case():
     from tests.test_reconstruction_evaluation import load
-    _, analysis, scene = load('bedroom_multiview')
+    _, analysis, scene = load('synthetic_study')
     def unresolved(*ids):
         return SimpleNamespace(unresolved_entities=[SimpleNamespace(entity_id=i) for i in ids], estimated_axes=[])
     return analysis, scene, unresolved

@@ -15,7 +15,7 @@ from roometry.scenes.validation import validate_geometry
 from roometry.vision.schemas import RoomAnalysisResponse
 from roometry.vision.proposal_schemas import DraftObject, DraftOpening, SceneDraft, UnresolvedEntity
 
-ROOT = Path(__file__).resolve().parents[1] / "data/evals"
+ROOT = Path(__file__).resolve().parents[1] / "data/fixtures/evaluation"
 
 
 def load(name):
@@ -24,8 +24,8 @@ def load(name):
     return case, RoomAnalysisResponse.model_validate_json(json.dumps(data["analysis"])), RoomScene.model_validate(data["working_scene"])
 
 
-@pytest.mark.parametrize("name", ["bedroom_multiview", "living_room_tv"])
-def test_hand_annotated_reference_is_geometry_valid_and_meets_photo_arrangement_gate(name):
+@pytest.mark.parametrize("name", ["synthetic_study", "living_room_tv"])
+def test_reference_is_geometry_valid_and_meets_arrangement_gate(name):
     case, analysis, scene = load(name)
     assert validate_geometry(scene).valid
     report = evaluate_reconstruction(case, analysis, scene)
@@ -36,17 +36,17 @@ def test_hand_annotated_reference_is_geometry_valid_and_meets_photo_arrangement_
 
 
 @pytest.mark.parametrize("defect", ["facing", "color", "missing_inventory", "wrong_end", "wrong_model", "narrow_wardrobe"])
-def test_bedroom_regression_rejects_recognizability_errors(defect):
-    case, analysis, scene = load("bedroom_multiview")
+def test_fictional_study_rejects_recognizability_errors(defect):
+    case, analysis, scene = load("synthetic_study")
     objects = {obj.id: obj for obj in scene.objects}
     if defect == "facing":
         objects["chair"].rotation_y_rad += pi
     elif defect == "color":
-        objects["sleeper"].color = "#FFFFFF"
+        objects["bed"].color = "#000000"
     elif defect == "wrong_end":
-        objects["wardrobe"].position.z = .4
+        objects["wardrobe"].position.x = .4
     elif defect == "wrong_model":
-        objects["sleeper"].asset_id = "bed_standard_01"
+        objects["bed"].asset_id = "bed_futon_01"
     elif defect == "narrow_wardrobe":
         objects["wardrobe"].dimensions_m.width = .6
     else:
@@ -75,7 +75,7 @@ def test_living_room_sofa_facing_the_window_fails_even_when_it_fits():
 
 
 def test_inventory_locates_missed_detections_catalog_conflicts_missing_drafts_and_validation_losses():
-    case, analysis, scene = load('bedroom_multiview')
+    case, analysis, scene = load('synthetic_study')
     draft = SceneDraft(
         wall_assignments=[],
         objects=[DraftObject.model_validate(obj.model_dump(include=set(DraftObject.model_fields))) for obj in scene.objects if obj.id != 'chair'],
@@ -116,7 +116,7 @@ def test_unavailable_draft_does_not_claim_a_known_draft_stage():
 
 @pytest.mark.parametrize('analysis_available', [True, False])
 def test_failed_generations_produce_a_baseline_report_instead_of_crashing(analysis_available):
-    case, analysis, _ = load('bedroom_multiview')
+    case, analysis, _ = load('synthetic_study')
     report = evaluate_reconstruction(case, analysis if analysis_available else None, None)
     assert report.passed is False and report.major_object_coverage == 0
     assert len(report.inventory) == 10
@@ -134,8 +134,8 @@ def test_retained_geometry_is_not_reported_missing_when_analysis_is_unavailable(
 def test_offline_cli_reports_failed_runs_without_images_or_paid_calls(tmp_path):
     failed_run = tmp_path / 'failed-run.json'
     failed_run.write_text(json.dumps({'analysis': None, 'working_scene': None, 'status': 'failed'}))
-    command = [sys.executable, str(ROOT.parents[1] / 'scripts/run_evals.py'),
-               '--case', str(ROOT / 'bedroom_multiview.json'), '--run', str(failed_run)]
+    command = [sys.executable, str(ROOT.parents[2] / 'scripts/run_evals.py'),
+               '--case', str(ROOT / 'synthetic_study.json'), '--run', str(failed_run)]
     result = subprocess.run(command, capture_output=True, text=True, check=False)
     assert result.returncode == 1, result.stderr
     report = json.loads(result.stdout)
@@ -145,7 +145,7 @@ def test_offline_cli_reports_failed_runs_without_images_or_paid_calls(tmp_path):
 
 @pytest.mark.parametrize('defect', [None, 'moved', 'missing'])
 def test_window_shelf_matching_ignores_desk_and_display_distractors_without_hiding_losses(defect):
-    case, analysis, scene = load('bedroom_multiview')
+    case, analysis, scene = load('synthetic_study')
     original = next(item for item in scene.objects if item.id == 'shelf_a')
     observation = next(item for item in analysis.observations.objects if item.id == 'shelf_a')
     # Distractor sorts first and even sits in a valid place: scoring must not use
@@ -154,7 +154,7 @@ def test_window_shelf_matching_ignores_desk_and_display_distractors_without_hidi
     analysis.observations.objects.append(observation.model_copy(update={
         'id': 'aaa_desk_shelf', 'label': 'Open shelving integrated into desk'}, deep=True))
     if defect == 'moved':
-        original.position.z = 4.
+        original.position.x = 3.
     elif defect == 'missing':
         scene.objects = [item for item in scene.objects if item.id != original.id]
     scene.objects.reverse()

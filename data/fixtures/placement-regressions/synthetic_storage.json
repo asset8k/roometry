@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "room": {
+    "room_type": "bedroom",
+    "width_m": 6.0,
+    "length_m": 6.0,
+    "height_m": 3.0,
+    "measurements_source": "estimated"
+  },
+  "finishes": null,
+  "wall_axis_bindings": [],
+  "wall_mapping": [],
+  "estimate_corrections": [],
+  "interpretation_corrections": [],
+  "appearance_corrections": [],
+  "openings": [],
+  "objects": [
+    {
+      "id": "sofa",
+      "type": "sofa",
+      "asset_id": "sofa_standard_01",
+      "position": {
+        "x": 3.0,
+        "y": 0.0,
+        "z": 5.0
+      },
+      "rotation_y_rad": 0.0,
+      "dimensions_m": {
+        "width": 2.25,
+        "depth": 0.95,
+        "height": 0.88
+      },
+      "color": "#808080",
+      "material_colors": null,
+      "placement": "floor",
+      "support_object_id": null,
+      "support_surface_id": null,
+      "wall": null,
+      "opening_id": null,
+      "fixed": false,
+      "locked": false,
+      "provenance": "user_added",
+      "measurements_source": "catalog"
+    },
+    {
+      "id": "existing_shelf",
+      "type": "shelf",
+      "asset_id": "shelf_low_metal_01",
+      "position": {
+        "x": 5.5,
+        "y": 0.0,
+        "z": 3.0
+      },
+      "rotation_y_rad": 0.0,
+      "dimensions_m": {
+        "width": 0.8,
+        "depth": 0.35,
+        "height": 0.8
+      },
+      "color": "#808080",
+      "material_colors": null,
+      "placement": "floor",
+      "support_object_id": null,
+      "support_surface_id": null,
+      "wall": null,
+      "opening_id": null,
+      "fixed": false,
+      "locked": false,
+      "provenance": "user_added",
+      "measurements_source": "catalog"
+    }
+  ],
+  "assumptions": [],
+  "warnings": []
+}
