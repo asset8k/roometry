@@ -96,7 +96,7 @@ def create_app(
             max_steps=settings.agent_max_steps,
             max_model_calls=settings.agent_max_model_calls,
             max_tool_calls=settings.agent_max_tool_calls,
-            step_timeout_seconds=2 * settings.analysis_timeout_seconds + 5
+            step_timeout_seconds=2 * max(settings.analysis_timeout_seconds, settings.request_timeout("scene_proposal")) + 5
         ),
     )
 

@@ -123,6 +123,27 @@ async def test_economical_graph_keeps_failure_terminal_instead_of_repeating_paid
     assert len(calls) == 1
 
 
+async def test_explicit_retry_after_construction_timeout_reuses_analysis_and_remaining_attempt(harness):
+    app, client, calls, actions = harness
+    app.state.settings.agent_deterministic_routing = True
+    _, _, uploaded = await prepared(harness)
+    async def timeout(request, payload):
+        raise httpx.ReadTimeout('PRIVATE', request=request)
+    actions.extend([photo, timeout])
+    request = {'input_id': uploaded['input_id'], 'request_id': str(uuid4())}
+    first = await client.post('/api/agent-runs', json=request)
+    assert first.json()['status'] == 'failed'
+    assert first.json()['tool_feedback'][-1]['details']['code'] == 'analysis_timeout'
+    assert (await client.post('/api/agent-runs', json=request)).json() == first.json()
+    assert len(calls) == 2
+    actions.append(scene_action())
+    second = await client.post('/api/agent-runs', json={**request, 'request_id': str(uuid4())})
+    assert second.json()['status'] == 'completed'
+    assert second.json()['analysis'] == first.json()['analysis']
+    assert [record.operation for record in app.state.analysis_service.analyzer.usage_records] == ['analysis', 'scene_proposal', 'scene_repair']
+    assert len(calls) == 3
+
+
 def photo_observations():
     ids = [str(uuid4()) for _ in range(5)]
     objects = [SimpleNamespace(source_image_ids=[key], span=None) for key in ids[:4]]

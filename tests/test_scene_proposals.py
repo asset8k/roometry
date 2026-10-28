@@ -899,7 +899,8 @@ async def test_proposal_timeout_consumes_attempt_and_releases_capacity(harness):
 async def test_slow_first_scene_attempt_does_not_starve_repair(harness):
     app, client, calls, actions = harness
     analysis = await analyzed(harness)
-    app.state.settings.analysis_timeout_seconds = 0.4
+    app.state.settings.analysis_timeout_seconds = 0.02
+    app.state.settings.scene_timeout_seconds = 0.4
     bad = draft_data()
     bad["openings"][0]["wall"] = "south"
 

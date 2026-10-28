@@ -236,6 +236,13 @@ describe('guided generation workspace', () => {
     expect(html).toContain('Retry the same answer')
     expect(html).toContain('fieldset disabled')
   })
+  it('explains a construction timeout without implying the photo analysis failed', () => {
+    const run = agentRun(input, { status: 'failed', last_error: 'tool_failed',
+      tool_feedback: [{ name: 'propose_scene', outcome: 'error', message: 'Tool timed out.', details: { code: 'analysis_timeout' } }] })
+    const html = render({ phase: 'failed', run })
+    expect(html).toContain('Scene construction exceeded its time limit')
+    expect(html).toContain('Your photo analysis is kept')
+  })
 })
 
 it('keeps the reconstructed viewer open and discloses unavailable catalog checks', () => {

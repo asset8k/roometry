@@ -88,13 +88,14 @@ describe('guided room generation', () => {
     expect(s.generation.getSnapshot().phase).toBe('completed')
     expect(vi.mocked(s.client.start).mock.calls[0][0].request_id).not.toBe(vi.mocked(s.client.start).mock.calls[1][0].request_id)
   })
-  it('reuses uploaded photos and cached analysis when retrying a decision failure', async () => {
+  it.each(['decision', 'construction'] as const)('reuses uploaded photos when explicitly retrying a %s failure', async stage => {
     const s = await setup()
-    vi.mocked(s.client.start).mockImplementationOnce(async () => agentRun(s.batch(), { status: 'failed', last_error: 'decision_failed', pending_tool: null,
-      tool_feedback: [{ name: null, outcome: 'error', message: 'Model unavailable.', details: { code: 'provider_unavailable' } }] }))
+    vi.mocked(s.client.start).mockImplementationOnce(async () => agentRun(s.batch(), { status: 'failed', last_error: stage === 'construction' ? 'tool_failed' : 'decision_failed', pending_tool: null,
+      tool_feedback: [{ name: stage === 'construction' ? 'propose_scene' : null, outcome: 'error', message: 'Model unavailable.', details: { code: stage === 'construction' ? 'analysis_timeout' : 'provider_unavailable' } }] }))
     await s.generation.generate()
     await s.generation.generate()
     expect(s.upload).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(s.client.start).mock.calls[0][0].input_id).toBe(vi.mocked(s.client.start).mock.calls[1][0].input_id)
     expect(s.generation.getSnapshot().phase).toBe('completed')
   })
   it('prevents duplicate uploads and ignores cancelled late upload completion', async () => {

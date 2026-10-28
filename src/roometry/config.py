@@ -115,6 +115,9 @@ class Settings(BaseSettings):
     analysis_timeout_seconds: float = Field(
         default=150, gt=0, le=300, allow_inf_nan=False
     )
+    # None preserves existing installations; construction can have more time
+    # without extending photo analysis, visual review or optimization requests.
+    scene_timeout_seconds: float | None = Field(default=None, gt=0, le=300, allow_inf_nan=False)
     analysis_max_body_bytes: int = Field(default=4096, ge=128, le=16384)
     analysis_max_request_bytes: int = Field(default=45_000_000, ge=1024, le=50_000_000)
     analysis_max_output_tokens: int = Field(default=16384, ge=128, le=32768)
@@ -163,6 +166,11 @@ class Settings(BaseSettings):
             if not value:
                 raise ValueError("Stage model names must not be blank.")
         return value
+
+    def request_timeout(self, operation: ModelOperation) -> float:
+        if operation in {"scene_proposal", "scene_repair"} and self.scene_timeout_seconds is not None:
+            return self.scene_timeout_seconds
+        return self.analysis_timeout_seconds
 
     def model_route(self, operation: ModelOperation) -> ModelRoute:
         return {

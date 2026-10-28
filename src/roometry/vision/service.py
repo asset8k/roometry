@@ -468,7 +468,7 @@ class AnalysisService:
             # Scene generation permits an initial call and one repair. Each gets
             # the configured per-call deadline; a slow first call must not consume
             # the repair's entire time budget. The total remains bounded.
-            with anyio.fail_after(2 * self.settings.analysis_timeout_seconds):
+            with anyio.fail_after(2 * self.settings.request_timeout("scene_proposal")):
                 return await self._propose(
                     request, owner, isolated_dimensions=isolated_dimensions, allow_ambiguous_axes=allow_ambiguous_axes,
                     assume_missing_dimensions=assume_missing_dimensions,
@@ -652,7 +652,7 @@ class AnalysisService:
             output_limited = False
             repair_failure = None
             try:
-                with anyio.fail_after(self.settings.analysis_timeout_seconds):
+                with anyio.fail_after(self.settings.request_timeout(operation)):
                     response = await self.analyzer.request(payload, operation=operation)
                 try:
                     decoded = response_json(

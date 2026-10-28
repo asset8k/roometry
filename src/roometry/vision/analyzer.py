@@ -168,7 +168,7 @@ class PhotoAnalyzer:
         started, outcome, request_id = perf_counter(), "interrupted", None
         try:
             response = await self._client.with_options(
-                max_retries=0, timeout=self.settings.analysis_timeout_seconds
+                max_retries=0, timeout=self.settings.request_timeout(operation)
             ).responses.create(**payload)
             outcome = (
                 response.status if isinstance(response, Response) else "unexpected_response"

@@ -80,6 +80,40 @@ def test_explicit_sol_construction_remains_available_for_comparison():
     assert settings.model_route('scene_repair').model == 'gpt-6-luna'
 
 
+def test_scene_timeout_is_independent_and_outer_graph_allows_initial_and_repair():
+    from roometry.main import create_app
+    settings = Settings(_env_file=None, analysis_timeout_seconds=150, scene_timeout_seconds=240)
+    assert settings.request_timeout('scene_proposal') == settings.request_timeout('scene_repair') == 240
+    for operation in ('analysis', 'visual_review', 'visual_repair', 'optimization_proposal', 'optimization_review'):
+        assert settings.request_timeout(operation) == 150
+    assert create_app(settings).state.agent_runs.default_limits.step_timeout_seconds == 485
+    legacy = Settings(_env_file=None, analysis_timeout_seconds=12)
+    assert legacy.request_timeout('scene_proposal') == 12
+
+
+@pytest.mark.parametrize('value', [0, -1, 301, float('inf')])
+def test_scene_timeout_remains_bounded(value):
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, scene_timeout_seconds=value)
+
+
+@pytest.mark.anyio
+async def test_scene_sdk_uses_scene_timeout_without_automatic_paid_retries(harness):
+    app, client, calls, actions = harness
+    analysis = await analyzed(harness)
+    app.state.settings.analysis_timeout_seconds = 0.01
+    app.state.settings.scene_timeout_seconds = 0.5
+    async def slow(request, payload):
+        import anyio
+        assert request.extensions['timeout']['read'] == 0.5
+        await anyio.sleep(0.03)
+        return await scene_action()(request, payload)
+    actions.append(slow)
+    response = await client.post('/api/rooms/propose-scene', json=body(analysis, dimensions=confirmed(length_m=4, height_m=2.6)))
+    assert response.json()['status'] == 'ready'
+    assert len(calls) == 2
+
+
 @pytest.mark.anyio
 async def test_output_limit_repairs_with_luna_and_cache_and_revised_dimensions_cannot_reset_initial_construction(harness):
     app, client, calls, actions = harness
