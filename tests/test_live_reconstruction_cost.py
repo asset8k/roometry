@@ -6,6 +6,20 @@ import pytest
 from scripts.live_reconstruction import estimate_cost
 
 
+@pytest.mark.parametrize("model", ["gpt-6.1-terra", "gpt-6.1-terra-test-snapshot"])
+def test_terra_costs_use_its_own_input_output_and_cache_rates(model):
+    report = estimate_cost([{
+        "operation": "scene_proposal", "model": model, "outcome": "completed",
+        "input_tokens": 10_000, "cached_input_tokens": 2000,
+        "cache_write_tokens": 5000, "output_tokens": 1000,
+        "reasoning_tokens": 300,
+        "cache_write_tokens_details": {"ttl_30m_tokens": 3000, "ttl_12h_tokens": 2000},
+    }])
+    # Reasoning is already part of output. Reads/writes are disjoint input.
+    assert report["complete_usage"] and report["unpriced_calls"] == 0
+    assert Decimal(report["estimated_usd"]) == Decimal("0.01685")
+
+
 def test_actual_usage_costs_include_cached_discount_and_failed_output_tokens():
     report = estimate_cost([
         {"operation": "scene_proposal", "model": "gpt-6.1-sol-2026-10-15", "outcome": "incomplete",

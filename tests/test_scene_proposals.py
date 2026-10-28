@@ -185,7 +185,7 @@ async def test_scene_output_budget_and_reasoning_are_separate_from_analysis(
     assert calls[0]["reasoning"] == {"effort": "medium"}
     assert calls[1]["max_output_tokens"] == 12288
     assert calls[0]["model"] == "gpt-6-luna"
-    assert calls[1]["model"] == "gpt-6.1-sol"
+    assert calls[1]["model"] == "gpt-6.1-terra"
     if effort == "default":
         assert "reasoning" not in calls[1]
     else:
@@ -340,7 +340,7 @@ async def test_measurement_confirmation_cached_analysis_and_ready_scene(harness)
     assert len(calls) == 2
     request = calls[-1]
     assert request["store"] is False and request["tools"] == []
-    assert request["model"] == "gpt-6.1-sol"
+    assert request["model"] == "gpt-6.1-terra"
     assert request["text"]["format"]["strict"] is True
     photos = [part for part in request["input"][0]["content"] if part["type"] == "input_image"]
     assert len(photos) == len(analysis["observations"]["image_ids"])

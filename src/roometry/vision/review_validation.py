@@ -11,10 +11,11 @@ from typing import Annotated, Literal
 from pydantic import Field, TypeAdapter, ValidationError
 
 from roometry.scenes.schemas import Note, SceneModel
+from roometry.vision.context_budget import photo_references
+from roometry.vision.review_comparisons import apply_comparisons, parse_comparisons
 from roometry.vision.review_policy import appearance_controls, review_targets
 from roometry.vision.review_render import VIEW_IDS
 from roometry.vision.review_schemas import ReviewCheck, ReviewFinding, ReviewJudgment
-from roometry.vision.review_comparisons import apply_comparisons, parse_comparisons
 
 
 class ReviewEnvelope(SceneModel):
@@ -116,6 +117,9 @@ def validate_judgment(analysis, judgment, scene):
 
 
 def parse_judgment(decoded, analysis, scene, *, require_comparisons=False):
+    # Request-only aliases are decoded before any evidence or identity checks.
+    # Unknown aliases remain invalid; historical UUID citations still work.
+    decoded = photo_references(decoded, analysis.observations.image_ids, decode=True)
     envelope = ReviewEnvelope.model_validate(decoded)
     targets, _ = review_targets(analysis, scene)
     expected = {target["entity_id"]: target for target in targets}

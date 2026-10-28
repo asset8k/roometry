@@ -115,7 +115,7 @@ async def run(runs, owner, uploaded):
     return await runs.execute(state.run_id, owner)
 
 
-async def test_full_graph_compares_original_photos_three_views_and_scene_with_one_luna_review(harness):
+async def test_full_graph_compares_original_photos_three_views_and_scene_with_one_terra_review(harness):
     app, _, calls, actions = harness
     runs, owner, uploaded = await enabled(harness)
     construction(actions)
@@ -126,7 +126,7 @@ async def test_full_graph_compares_original_photos_three_views_and_scene_with_on
     images = [part["image_url"] for part in review["input"][0]["content"] if part["type"] == "input_image"]
     assert sum(image.startswith("data:image/jpeg;") for image in images) == len(uploaded["images"])
     assert sum(image.startswith("data:image/png;") for image in images) == 3
-    assert review["model"] == "gpt-6-luna" and review["reasoning"]["effort"] == "low"
+    assert review["model"] == "gpt-6.1-terra" and review["reasoning"]["effort"] == "low"
     assert not review["store"] and review["tools"] == [] and review["truncation"] == "disabled"
     assert "data:image" not in result.model_dump_json()
     ledger = app.state.analysis_service.analyzer.usage_records
@@ -394,7 +394,7 @@ async def test_review_can_restore_catalog_misinterpreted_wardrobe_after_construc
     assert len(result.base_scene.objects)==5 and not result.proposal.unresolved_entities
     restored=next(obj for obj in result.base_scene.objects if obj.id=="bed_observed")
     assert restored.type=="wardrobe" and restored.placement=="floor" and restored.fixed
-    assert sum(call["model"]=="gpt-6.1-sol" for call in calls)==1 and len(calls)==8
+    assert sum(call["model"]=="gpt-6.1-terra" for call in calls)==2 and len(calls)==8
 
 
 @pytest.mark.parametrize("wall_ids", [[],["window_wall"]])

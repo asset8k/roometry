@@ -244,7 +244,7 @@ async def test_api_restores_opening_and_its_covering_using_one_sparse_luna_repai
     assert response.status_code == 200 and response.json()["status"] == "ready", response.text
     scene = RoomScene.model_validate(response.json()["scene"])
     assert len(scene.objects) == len(scene.openings) == 1 and validate_geometry(scene).valid
-    assert [call["model"] for call in calls] == ["gpt-6-luna", "gpt-6.1-sol", "gpt-6-luna"]
+    assert [call["model"] for call in calls] == ["gpt-6-luna", "gpt-6.1-terra", "gpt-6-luna"]
     context = json.loads(calls[-1]["input"][0]["content"][0]["text"])
     assert context["repair"]["mode"] == "upsert"
     assert set(context["repair"]["editable_entity_ids"]) == {"door_observed", "curtains_observed"}

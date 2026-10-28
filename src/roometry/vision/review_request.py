@@ -4,12 +4,14 @@ import base64
 import json
 
 from roometry.config import Settings
+from roometry.vision.context_budget import photo_reference_schema
 from roometry.vision.errors import AnalysisFailure
 from roometry.vision.evidence import photo_content, strict_schema
 from roometry.vision.proposal_schemas import SceneProposalResponse
+from roometry.vision.review_context import compact_review_context, without_schema_titles
+from roometry.vision.review_policy import review_targets
 from roometry.vision.review_render import RENDER_LIMITATIONS, ReviewView
 from roometry.vision.review_schemas import ReviewJudgment
-from roometry.vision.review_policy import review_targets
 from roometry.vision.schemas import ReconstructionConstraints, RoomAnalysisResponse
 
 REVIEW_INSTRUCTIONS = """Review a Roometry BASE reconstruction against ALL original room photos.
@@ -125,8 +127,12 @@ def build_review_request(settings: Settings, analysis: RoomAnalysisResponse, pro
         "review_priority": ["major placement and facing", "major proportions", "visible material colors", "secondary inventory", "minor accessories"],
         "existing_limitations": proposal.warnings,
     }
-    content = [{"type": "input_text", "text": json.dumps(context, ensure_ascii=True)}]
-    content.extend(photo_content(analysis.observations.image_ids, images, settings.analysis_max_request_bytes))
+    image_ids = analysis.observations.image_ids
+    if settings.review_compact_context:
+        context = compact_review_context(context, image_ids)
+        image_ids = context["observations"]["image_ids"]
+    content = [{"type": "input_text", "text": json.dumps(context, ensure_ascii=True, separators=(",", ":"))}]
+    content.extend(photo_content(image_ids, images, settings.analysis_max_request_bytes))
     for view in views:
         content.extend([
             {"type": "input_text", "text": f"DIAGNOSTIC SCENE VIEW: {view.view_id}. This is a reconstruction render, not an original room photo."},
@@ -147,6 +153,8 @@ def build_review_request(settings: Settings, analysis: RoomAnalysisResponse, pro
         schema["$defs"]["RelationComparison"]["properties"]["target_id"]["enum"] = ids
     else:
         schema["$defs"]["ReviewFinding"]["properties"]["entity_ids"]["maxItems"] = 0
+    if settings.review_compact_context:
+        schema = without_schema_titles(photo_reference_schema(schema, analysis.observations.image_ids))
     payload = {
         "model": settings.model_route("visual_review").model,
         "instructions": REVIEW_INSTRUCTIONS,

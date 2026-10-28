@@ -7,7 +7,13 @@ from pydantic import ValidationError
 from roometry.config import Settings
 from tests import test_vision_api as api
 from tests.test_agent_tools import decision, photo, prepared
-from tests.test_scene_proposals import analyzed, body, confirmed, output_limited_scene, scene_action
+from tests.test_scene_proposals import (
+    analyzed,
+    body,
+    confirmed,
+    output_limited_scene,
+    scene_action,
+)
 
 anyio_backend = api.anyio_backend
 isolated_environment = api.isolated_environment
@@ -18,13 +24,13 @@ def test_default_stage_routes_and_visual_review_configuration_do_not_enable_call
     settings = Settings(_env_file=None)
     expected = {
         'analysis': ('gpt-6-luna', 'medium'),
-        'scene_proposal': ('gpt-6.1-sol', 'medium'),
+        'scene_proposal': ('gpt-6.1-terra', 'medium'),
         'scene_repair': ('gpt-6-luna', 'medium'),
-        'visual_review': ('gpt-6-luna', 'low'),
+        'visual_review': ('gpt-6.1-terra', 'low'),
         'visual_repair': ('gpt-6-luna', 'medium'),
         'agent_decision': ('gpt-6-luna', 'low'),
         'room_assessment': ('gpt-6-luna', 'low'),
-        'optimization_proposal': ('gpt-6-luna', 'low'),
+        'optimization_proposal': ('gpt-6.1-terra', 'low'),
         'optimization_review': ('gpt-6-luna', 'low'),
     }
     for operation, (model, effort) in expected.items():
@@ -35,23 +41,27 @@ def test_default_stage_routes_and_visual_review_configuration_do_not_enable_call
 def test_stage_overrides_take_precedence_over_the_legacy_economical_fallback():
     settings = Settings(
         _env_file=None, model_name='economy-default',
-        analysis_model_name='analysis-test', review_model_name='review-test',
+        analysis_model_name='analysis-test', review_model_name='review-test', visual_review_model_name='visual-review-test',
         scene_model_name='construction-test', scene_repair_model_name='repair-test',
+        optimization_model_name='optimization-test',
     )
     assert settings.model_route('agent_decision').model == 'economy-default'
     assert settings.model_route('analysis').model == 'analysis-test'
-    assert settings.model_route('visual_review').model == 'review-test'
+    assert settings.model_route('visual_review').model == 'visual-review-test'
+    assert settings.model_route('room_assessment').model == 'review-test'
+    assert settings.model_route('optimization_review').model == 'review-test'
+    assert settings.model_route('optimization_proposal').model == 'optimization-test'
     assert settings.model_route('scene_repair').model == 'repair-test'
     assert settings.model_route('scene_proposal').model == 'construction-test'
 
 
-@pytest.mark.parametrize('field', ['analysis_model_name', 'agent_model_name', 'review_model_name', 'scene_repair_model_name', 'model_name'])
+@pytest.mark.parametrize('field', ['analysis_model_name', 'agent_model_name', 'review_model_name', 'visual_review_model_name', 'optimization_model_name', 'scene_repair_model_name', 'model_name'])
 def test_sol_cannot_silently_enter_economical_stages(field):
     with pytest.raises(ValidationError, match='Sol is reserved'):
         Settings(_env_file=None, **{field: 'gpt-6.1-sol'})
 
 
-@pytest.mark.parametrize('field', ['analysis_model_name', 'agent_model_name', 'review_model_name', 'scene_repair_model_name', 'scene_model_name'])
+@pytest.mark.parametrize('field', ['analysis_model_name', 'agent_model_name', 'review_model_name', 'visual_review_model_name', 'optimization_model_name', 'scene_repair_model_name', 'scene_model_name'])
 def test_blank_explicit_stage_models_are_rejected(field):
     with pytest.raises(ValidationError, match='must not be blank'):
         Settings(_env_file=None, **{field: '  '})
@@ -59,19 +69,26 @@ def test_blank_explicit_stage_models_are_rejected(field):
 
 def test_sol_incompatible_effort_fails_before_any_provider_request():
     with pytest.raises(ValidationError, match='reasoning effort'):
-        Settings(_env_file=None, scene_reasoning_effort='none')
+        Settings(_env_file=None, scene_model_name='gpt-6.1-sol', scene_reasoning_effort='none')
+    assert Settings(_env_file=None, scene_model_name='gpt-6.1-terra', scene_reasoning_effort='none')
     assert Settings(_env_file=None, scene_model_name='gpt-6-luna', scene_reasoning_effort='none')
 
 
+def test_explicit_sol_construction_remains_available_for_comparison():
+    settings = Settings(_env_file=None, scene_model_name='gpt-6.1-sol')
+    assert settings.model_route('scene_proposal').model == 'gpt-6.1-sol'
+    assert settings.model_route('scene_repair').model == 'gpt-6-luna'
+
+
 @pytest.mark.anyio
-async def test_output_limit_repairs_with_luna_and_cache_and_revised_dimensions_cannot_reset_sol(harness):
+async def test_output_limit_repairs_with_luna_and_cache_and_revised_dimensions_cannot_reset_initial_construction(harness):
     app, client, calls, actions = harness
     analysis = await analyzed(harness)
     actions.extend([output_limited_scene(), scene_action()])
     request = body(analysis, dimensions=confirmed(length_m=4, height_m=2.6))
     result = await client.post('/api/rooms/propose-scene', json=request)
     assert result.status_code == 200 and result.json()['status'] == 'ready'
-    assert [call['model'] for call in calls] == ['gpt-6-luna', 'gpt-6.1-sol', 'gpt-6-luna']
+    assert [call['model'] for call in calls] == ['gpt-6-luna', 'gpt-6.1-terra', 'gpt-6-luna']
     assert all(call['reasoning'] == {'effort': 'medium'} for call in calls)
     assert (await client.post('/api/rooms/propose-scene', json=request)).json() == result.json()
     changed = await client.post('/api/rooms/propose-scene', json=body(analysis, dimensions=confirmed(length_m=5, height_m=2.6)))
@@ -89,7 +106,7 @@ async def test_output_limit_repairs_with_luna_and_cache_and_revised_dimensions_c
 
 @pytest.mark.anyio
 @pytest.mark.parametrize('kind', ['timeout', 'connection', 'provider_error'])
-async def test_ambiguous_or_failed_sol_call_consumes_its_allowance_before_dispatch(harness, kind):
+async def test_ambiguous_or_failed_construction_call_consumes_its_allowance_before_dispatch(harness, kind):
     app, client, calls, actions = harness
     analysis = await analyzed(harness)
 
@@ -105,11 +122,11 @@ async def test_ambiguous_or_failed_sol_call_consumes_its_allowance_before_dispat
     first = await client.post('/api/rooms/propose-scene', json=request)
     assert first.status_code in {503, 504} and len(calls) == 2
     failed_record = app.state.analysis_service.analyzer.usage_records[-1]
-    assert failed_record.model == 'gpt-6.1-sol' and failed_record.total_tokens is None
+    assert failed_record.model == 'gpt-6.1-terra' and failed_record.total_tokens is None
     actions.append(scene_action())
     second = await client.post('/api/rooms/propose-scene', json=request)
     assert second.status_code == 200 and second.json()['status'] == 'ready'
-    assert [call['model'] for call in calls] == ['gpt-6-luna', 'gpt-6.1-sol', 'gpt-6-luna']
+    assert [call['model'] for call in calls] == ['gpt-6-luna', 'gpt-6.1-terra', 'gpt-6-luna']
     assert 'PRIVATE' not in first.text
 
 
@@ -131,7 +148,7 @@ async def test_entire_graph_records_model_and_usage_for_decisions_analysis_and_r
     assert [r.operation for r in records] == [
         'agent_decision', 'analysis', 'agent_decision', 'scene_proposal', 'scene_repair', 'agent_decision',
     ]
-    assert sum(r.model == 'gpt-6.1-sol' for r in records) == 1
+    assert sum(r.model == 'gpt-6.1-terra' for r in records) == 1
     assert sum(r.input_tokens for r in records) == result.usage.input_tokens
     assert sum(r.output_tokens for r in records) == result.usage.output_tokens
     assert all(r.run_id == initial.run_id for r in records)
@@ -149,12 +166,12 @@ async def test_record_distinguishes_requested_model_from_provider_snapshot(harne
 
     async def snapshot(request, payload):
         result = (await scene_action()(request, payload)).json()
-        result['model'] = 'gpt-6.1-sol-test-snapshot'
+        result['model'] = 'gpt-6.1-terra-test-snapshot'
         return httpx.Response(200, json=result)
 
     actions.append(snapshot)
     result = await client.post('/api/rooms/propose-scene', json=body(analysis, dimensions=confirmed(length_m=4, height_m=2.6)))
     assert result.json()['status'] == 'ready'
     for record in (app.state.analysis_service.usage_records[-1], app.state.analysis_service.analyzer.usage_records[-1]):
-        assert record.requested_model == 'gpt-6.1-sol'
-        assert record.model == 'gpt-6.1-sol-test-snapshot'
+        assert record.requested_model == 'gpt-6.1-terra'
+        assert record.model == 'gpt-6.1-terra-test-snapshot'

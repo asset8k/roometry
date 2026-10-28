@@ -8,11 +8,11 @@ No extra model is called for evaluation, costing or rendering.
 
 import argparse
 import asyncio
+import json
+import mimetypes
 from dataclasses import asdict
 from datetime import UTC, datetime
 from decimal import Decimal
-import json
-import mimetypes
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from time import perf_counter
@@ -29,10 +29,11 @@ from roometry.optimization.schemas import OptimizationRun
 from roometry.scenes.validation import validate_geometry
 from roometry.vision.review_render import render_views
 
-# Standard API USD / million tokens, verified 2026-10-24. Reads and writes are
+# Standard API USD / million tokens, verified 2026-10-28. Reads and writes are
 # disjoint subsets of input. Write prices are total rates, not surcharges.
 PRICES = {"gpt-6-luna": ("0.10", "0.01", "0.50", "0.125", "0.25"),
-          "gpt-6.1-sol": ("2", "0.10", "10", "2.50", "5")}
+          "gpt-6.1-sol": ("2", "0.10", "10", "2.50", "5"),
+          "gpt-6.1-terra": ("1", "0.05", "5", "1.25", "2.50")}
 PRICE_SOURCE = "https://developers.openai.com/api/docs/pricing"
 
 
@@ -78,7 +79,7 @@ def estimate_cost(records, responses=()):
         else:
             total += cost
         rows.append({**entry, "estimated_usd": str(cost) if cost is not None else None})
-    return {"currency": "USD", "pricing_date": "2026-10-24", "pricing_source": PRICE_SOURCE,
+    return {"currency": "USD", "pricing_date": "2026-10-28", "pricing_source": PRICE_SOURCE,
             "standard_rates_per_million": PRICES, "estimated_usd": str(total),
             "unpriced_calls": unknown, "complete_usage": unknown == 0,
             "note": "Estimate from provider-reported tokens at standard short-context rates; not a billing invoice. Unknown usage is excluded, so an incomplete total is a lower bound. Includes image and reasoning tokens in reported totals; no second charge for them.",
@@ -145,11 +146,11 @@ async def run(args):
     directory.mkdir(parents=True, exist_ok=False)  # Never replace an earlier run.
     settings = Settings()
     operations = ("analysis", "scene_proposal", "scene_repair", "visual_review", "visual_repair", "agent_decision", "room_assessment", "optimization_proposal", "optimization_review")
-    expected = {op: "gpt-6.1-sol" if op == "scene_proposal" else "gpt-6-luna" for op in operations}
+    expected = {op: "gpt-6.1-terra" if op in {"scene_proposal", "visual_review", "optimization_proposal"} else "gpt-6-luna" for op in operations}
     if not settings.analysis_enabled or not settings.visual_review_enabled or not settings.openai_api_key:
         raise RuntimeError("Enable analysis and visual review, and configure the API key before this test.")
     if any(settings.model_route(op).model != model for op, model in expected.items()):
-        raise RuntimeError("This check expects one Sol 6.1 construction and Luna for all other operations.")
+        raise RuntimeError("This check expects Terra 6.1 construction, visual review and improvement proposals, with Luna for all other operations.")
     save(directory, "manifest.json", {"started_at": datetime.now(UTC).isoformat(),
          "photo_files": [path.name for path in args.photos], "room_type": args.room_type,
          "dimensions_m": [args.width, args.length, args.height],
@@ -157,12 +158,14 @@ async def run(args):
          "routes": {op: asdict(settings.model_route(op)) for op in operations},
          "cost_controls": {"deterministic_routing": settings.agent_deterministic_routing,
                            "compact_context": settings.scene_compact_context,
+                           "compact_review_context": settings.review_compact_context,
                            "construction_photo_target": settings.scene_photo_target,
                            "prompt_cache_mode": settings.model_prompt_cache_mode},
          "one_generation_only": True, "optimization_focus": getattr(args, "optimize", None),
          "reference_injected_into_prompts": False})
     case = ReconstructionCase.model_validate_json(args.case.read_text())
     started, responses, snapshots, answers = perf_counter(), [], [], []
+    phase_timings = {}
     with TemporaryDirectory(prefix="roometry-live-") as temporary:
         settings.upload_storage_dir = Path(temporary) / "inputs"
         app = create_app(settings)
@@ -225,7 +228,9 @@ async def run(args):
                     for label, proposal, scene in [("final", state.proposal, state.working_scene),
                         ("pre-review", None, None)]:
                         if label == "pre-review" and snapshots:
-                            from roometry.vision.proposal_schemas import SceneProposalResponse
+                            from roometry.vision.proposal_schemas import (
+                                SceneProposalResponse,
+                            )
                             proposal = SceneProposalResponse.model_validate_json(json.dumps(snapshots[-1]))
                             scene = proposal.scene
                         report = evaluate_reconstruction(case, state.analysis, scene, unresolved=proposal.unresolved_entities if proposal else [])
@@ -234,14 +239,17 @@ async def run(args):
                             save(directory, label + "-geometry.json", validate_geometry(scene).model_dump(mode="json"))
                             for view in render_views(scene):
                                 (directory / f"{label}-{view.view_id}.png").write_bytes(view.image)
+                    phase_timings["reconstruction_elapsed_seconds"] = round(perf_counter() - started, 2)
                     if getattr(args, "optimize", None):
+                        optimization_started = perf_counter()
                         await optimize_once(client, state, directory, analyzer, args.optimize)
+                        phase_timings["optimization_elapsed_seconds"] = round(perf_counter() - optimization_started, 2)
                     print(json.dumps({"status": state.status, "objects": len(state.working_scene.objects) if state.working_scene else 0,
                           "openings": len(state.working_scene.openings) if state.working_scene else 0,
                           "elapsed_seconds": round(perf_counter()-started, 2)}, indent=2), flush=True)
         finally:
             save(directory, "cost.json", estimate_cost([asdict(record) for record in analyzer.usage_records], responses))
-            save(directory, "timing.json", {"elapsed_seconds": round(perf_counter()-started, 2)})
+            save(directory, "timing.json", {**phase_timings, "elapsed_seconds": round(perf_counter()-started, 2)})
 
 
 if __name__ == "__main__":

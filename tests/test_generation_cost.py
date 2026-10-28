@@ -1,8 +1,8 @@
 """Economical routing and compact evidence over mocked HTTP; never paid calls."""
 
-from itertools import chain
-from base64 import b64decode
 import json
+from base64 import b64decode
+from itertools import chain
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -11,10 +11,10 @@ import pytest
 
 from roometry.agents.state import AgentState
 from roometry.config import Settings
-from roometry.vision.context_budget import select_photo_ids, photo_references
+from roometry.vision.context_budget import photo_references, select_photo_ids
 from roometry.vision.proposal_request import build_proposal_request
-from roometry.vision.proposals import issue
 from roometry.vision.proposal_schemas import SceneDraft
+from roometry.vision.proposals import issue
 from roometry.vision.recovery import actionable_repair
 from tests import test_vision_api as api
 from tests.test_agent_tools import photo, prepared
@@ -36,7 +36,7 @@ async def test_default_economical_graph_analyzes_constructs_and_finishes_without
     assert response.status_code == 200, response.text
     state = AgentState.model_validate_json(response.text)
     assert state.status == 'completed' and state.proposal.validation.valid
-    assert [c['model'] for c in calls] == ['gpt-6-luna', 'gpt-6.1-sol']
+    assert [c['model'] for c in calls] == ['gpt-6-luna', 'gpt-6.1-terra']
     assert state.usage.model_calls == 2
     assert state.usage.tool_calls == 2
     assert all(c['prompt_cache_options'] == {'mode': 'explicit'} for c in calls)
@@ -71,10 +71,10 @@ async def test_free_clarification_interrupt_and_answer_do_not_repeat_analysis(ha
 
 
 async def test_default_full_flow_reviews_rates_then_optimizes_only_after_user_choice(harness):
-    from tests.test_visual_review import review_action
-    from tests.test_room_assessment import photo_assessment
-    from tests.test_optimization_execution import provider_action, proposal, review
+    from tests.test_optimization_execution import proposal, provider_action, review
     from tests.test_optimization_runs import request
+    from tests.test_room_assessment import photo_assessment
+    from tests.test_visual_review import review_action
 
     app, client, calls, actions = harness
     app.state.settings.agent_deterministic_routing = True
@@ -101,6 +101,7 @@ async def test_default_full_flow_reviews_rates_then_optimizes_only_after_user_ch
     assert improved.status_code == 200, improved.text
     assert improved.json()['status'] == 'completed'
     assert [r.operation for r in ledger][-2:] == ['optimization_proposal', 'optimization_review']
+    assert [r.model for r in ledger][-2:] == ['gpt-6.1-terra', 'gpt-6-luna']
     assert len(calls) == 6 and not actions
     assert (await runs.read(source.run_id, owner)) == source
     assert (await client.post(path, json=body)).json() == improved.json()

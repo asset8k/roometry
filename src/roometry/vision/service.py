@@ -624,7 +624,7 @@ class AnalysisService:
         repair_failure: AnalysisFailure | None = None
         while state.scene_attempts < 2:
             # Reservation is shared by every run/retry using this analysis.
-            # An ambiguous first request still spends the sole Sol allowance.
+            # An ambiguous first request still spends the initial construction allowance.
             operation: Literal["scene_proposal", "scene_repair"] = (
                 "scene_proposal" if state.scene_attempts == 0 else "scene_repair"
             )

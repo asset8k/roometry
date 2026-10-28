@@ -1,26 +1,30 @@
 """Actual bounded LangGraph + Responses SDK; all provider responses are mocked."""
 
+import json
 from math import pi
 from types import SimpleNamespace
 from uuid import uuid4
 
 import anyio
 import httpx
-import json
 import pytest
 from jsonschema import Draft202012Validator
 
 from roometry.agents.state import RunLimits
 from roometry.optimization.policy import evaluate
 from roometry.optimization.runs import OptimizationRuns
-from roometry.optimization.schemas import CandidateProposal, OptimizationRun, StartOptimizationRequest
+from roometry.optimization.schemas import (
+    CandidateProposal,
+    OptimizationRun,
+    StartOptimizationRequest,
+)
 from roometry.scenes.hashing import scene_hash
 from roometry.scenes.validation import validate_geometry
 from roometry.vision.schemas import ReconstructionConstraints
 from tests import test_vision_api as api
-from tests.test_optimization_runs import reconstructed, request
 from tests.test_geometry import obj
 from tests.test_layout_scoring import case
+from tests.test_optimization_runs import reconstructed, request
 
 anyio_backend = api.anyio_backend
 isolated_environment = api.isolated_environment
@@ -40,7 +44,8 @@ def proposal(changes=None, *, finish=True):
 
 def provider_action(data, name='optimization_proposal', failure=None):
     async def action(request, payload):
-        assert payload['model'] == 'gpt-6-luna' and payload['reasoning'] == {'effort': 'low'}
+        expected_model = 'gpt-6.1-terra' if name == 'optimization_proposal' else 'gpt-6-luna'
+        assert payload['model'] == expected_model and payload['reasoning'] == {'effort': 'low'}
         assert payload['store'] is False and payload['tools'] == []
         assert payload['text']['format']['name'] == name
         if failure == 'timeout': raise httpx.ReadTimeout('PRIVATE_ERROR', request=request)
@@ -175,7 +180,8 @@ async def test_duplicate_execution_and_cancellation_during_provider_call_do_not_
 
 
 def policy_run(scene, focus='openness', budget=None):
-    from datetime import datetime, UTC, timedelta
+    from datetime import UTC, datetime, timedelta
+
     from roometry.optimization.schemas import OptimizationPreferences
     now = datetime.now(UTC)
     return OptimizationRun(run_id=str(uuid4()), source_run_id=str(uuid4()), input_id=str(uuid4()),
@@ -283,8 +289,8 @@ async def test_aborted_execution_is_cancelled_without_replaying_an_ambiguous_pai
 
 
 def test_repeating_existing_material_colors_cannot_claim_an_improvement():
-    from tests.test_agent_graph import Room
     from roometry.vision.review_policy import appearance_controls
+    from tests.test_agent_graph import Room
     scene = Room().proposal().scene
     desk = next(o for o in scene.objects if o.type == 'desk')
     controls = appearance_controls(desk)

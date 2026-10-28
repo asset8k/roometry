@@ -66,8 +66,12 @@ async def test_targeted_review_moves_support_group_and_restores_color_or_keeps_p
             if defect=="wrong_direction": obj["position"]["z"]=2.3
             if defect=="insufficient_progress": obj["position"].update(x=3.3, z=1.6)
         old=next(obj for obj in context["observations"]["objects"] if obj["id"]=="chair_a")
+        baseline = context["appearance_revision_baselines"][0]
+        assert baseline["entity_id"] == "chair_a" and baseline["previous_value"] == old.get("color")
+        assert "checks" not in context["visual_review"] and "findings" not in context["visual_review"]
+        assert set(context["appearance_controls"]) == {"desk_observed", "chair_a"}
         patch={"wall_assignments":[],"openings":[],"objects":items,"assumptions":[],"warnings":[],"appearance_corrections":[{
-            "entity_id":"chair_a","field":"color","previous_value":old.get("color"),
+            "entity_id":"chair_a","field":"color","previous_value":baseline["previous_value"],
             "revised_value":"#FFFF00" if defect=="wrong_color" else "#28558A",
             "reason":"The original photo shows blue upholstery, independently of the black frame.","source_image_ids":old["source_image_ids"],
         }]}
@@ -251,7 +255,7 @@ def test_new_review_schema_requires_the_complete_bounded_checklist():
         if item.get("type")=="object":
             assert set(item["required"])==set(item["properties"])
             assert not item["additionalProperties"]
-    assert payload["model"]=="gpt-6-luna"
+    assert payload["model"]=="gpt-6.1-terra"
 
 
 async def test_limited_review_keeps_scope_warning_even_when_model_fills_all_limitations(harness,monkeypatch):

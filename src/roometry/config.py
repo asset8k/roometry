@@ -96,13 +96,17 @@ class Settings(BaseSettings):
     analysis_model_name: str | None = Field(default=None, min_length=1, max_length=128)
     agent_model_name: str | None = Field(default=None, min_length=1, max_length=128)
     review_model_name: str | None = Field(default=None, min_length=1, max_length=128)
+    # Reconstruction review is independent of ratings and optimization review.
+    visual_review_model_name: str = Field(default="gpt-6.1-terra", min_length=1, max_length=128)
+    optimization_model_name: str = Field(default="gpt-6.1-terra", min_length=1, max_length=128)
     scene_repair_model_name: str | None = Field(default=None, min_length=1, max_length=128)
-    scene_model_name: str = Field(default="gpt-6.1-sol", min_length=1, max_length=128)
+    scene_model_name: str = Field(default="gpt-6.1-terra", min_length=1, max_length=128)
     analysis_reasoning_effort: ReasoningEffort = "medium"
     # A bounded material/relationship checklist needs room for its JSON output;
     # medium reasoning can consume the review allowance before checks finish.
     review_reasoning_effort: ReasoningEffort = "low"
     visual_review_enabled: bool = True
+    review_compact_context: bool = True
     review_max_output_tokens: int = Field(default=6144, ge=512, le=8192)
     room_assessment_enabled: bool = True
     assessment_max_output_tokens: int = Field(default=1536, ge=512, le=4096)
@@ -148,7 +152,7 @@ class Settings(BaseSettings):
         return value
 
     @field_validator(
-        "analysis_model_name", "agent_model_name", "review_model_name",
+        "analysis_model_name", "agent_model_name", "review_model_name", "visual_review_model_name", "optimization_model_name",
         "scene_repair_model_name", "scene_model_name", mode="before",
     )
     @classmethod
@@ -168,10 +172,10 @@ class Settings(BaseSettings):
                 self.agent_model_name or self.model_name, self.agent_reasoning_effort
             ),
             "visual_review": ModelRoute(
-                self.review_model_name or self.model_name, self.review_reasoning_effort
+                self.visual_review_model_name, self.review_reasoning_effort
             ),
             "room_assessment": ModelRoute(self.review_model_name or self.model_name, "low"),
-            "optimization_proposal": ModelRoute(self.agent_model_name or self.model_name, "low"),
+            "optimization_proposal": ModelRoute(self.optimization_model_name, "low"),
             "optimization_review": ModelRoute(self.review_model_name or self.model_name, "low"),
             "visual_repair": ModelRoute(
                 self.scene_repair_model_name or self.model_name, self.scene_repair_reasoning_effort
