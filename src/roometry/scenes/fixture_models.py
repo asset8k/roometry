@@ -6,6 +6,7 @@ supports. These component definitions are inputs for the later geometry update.
 """
 
 from dataclasses import replace
+from math import cos, pi, sin
 from types import MappingProxyType
 
 from roometry.scenes.assets import ObjectType, Placement
@@ -89,7 +90,8 @@ def frame(
 
 def faucet(deck_y: float, *, z: float = -0.4, top: float = 1) -> list[FurniturePart]:
     upright_top = top - 0.025
-    return [
+    bend = min(0.055, (upright_top - deck_y) / 3)
+    p = [
         part(
             "tap_base",
             (0.12, 0.025, 0.14),
@@ -97,10 +99,10 @@ def faucet(deck_y: float, *, z: float = -0.4, top: float = 1) -> list[FurnitureP
             "chrome",
             shape="cylinder",
         ),
-        rod("tap_riser", (0, deck_y + 0.02, z), (0, upright_top, z), 0.024, "chrome"),
+        rod("tap_riser", (0, deck_y + 0.02, z), (0, upright_top - bend, z), 0.024, "chrome"),
         rod(
             "tap_spout",
-            (0, upright_top, z),
+            (0, upright_top, z + bend),
             (0, upright_top, z + 0.24),
             0.024,
             "chrome",
@@ -113,7 +115,36 @@ def faucet(deck_y: float, *, z: float = -0.4, top: float = 1) -> list[FurnitureP
             shape="cylinder",
         ),
         part("tap_lever", (0.16, 0.018, 0.035), (0.04, top - 0.009, z), "chrome"),
+        part("tap_aerator", (0.032, 0.006, 0.032), (0, top - 0.078, z + 0.24),
+             "inset", shape="cylinder", collision=False),
     ]
+    # A continuous elbow, rather than two cylinders crossing at a sharp corner.
+    for i in range(5):
+        a, b = i * pi / 10, (i + 1) * pi / 10
+        p.append(rod(f"tap_elbow_{i}",
+                     (0, upright_top - bend + bend * sin(a), z + bend - bend * cos(a)),
+                     (0, upright_top - bend + bend * sin(b), z + bend - bend * cos(b)),
+                     0.024, "chrome"))
+    return p
+
+
+def panel_front(name: str, size: Point, at: Point) -> list[FurniturePart]:
+    """Recessed cabinet field and joined rails, within the cabinet envelope.
+
+    The backing remains the collision component. The small raised details do not
+    create support areas or turn the space behind an open cabinet into a solid.
+    """
+    w, h, d = size
+    x, y, z = at
+    rail_w, rail_h = w * .075, min(.055, h * .10)
+    face_z = z + d / 2 + .006
+    p = [part(name, size, at, radius=.004)]
+    for side in (-1, 1):
+        p += [part(f"{name}_stile_{side}", (rail_w, h, .012),
+                   (x + side * (w - rail_w) / 2, y, face_z), radius=.002, collision=False),
+              part(f"{name}_rail_{side}", (w - 2 * rail_w, rail_h, .012),
+                   (x, y + side * (h - rail_h) / 2, face_z), radius=.002, collision=False)]
+    return p
 
 
 def base_cabinet(
@@ -147,12 +178,12 @@ def base_cabinet(
     else:
         door_h = top_y - 0.20
         for side in (-1, 1):
+            p += panel_front(
+                f"door_{side}",
+                (0.44, door_h, 0.035),
+                (side * 0.227, 0.15 + door_h / 2, 0.4425),
+            )
             p += [
-                part(
-                    f"door_{side}",
-                    (0.44, door_h, 0.035),
-                    (side * 0.227, 0.15 + door_h / 2, 0.4425),
-                ),
                 part(
                     f"pull_{side}",
                     (0.18, 0.018, 0.035),
@@ -254,6 +285,10 @@ def sink_counter() -> Model:
             shape="cylinder",
             collision=False,
         ),
+        part("drain_rim", (.105, .008, .105), (0, .554, 0), "chrome",
+             shape="tube", wall_thickness=.09, collision=False),
+        part("overflow", (.07, .018, .004), (0, .69, -.243), "inset",
+             radius=.002, collision=False),
     ]
     p += faucet(0.74)
     return p, [surface(piece) for piece in deck]
@@ -659,8 +694,10 @@ def toilet(placement: Placement) -> list[FurniturePart]:
                 (0.50, 0.26, 0.60),
                 (0, 0.13, 0.06),
                 "primary_ceramic",
-                radius=0.06,
+                shape="cylinder", top_scale=.76, bottom_scale=.92,
             ),
+            part("pedestal_neck", (.62, .22, .56), (0, .265, .08),
+                 "primary_ceramic", shape="ellipsoid"),
             part(
                 "cistern",
                 (0.84, 0.50, 0.22),

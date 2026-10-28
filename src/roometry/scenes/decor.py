@@ -354,6 +354,26 @@ def mirror(placement: Placement) -> list[FurniturePart]:
     return p
 
 
+def leaf_blade(
+    name: str, size: Point, at: Point, rotation: Point, material: MaterialRole = "foliage"
+) -> list[FurniturePart]:
+    """Thin curved blade with a midrib; decoration may overhang its solid pot."""
+    rx, ry, rz = rotation
+    cx, cy, cz, sx, sy, sz = cos(rx), cos(ry), cos(rz), sin(rx), sin(ry), sin(rz)
+    matrix = ((cy * cz, -cy * sz, sy),
+              (cx * sz + sx * sy * cz, cx * cz - sx * sy * sz, -sx * cy),
+              (sx * sz - cx * sy * cz, sx * cz + cx * sy * sz, cx * cy))
+
+    def world(local: Point) -> Point:
+        return tuple(center + sum(a * b for a, b in zip(row, local))
+                     for center, row in zip(at, matrix))
+
+    return [part(name, size, at, material, shape="ellipsoid", rotation=rotation, collision=False),
+            rod(f"{name}_midrib", world((0, -size[1] * .3, size[2] * .41)),
+                world((0, size[1] * .05, size[2] * .51)), .0015,
+                "foliage_dark", collision=False)]
+
+
 def plant(placement: Placement) -> list[FurniturePart]:
     p = [
         part(
@@ -380,10 +400,12 @@ def plant(placement: Placement) -> list[FurniturePart]:
             shape="cylinder",
             collision=False,
         ),
+        part("pot_lip", (.62, .014, .62), (0, .293, 0), "primary_ceramic",
+             shape="tube", wall_thickness=.045, collision=False),
     ]
     if placement == "floor":
         p.append(rod("trunk", (0, 0.25, 0), (0.015, 0.85, 0), 0.018, "wood"))
-        levels = ((0.48, 0.24), (0.63, 0.23), (0.78, 0.20), (0.84, 0.13))
+        levels = ((0.48, 0.26), (0.63, 0.29), (0.78, 0.24), (0.85, 0.14))
     else:
         levels = ((0.43, 0.23), (0.60, 0.24), (0.76, 0.18), (0.84, 0.12))
     for level, (y, reach) in enumerate(levels):
@@ -400,17 +422,11 @@ def plant(placement: Placement) -> list[FurniturePart]:
                     collision=False,
                 )
             )
-            p.append(
-                part(
-                    f"leaf_{level}_{j}",
-                    (0.17, 0.22 if level < 3 else 0.19, 0.045),
-                    (x, y + 0.025, z),
-                    "foliage" if j % 2 else "foliage_dark",
-                    shape="ellipsoid",
-                    rotation=(0.35 * sin(angle), angle, -0.55 * cos(angle)),
-                    collision=False,
-                )
-            )
+            p += leaf_blade(f"leaf_{level}_{j}",
+                            (.16 + .015 * (j % 2), .23 if level < 3 else .17, .018),
+                            (x, y + .025, z),
+                            (.85 + .12 * sin(angle), angle, -.45 * cos(angle)),
+                            "foliage" if j % 2 else "foliage_dark")
     return p
 
 

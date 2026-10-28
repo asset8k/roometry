@@ -257,7 +257,7 @@ def sofa(
     depth, z = (0.56, -0.22) if chaise else (1, 0)
     p += [
         part("base", (1, 0.22, depth), (0, 0.24, z), "primary_dark", radius=0.035),
-        part("back_frame", (0.88, 0.63, 0.15), (0, 0.685, -0.425), radius=0.045),
+        part("back_frame", (0.88, 0.63, 0.15), (0, 0.685, -0.425), radius=0.055),
     ]
     for side in (-1, 1):
         p.append(
@@ -265,7 +265,7 @@ def sofa(
                 f"arm_{side}",
                 (0.12, 0.44, depth - 0.04),
                 (side * 0.44, 0.51, z),
-                radius=0.045,
+                radius=0.055,
             )
         )
     count = 1 if armchair else 3
@@ -276,16 +276,17 @@ def sofa(
             f"seat_{i}",
             (0.74 / count - 0.012, 0.18, depth - 0.19),
             (x, 0.43, z + 0.07),
-            radius=0.035,
+            radius=0.05,
         )
         seats.append(seat)
         p += [
             seat,
             part(
                 f"back_cushion_{i}",
-                (0.74 / count - 0.012, 0.4, 0.17),
-                (x, 0.75, -0.32),
-                radius=0.045,
+                (0.74 / count - 0.012, 0.38, 0.19),
+                (x, 0.745, -0.30),
+                radius=0.055,
+                rotation=(-0.12, 0, 0),
             ),
         ]
     if chaise:
@@ -294,7 +295,7 @@ def sofa(
             "chaise_seat",
             (0.74 / count - 0.012, 0.18, 0.46),
             (x, 0.43, 0.27),
-            radius=0.025,
+            radius=0.05,
         )
         p += [
             part(
@@ -316,6 +317,13 @@ def sofa(
         p[2] = replace(p[2], at=(-0.41, 0.065, -0.02))
         p[3] = replace(p[3], at=(0.41, 0.065, -0.02))
         seats.append(chaise_seat)
+    # A narrow welt at the lower cushion edge adds upholstery detail without
+    # moving the flat seating plane or filling the empty corner of a sectional.
+    for seat in seats:
+        p.append(part(f"{seat.name}_welt",
+                      (seat.size[0] - .012, .012, seat.size[2] - .018),
+                      (seat.at[0], seat.at[1] - .073, seat.at[2]),
+                      "primary_dark", radius=.005, collision=False))
     return p, [surface(s, purpose="seating") for s in seats]
 
 

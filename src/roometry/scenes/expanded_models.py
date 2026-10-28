@@ -15,9 +15,9 @@ from roometry.scenes.furniture import (
 )
 from roometry.scenes.fixture_models import (
     FIXTURE_CATALOG, base_cabinet, sink_counter, basin,
-    cooker, toilet, bathtub, oven_front,
+    cooker, toilet, bathtub, oven_front, panel_front, frame,
 )
-from roometry.scenes.decor import DECOR_CATALOG, curtains, rug
+from roometry.scenes.decor import DECOR_CATALOG, curtains, rug, leaf_blade
 from roometry.scenes.equipment import EQUIPMENT_CATALOG, rod
 
 
@@ -50,7 +50,7 @@ def round_area(p, purpose="objects"):
                           x - w * .34, x + w * .34, z - d * .34, z + d * .34, purpose)
 
 
-def fronts(count=2, *, low=.12, high=.94, glass=False, drawers=False):
+def fronts(count=2, *, low=.12, high=.94, glass=False, drawers=False, paneled=False):
     parts = []
     for i in range(count):
         if drawers:
@@ -59,8 +59,10 @@ def fronts(count=2, *, low=.12, high=.94, glass=False, drawers=False):
         else:
             size = (.94 / count - .018, high - low, .035)
             at = (-.47 + (i + .5) * .94 / count, (low + high) / 2, .4475)
-        parts += [part(f"front_{i}", size, at, "glass" if glass else "primary"),
-                  part(f"handle_{i}", (.15, .018, .025), (at[0], at[1] + size[1] * .3, .4775), "metal", collision=False)]
+        parts += (panel_front(f"front_{i}", size, at) if paneled and not glass
+                  else [part(f"front_{i}", size, at, "glass" if glass else "primary")])
+        parts.append(part(f"handle_{i}", (.15, .018, .025),
+                          (at[0], at[1] + size[1] * .3, .4775), "metal", collision=False))
     return parts
 
 
@@ -108,7 +110,7 @@ def worktop_base(style):
     p, areas = base_cabinet(worktop=True, island=style in {"peninsula", "butcher_block"})
     if style in {"drawer_base", "single_base"}:
         p = [a for a in p if not a.name.startswith(("door_", "pull_"))]
-        p += fronts(3 if style == "drawer_base" else 1, drawers=style == "drawer_base")
+        p += fronts(3 if style == "drawer_base" else 1, drawers=style == "drawer_base", paneled=True)
     if style == "waterfall":
         p += [part("waterfall_left", (.04, .955, 1), (-.48, .4775, 0), "enamel"),
               part("waterfall_right", (.04, .955, 1), (.48, .4775, 0), "enamel")]
@@ -139,7 +141,7 @@ def sink_assembly(style):
     elif style == "apron_counter":
         p = [replace(a, material="enamel") if a.name.startswith("sink_") else a for a in p]
         p = [a for a in p if not a.name.startswith(("door_", "pull_"))]
-        p += fronts(2, low=.15, high=.51)
+        p += fronts(2, low=.15, high=.51, paneled=True)
         p += [part("apron_face", (.56, .21, .08), (0, .635, .46), "enamel"),
               part("apron_left_trim", (.2, .21, .04), (-.38, .635, .46)),
               part("apron_right_trim", (.2, .21, .04), (.38, .635, .46))]
@@ -198,7 +200,7 @@ def vanity_model(style):
         p.append(shelf)
         areas.append(surface(shelf, inset=.025))
     if style == "vanity_compact":
-        p = [a for a in p if not a.name.startswith(("door_", "pull_"))] + fronts(1, high=.65)
+        p = [a for a in p if not a.name.startswith(("door_", "pull_"))] + fronts(1, high=.65, paneled=True)
     return p, areas
 
 
@@ -208,18 +210,25 @@ def shower_model(style):
                 part("wall_channel", (.04, 1, 1), (-.48, .5, 0), "primary_metal"),
                 part("base_channel", (.96, .025, .3), (0, .0125, .1), "primary_metal")], []
     p = [part("tray", (1, .025, 1), (0, .0125, 0), "primary_ceramic"),
-         part("drain", (.15, .008, .1), (.2, .029, -.25), "chrome", collision=False)]
+         part("wet_floor", (.94, .006, .94), (0, .028, 0), "enamel"),
+         part("drain", (.15, .008, .1), (.2, .035, -.25), "chrome", collision=False)]
+    p += frame("tray_lip", .034, .018, hole_x=.94, hole_z=.94, material="primary_ceramic")
     if style.startswith("walk_in"):
         side = -.49 if style.endswith("left") else .49
         p += [part("glass_screen", (.012, .965, .96), (side, .5175, 0), "clear_glass"),
               part("screen_base", (.02, .04, 1), (side, .04, 0), "primary_metal"),
-              part("brace", (.8, .012, .018), (0, .9, -.42), "primary_metal")]
+              part("brace", (.98, .012, .018), (0, .9, -.42), "primary_metal")]
+        for i, z in enumerate((-.34, .34)):
+            p.append(part(f"screen_clamp_{i}", (.04, .05, .05),
+                          (side / abs(side) * .48, .069, z), "chrome"))
+        p.append(part("brace_socket", (.04, .035, .04),
+                      (side / abs(side) * .48, .9, -.42), "chrome"))
     else:
         p += [part("back_glass", (.96, .96, .012), (0, .52, -.49), "clear_glass"),
               part("side_glass", (.012, .96, .96), (-.49, .52, 0), "clear_glass")]
-        for i in range(8):
-            angle = (i + .5) * pi / 16
-            p.append(part(f"curved_screen_{i}", (.012, .96, .94 * pi / 16),
+        for i in range(12):
+            angle = (i + .5) * pi / 24
+            p.append(part(f"curved_screen_{i}", (.012, .96, .94 * pi / 24),
                           (-.47 + .94 * sin(angle), .52, -.47 + .94 * cos(angle)),
                           "clear_glass", rotation=(0, angle + pi / 2, 0)))
         p.append(part("door_handle", (.04, .12, .04), (.2, .52, .2), "primary_metal"))
@@ -266,23 +275,31 @@ def seating(style):
                   for i, x in enumerate((-.14, .14))]
         else:
             p = [a for a in p if not a.name.startswith(("seat_", "back_cushion_"))]
-            seats = [part(f"wide_seat_{i}", (.36, .18, .81), (x, .43, .07), radius=.035) for i, x in enumerate((-.19, .19))]
-            p += seats + [part(f"wide_back_{i}", (.36, .4, .17), (x, .75, -.32), radius=.04) for i, x in enumerate((-.19, .19))]
+            seats = [part(f"wide_seat_{i}", (.36, .18, .81), (x, .43, .07), radius=.05) for i, x in enumerate((-.19, .19))]
+            p += seats + [part(f"wide_back_{i}", (.36, .38, .19), (x, .745, -.3),
+                              radius=.055, rotation=(-.12, 0, 0)) for i, x in enumerate((-.19, .19))]
             areas = [surface(a, purpose="seating") for a in seats]
     if style in {"tufted_chair", "chesterfield"}:
         p = [replace(a, shape="ellipsoid", radius=.02) if a.name.startswith("arm_") else a for a in p]
+        # Keep buttons on cushion faces, rather than suspended in the gaps
+        # between the sofa's three independently rounded back cushions.
+        button_xs = (-.3, -.15, 0, .15, .3) if style == "tufted_chair" else (-.74 / 3, 0, .74 / 3)
         for row in range(3):
-            for col in range(5):
-                p.append(part(f"tuft_{row}_{col}", (.02, .02, .015), (-.3 + col * .15, .62 + row * .1, -.225), "primary_dark", shape="ellipsoid", collision=False))
+            for col, x in enumerate(button_xs):
+                y = .62 + row * .1
+                p.append(part(f"tuft_{row}_{col}", (.02, .02, .012),
+                              (x, y, -.3 - .12 * (y - .745) + .1),
+                              "primary_dark", shape="ellipsoid", collision=False))
     if style == "barrel_chair":
         p = [a for a in p if not a.name.startswith(("arm_", "back_"))]
-        # Overlapping tangent panels form one continuous upholstered shell.
-        for i in range(13):
-            angle = -2. + i / 3
-            height = .5 - .15 * abs(angle) / 2
-            p.append(part(f"wrap_back_{i}", (.15, height, .09),
-                          (.38 * sin(angle), .5 + height / 2, -.34 * cos(angle)),
-                          radius=.025, rotation=(0, -angle, 0)))
+        p = [replace(a, size=(.9, .20, .82), radius=.065) if a.name == "base" else a for a in p]
+        # Closely spaced, deeply rounded panels share a level crown. This reads
+        # as one padded wraparound shell instead of a row of stepped posts.
+        for i in range(25):
+            angle = -2.1 + i * 4.2 / 24
+            p.append(part(f"wrap_back_{i}", (.084, .46, .12),
+                          (.38 * sin(angle), .73, -.34 * cos(angle)),
+                          radius=.04, rotation=(0, -angle, 0)))
     if style == "wing_chair":
         p += [part(f"wing_{i}", (.1, .45, .32), (x, .775, -.28), radius=.035) for i, x in enumerate((-.35, .35))]
     if style == "recliner":
@@ -472,7 +489,10 @@ def foliage(style):
     trailing = style in {"wall_plant", "trailing_plant"}
     pot_y = .875 if wall else .125 if trailing else .15
     root_y = .99 if wall else .24 if trailing else .29
-    p = [part("pot", (.6, .25 if trailing else .3, .6), (0, pot_y, -.1 if wall else 0), "primary", shape="cylinder", bottom_scale=.7),
+    pot_h = .25 if trailing else .3
+    pot_z = -.1 if wall else 0
+    p = [part("pot", (.6, pot_h, .6), (0, pot_y, pot_z), "primary", shape="tube", bottom_scale=.7, wall_thickness=.045),
+         part("pot_bottom", (.42, .018, .42), (0, pot_y - pot_h / 2 + .009, pot_z), "primary", shape="cylinder"),
          part("soil", (.54, .015, .54), (0, root_y, -.1 if wall else 0), "soil", shape="cylinder", collision=False)]
     if wall:
         p.append(part("wall_bracket", (.4, .2, .06), (0, .85, -.47), "metal"))
@@ -484,15 +504,20 @@ def foliage(style):
         tip = (x, tip_y, z)
         if trailing and not wall:
             arch = (x * .45, .7 + (i % 2) * .15, z * .45)
+            end = tuple(a + (b - a) * .88 for a, b in zip(arch, tip))
             p += [rod(f"stem_arch_{i}", root, arch, .012, "foliage_dark"),
-                  rod(f"stem_tip_{i}", arch, tip, .012, "foliage_dark")]
+                  rod(f"stem_tip_{i}", arch, end, .012, "foliage_dark")]
             root = arch
         else:
-            p.append(rod(f"stem_{i}", root, tip, .012, "foliage_dark"))
-        for j in range(3 if trailing else 2):
+            end = tuple(a + (b - a) * .88 for a, b in zip(root, tip))
+            p.append(rod(f"stem_{i}", root, end, .012, "foliage_dark"))
+        for j in range(3):
             f = .4 + j * .22
             at = (x * f, root[1] + (tip_y - root[1]) * f, root[2] + (z - root[2]) * f)
-            p.append(part(f"leaf_{i}_{j}", (.14 if trailing else .28, .10 if trailing else .2, .045), at, "foliage", shape="ellipsoid", rotation=(0, angle, 0), collision=False))
+            p += leaf_blade(f"leaf_{i}_{j}",
+                            (.14 if trailing else .24, .12 if trailing else .25, .014 if trailing else .02),
+                            at, (.55 + .15 * sin(angle + j), angle + j * .4, .25 * cos(angle)),
+                            "foliage" if (i + j) % 3 else "foliage_dark")
     return p, []
 
 
