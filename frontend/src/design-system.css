@@ -1,6 +1,7 @@
 /* Smoked optical glass, rounded lens edges, and stable neon-lime actions. */
 :root {
   color-scheme: dark;
+  --font-control: 12px;
   --page: #080a0a;
   --surface: #292c2c;
   --glass: rgba(42, 47, 53, .32);
@@ -48,6 +49,8 @@ body {
 }
 ::selection { color: var(--on-accent); background: var(--lime); }
 button, input, textarea, select { font: inherit; }
+/* The shared font reset must not make unstyled actions inherit body-sized text. */
+button { font-size: var(--font-control); }
 button, a, input, textarea, select, summary { -webkit-tap-highlight-color: transparent; }
 button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, summary:focus-visible {
   outline: 2px solid var(--focus);
@@ -540,7 +543,7 @@ select option { color: var(--text); background: var(--surface); }
 .improvement-request .refinement-cancel { min-height: 40px; padding: 8px 12px; font-size: 12px; }
 .unified-workspace .improvement-request :is(p, li, legend) { font-size: 12px; line-height: 1.6; }
 .unified-workspace .input-actions { flex-wrap: wrap; }
-.unified-workspace .input-actions button { min-height: 44px; }
+.unified-workspace .input-actions button { min-height: 44px; font-size: var(--font-control); }
 .workspace-room-details { margin-top: 20px; font-size: 12px; }
 .workspace-room-details > summary { color: var(--muted); }
 .candidate-details { border-top: 1px solid var(--line); }
