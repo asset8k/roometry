@@ -42,7 +42,11 @@ from roometry.vision.review_policy import (
     select_findings,
 )
 from roometry.vision.review_render import render_views
-from roometry.vision.review_request import build_review_request, enforce_review_limit
+from roometry.vision.review_request import (
+    build_appearance_repair_request,
+    build_review_request,
+    enforce_review_limit,
+)
 from roometry.vision.review_schemas import VisualReviewResult
 from roometry.vision.review_validation import parse_judgment
 from roometry.vision.review_validation import validate_judgment as validate_judgment
@@ -298,12 +302,17 @@ class VisualReviewer:
             room_appearance = any(f.kind == "color" and (not f.entity_ids or set(f.entity_ids) <= wall_ids) for f in actionable)
             try:
                 required_photos = {key for finding in actionable for key in finding.source_image_ids}
-                payload = await anyio.to_thread.run_sync(partial(build_proposal_request, operation="scene_repair", mandatory_image_ids=required_photos), settings, analysis, measurements, previous, problems, images)
+                color_only = all(f.kind == "color" for f in actionable)
+                if color_only:
+                    payload = build_appearance_repair_request(settings, analysis, proposal, constraints, judgment, selected, images)
+                else:
+                    payload = await anyio.to_thread.run_sync(partial(build_proposal_request, operation="scene_repair", mandatory_image_ids=required_photos), settings, analysis, measurements, previous, problems, images)
                 context = json.loads(payload["input"][0]["content"][0]["text"])
-                context.update(repair_review_context(analysis, proposal.scene, judgment, selected))
+                if not color_only:
+                    context.update(repair_review_context(analysis, proposal.scene, judgment, selected))
                 context["room_appearance_revision_allowed"] = room_appearance
                 context["protected_object_ids"] = [obj.id for obj in proposal.scene.objects if obj.locked or obj.provenance == "user_added"]
-                if settings.scene_compact_context:
+                if settings.scene_compact_context or color_only:
                     from roometry.vision.context_budget import photo_references
                     context = photo_references(context, analysis.observations.image_ids)
                 payload["input"][0]["content"][0]["text"] = json.dumps(context, separators=(',', ':'))
@@ -314,8 +323,9 @@ class VisualReviewer:
                         {"type":"input_text", "text":f"Diagnostic view of the current reconstruction: {view.view_id}"},
                         {"type":"input_image", "detail":"high", "image_url":"data:image/png;base64,"+b64encode(view.image).decode("ascii")},
                     ])
-                payload["instructions"] += "\nApply only repair_objectives from selected_findings, prioritizing placement and visible material colors over accessories. A targeted position/facing change must reach its placement_target without moving the reference target. A color change must use an actually rendered appearance control and approach appearance_target.value. Update dependent surface objects with their support, preserving their relative arrangements. Do not reset colors, resize furniture or move unrelated objects merely to obtain valid geometry. For object or room color/finish differences, appearance_corrections must record entity_id (null only for room finishes), field, exact ORIGINAL observation previous_value, revised_value, reason and original source_image_ids. Do not change an unaffected appearance. Do not imitate lighting or invent textures. Respect protected_object_ids; room dimensions, user answers, measured object sizes and locks cannot change. Do not redesign.\n"
-                payload["instructions"] += "Use appearance_revision_baselines for the exact ORIGINAL previous_value, including null. A rendered/default/current scene color is not that original value. Supply a concise photo-supported reason for each correction.\n"
+                if not color_only:
+                    payload["instructions"] += "\nApply only repair_objectives from selected_findings, prioritizing placement and visible material colors over accessories. A targeted position/facing change must reach its placement_target without moving the reference target. A color change must use an actually rendered appearance control and approach appearance_target.value. Update dependent surface objects with their support, preserving their relative arrangements. Do not reset colors, resize furniture or move unrelated objects merely to obtain valid geometry. For object or room color/finish differences, appearance_corrections must record entity_id (null only for room finishes), field, exact ORIGINAL observation previous_value, revised_value, reason and original source_image_ids. Do not change an unaffected appearance. Do not imitate lighting or invent textures. Respect protected_object_ids; room dimensions, user answers, measured object sizes and locks cannot change. Do not redesign.\n"
+                    payload["instructions"] += "Use appearance_revision_baselines for the exact ORIGINAL previous_value, including null. A rendered/default/current scene color is not that original value. Supply a concise photo-supported reason for each correction.\n"
                 payload["model"] = settings.model_route("visual_repair").model
                 enforce_review_limit(settings, payload)
                 await service._owned_analysis(proposal.analysis_id, owner)

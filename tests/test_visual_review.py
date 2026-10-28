@@ -11,7 +11,13 @@ from PIL import Image
 from roometry.scenes.schemas import RoomScene
 from roometry.scenes.validation import validate_geometry
 from roometry.vision.proposal_schemas import SceneDraft
-from roometry.vision.review import VisualReviewer, candidate_allowed, draft_from_scene, patch_matches_findings, reconstruction_changed
+from roometry.vision.review import (
+    VisualReviewer,
+    candidate_allowed,
+    draft_from_scene,
+    patch_matches_findings,
+    reconstruction_changed,
+)
 from roometry.vision.review_render import VIEW_IDS, material_color, render_views
 from roometry.vision.review_schemas import ReviewJudgment
 from roometry.vision.schemas import ReconstructionConstraints
@@ -246,8 +252,8 @@ async def test_empty_visual_patch_cannot_claim_correction_by_reordering_entities
 
 
 def test_reconstruction_change_ignores_order_and_roundoff_but_detects_real_edits():
-    from tests.test_scene_proposals import measurements, source
     from roometry.vision.proposals import assemble
+    from tests.test_scene_proposals import measurements, source
     scene, _, _ = assemble(source(), measurements(), SceneDraft.model_validate(draft_data()))
     candidate = scene.model_copy(deep=True)
     candidate.objects.reverse()
@@ -284,10 +290,14 @@ async def test_appearance_revision_is_audited_and_source_observations_remain_imm
     async def repair(request,payload):
         context = json.loads(payload["input"][0]["content"][0]["text"])
         obj = context["observations"]["objects"][0]
+        baseline = context["appearance_revision_baselines"][0]
         patch = {"wall_assignments":[],"openings":[],"objects":[],"assumptions":[],"warnings":[],"appearance_corrections":[{
                 "entity_id":obj["id"],"field":"color","previous_value":obj.get("color"),"revised_value":"#353535",
-            "reason":"The visible upholstery is dark charcoal, rather than the initial light estimate.","source_image_ids":obj["source_image_ids"],
+            "reason":"The visible upholstery is dark charcoal, rather than the initial light estimate.","source_image_ids":baseline["source_image_ids"],
         }]}
+        patch.update(estimate_corrections=[], interpretation_corrections=[])
+        from jsonschema import Draft202012Validator
+        Draft202012Validator(payload["text"]["format"]["schema"]).validate(patch)
         return await scene_action(patch)(request,payload)
     actions.extend([review_action(lambda payload: discrepancy(payload, kind="color")),repair,decision("finish")])
     result = await run(runs, owner, uploaded)
@@ -299,8 +309,8 @@ async def test_appearance_revision_is_audited_and_source_observations_remain_imm
 
 
 async def test_diagnostic_views_are_valid_pngs_and_track_real_pose_and_palette():
-    from tests.test_scene_proposals import source,measurements
     from roometry.vision.proposals import assemble
+    from tests.test_scene_proposals import measurements, source
     scene,_,_ = assemble(source(),measurements(),SceneDraft.model_validate(draft_data()))
     before = render_views(scene)
     assert tuple(view.view_id for view in before) == VIEW_IDS
@@ -314,8 +324,8 @@ async def test_diagnostic_views_are_valid_pngs_and_track_real_pose_and_palette()
 
 
 async def test_candidate_guard_protects_locks_measurements_and_retained_inventory():
-    from tests.test_scene_proposals import source,measurements
     from roometry.vision.proposals import assemble
+    from tests.test_scene_proposals import measurements, source
     analysis = source()
     scene,_,_ = assemble(analysis,measurements(),SceneDraft.model_validate(draft_data()))
     for defect in ("locked","measured","deleted","room"):
@@ -334,8 +344,8 @@ async def test_candidate_guard_protects_locks_measurements_and_retained_inventor
 
 
 async def test_color_review_does_not_authorize_pose_changes():
-    from tests.test_scene_proposals import source,measurements
     from roometry.vision.proposals import assemble
+    from tests.test_scene_proposals import measurements, source
     analysis = source()
     scene,_,_ = assemble(analysis,measurements(),SceneDraft.model_validate(draft_data()))
     previous = draft_from_scene(scene)
@@ -405,10 +415,14 @@ async def test_room_finish_revision_cannot_move_unaffected_furniture(harness,wal
     async def recolor(request,payload):
         context=json.loads(payload["input"][0]["content"][0]["text"])
         old=context["observations"].get("finishes")
+        baseline=context["appearance_revision_baselines"][0]
         patch={"wall_assignments":[],"openings":[],"objects":[],"assumptions":[],"warnings":[],"appearance_corrections":[{
             "entity_id":None,"field":"wall_color","previous_value":old["finishes"]["wall_color"] if old else None,
-            "revised_value":"#DDDDDD","reason":"The walls have a neutral light gray paint in the original views.","source_image_ids":context["observations"]["image_ids"],
+            "revised_value":"#DDDDDD","reason":"The walls have a neutral light gray paint in the original views.","source_image_ids":baseline["source_image_ids"],
         }]}
+        patch.update(estimate_corrections=[], interpretation_corrections=[])
+        from jsonschema import Draft202012Validator
+        Draft202012Validator(payload["text"]["format"]["schema"]).validate(patch)
         return await scene_action(patch)(request,payload)
     actions.extend([review_action(lambda payload:discrepancy(payload,kind="color",ids=wall_ids)),recolor,decision("finish")])
     result=await run(runs,owner,uploaded)
@@ -446,7 +460,9 @@ async def test_visual_request_limit_is_checked_before_paid_dispatch(harness):
 
 async def test_visual_result_cannot_be_attached_to_a_different_scene_revision():
     from pathlib import Path
+
     from pydantic import ValidationError
+
     from roometry.scenes.hashing import scene_hash
     from roometry.vision.proposal_schemas import SceneProposalResponse
     from roometry.vision.review_schemas import VisualReviewResult

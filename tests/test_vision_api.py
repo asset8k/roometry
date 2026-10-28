@@ -886,13 +886,15 @@ async def test_failure_logs_include_safe_schema_reason_and_provider_ids(
 
 
 @pytest.mark.parametrize("count", [1, 2, 10])
-async def test_evidence_schema_is_bound_to_only_the_current_upload(harness, count):
-    _, client, calls, _ = harness
+@pytest.mark.parametrize("compact", [False, True])
+async def test_evidence_schema_is_bound_to_only_the_current_upload(harness, count, compact):
+    app, client, calls, _ = harness
+    app.state.settings.analysis_compact_context = compact
     uploaded = await upload(client, count)
     response = await client.post('/api/rooms/analyze', json={'input_id': uploaded['input_id']})
     assert response.status_code == 200
     schema = calls[0]['text']['format']['schema']
-    expected = [image['image_id'] for image in uploaded['images']]
+    expected = [f'photo_{i+1}' for i in range(count)] if compact else [image['image_id'] for image in uploaded['images']]
     root = schema['properties']['image_ids']
     assert root['items']['enum'] == expected
     assert root['minItems'] == root['maxItems'] == count

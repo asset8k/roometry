@@ -30,6 +30,17 @@ def compact_review_context(context, image_ids):
         result["scene"].pop(field, None)
     for field in ("observations", "scene"):
         result[field] = _without_nulls(result[field])
+    targets = {item["entity_id"]: item for item in result["review_targets"]}
+    # These facts are already supplied verbatim in each review target. Keep one
+    # copy while preserving every entity, relationship, control and source view.
+    for item in result["observations"]["objects"]:
+        if item["id"] in targets:
+            item.pop("label", None)
+            item.pop("source_image_ids", None)
+    for item in result["scene"]["objects"]:
+        if item["id"] in targets and targets[item["id"]]["appearance_controls"]:
+            item.pop("color", None)
+            item.pop("material_colors", None)
     # A null answer inside a constraint map records an explicit "not sure";
     # preserve it rather than treating it as absent metadata.
     # Targets deliberately retain null entity_id for the room-finish check and

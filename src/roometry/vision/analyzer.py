@@ -12,7 +12,13 @@ from copy import deepcopy
 from dataclasses import asdict
 from time import perf_counter
 
-from openai import AsyncOpenAI, APIConnectionError, APIError, APIStatusError, APITimeoutError
+from openai import (
+    APIConnectionError,
+    APIError,
+    APIStatusError,
+    APITimeoutError,
+    AsyncOpenAI,
+)
 from openai.types.responses import (
     Response,
     ResponseInputContentParam,
@@ -29,12 +35,13 @@ from pydantic import ValidationError
 from roometry.config import Settings
 from roometry.model_calls import ModelAttempt, ModelOperation, current_observer
 from roometry.uploads.schemas import PreparedRoomInput
+from roometry.vision.context_budget import photo_references
 from roometry.vision.diagnostics import provider_id, validation_diagnostics
 from roometry.vision.errors import AnalysisFailure
-from roometry.vision.prompts import OBSERVATION_INSTRUCTIONS, observation_context
-from roometry.vision.schemas import RoomObservations
 from roometry.vision.evidence import strict_schema
 from roometry.vision.observation_recovery import recover_optional_observations
+from roometry.vision.prompts import OBSERVATION_INSTRUCTIONS, observation_context
+from roometry.vision.schemas import RoomObservations
 
 
 class PhotoAnalyzer:
@@ -61,15 +68,20 @@ class PhotoAnalyzer:
                 "request_too_large",
                 "These photos are too large for analysis. Upload smaller photos.",
             )
+        image_ids = [image.image_id for image in prepared.images]
+        request_ids = [f"photo_{i+1}" for i in range(len(image_ids))] if self.settings.analysis_compact_context else image_ids
+        context = json.loads(observation_context(prepared))
+        if self.settings.analysis_compact_context:
+            context = photo_references(context, image_ids)
         content: list[ResponseInputContentParam] = [
-            {"type": "input_text", "text": observation_context(prepared)}
+            {"type": "input_text", "text": json.dumps(context, separators=(",", ":"))}
         ]
-        for metadata, image in zip(prepared.images, images):
+        for image_id, image in zip(request_ids, images):
             content.extend(
                 [
                     {
                         "type": "input_text",
-                        "text": f"Photo evidence ID: {metadata.image_id}",
+                        "text": f"Photo evidence ID: {image_id}",
                     },
                     {
                         "type": "input_image",
@@ -81,14 +93,13 @@ class PhotoAnalyzer:
             )
         # Ground evidence at decoding time, not merely in prose instructions.
         # UUID shape alone cannot distinguish this upload from another room.
-        image_ids = [image.image_id for image in prepared.images]
         schema = strict_schema(RoomObservations)
         for properties in [schema["properties"], *(
             definition.get("properties", {}) for definition in schema.get("$defs", {}).values()
         )]:
             for name in ("image_ids", "source_image_ids"):
                 if name in properties:
-                    properties[name]["items"]["enum"] = image_ids
+                    properties[name]["items"] = {"type": "string", "enum": request_ids}
                     properties[name]["maxItems"] = len(image_ids)
         schema["properties"]["image_ids"]["minItems"] = len(image_ids)
         payload: ResponseCreateParamsNonStreaming = {
@@ -401,6 +412,7 @@ def parse_observations(
 ) -> RoomObservations:
     decoded = response_json(response, max_bytes)
     try:
+        decoded = photo_references(decoded, image_ids, decode=True)
         normalized = _normalize_observations(decoded, image_ids)
         observations = RoomObservations.model_validate(normalized)
     except ValidationError as error:

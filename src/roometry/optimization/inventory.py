@@ -18,7 +18,7 @@ from roometry.vision.review_policy import appearance_controls
 from roometry.vision.context_budget import shortlist
 
 
-def catalog_options(query="", *, required_ids=()):
+def catalog_options(query="", *, required_ids=(), object_types=None):
     """Relevant variants of every movable type, retaining mounts and current IDs.
 
     The complete catalogue stays searchable through MCP; growing its size must
@@ -60,6 +60,7 @@ def catalog_options(query="", *, required_ids=()):
         for a in ASSET_CATALOG.values()
         if ASSET_REGISTRY[a.asset_id].placements & {"floor", "wall", "surface"}
         and not ASSET_REGISTRY[a.asset_id].fixed_by_default
+        and (object_types is None or a.object_type in object_types)
     ]
     groups = {}
     for option in options:

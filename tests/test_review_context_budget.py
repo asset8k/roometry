@@ -61,6 +61,17 @@ def test_compaction_preserves_all_photos_renders_targets_and_geometry_without_mu
     restored = photo_references(
         compact_context, analysis.observations.image_ids, decode=True
     )
+    targets = {t["entity_id"]: t for t in restored["review_targets"]}
+    for item in restored["observations"]["objects"]:
+        if item["id"] in targets:
+            item.update({key: targets[item["id"]][key] for key in ("label", "source_image_ids")})
+    # Exact rendered material values are supplied once in the targets. Check
+    # every pose/dimension/mount independently of their deduplicated appearance.
+    scene_objects = proposal.scene.model_dump(mode="json", exclude_none=True)["objects"]
+    for item in scene_objects:
+        if item["id"] in targets and targets[item["id"]]["appearance_controls"]:
+            item.pop("color", None)
+            item.pop("material_colors", None)
     for field in (
         "review_targets",
         "room_dimensions",
@@ -73,7 +84,7 @@ def test_compaction_preserves_all_photos_renders_targets_and_geometry_without_mu
     ) == ReconstructionConstraints.model_validate(full_context["human_answers"])
     assert (
         restored["scene"]["objects"]
-        == proposal.scene.model_dump(mode="json", exclude_none=True)["objects"]
+        == scene_objects
     )
     assert restored["observations"] == analysis.observations.model_dump(
         mode="json", exclude_none=True

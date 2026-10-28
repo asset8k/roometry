@@ -102,6 +102,7 @@ class Settings(BaseSettings):
     scene_repair_model_name: str | None = Field(default=None, min_length=1, max_length=128)
     scene_model_name: str = Field(default="gpt-6.1-terra", min_length=1, max_length=128)
     analysis_reasoning_effort: ReasoningEffort = "medium"
+    analysis_compact_context: bool = True
     # A bounded material/relationship checklist needs room for its JSON output;
     # medium reasoning can consume the review allowance before checks finish.
     review_reasoning_effort: ReasoningEffort = "low"

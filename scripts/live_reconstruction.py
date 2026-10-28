@@ -145,12 +145,20 @@ async def run(args):
     directory = args.output.resolve()
     directory.mkdir(parents=True, exist_ok=False)  # Never replace an earlier run.
     settings = Settings()
+    if getattr(args, "analysis_model", None):
+        settings.analysis_model_name = args.analysis_model
+    if getattr(args, "review_model", None):
+        settings.visual_review_model_name = args.review_model
+    if getattr(args, "analysis_effort", None):
+        settings.analysis_reasoning_effort = args.analysis_effort
     operations = ("analysis", "scene_proposal", "scene_repair", "visual_review", "visual_repair", "agent_decision", "room_assessment", "optimization_proposal", "optimization_review")
     expected = {op: "gpt-6.1-terra" if op in {"scene_proposal", "visual_review", "optimization_proposal"} else "gpt-6-luna" for op in operations}
+    expected["analysis"] = getattr(args, "analysis_model", None) or "gpt-6-luna"
+    expected["visual_review"] = getattr(args, "review_model", None) or "gpt-6.1-terra"
     if not settings.analysis_enabled or not settings.visual_review_enabled or not settings.openai_api_key:
         raise RuntimeError("Enable analysis and visual review, and configure the API key before this test.")
     if any(settings.model_route(op).model != model for op, model in expected.items()):
-        raise RuntimeError("This check expects Terra 6.1 construction, visual review and improvement proposals, with Luna for all other operations.")
+        raise RuntimeError("Configured model routes do not match the explicit analysis/review test profile and Terra construction/improvement routing.")
     save(directory, "manifest.json", {"started_at": datetime.now(UTC).isoformat(),
          "photo_files": [path.name for path in args.photos], "room_type": args.room_type,
          "dimensions_m": [args.width, args.length, args.height],
@@ -255,6 +263,9 @@ async def run(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--allow-paid", action="store_true", required=True)
+    parser.add_argument("--analysis-model", choices=["gpt-6-luna", "gpt-6.1-terra"], help="Explicit, test-only analysis model override; does not edit .env.")
+    parser.add_argument("--review-model", choices=["gpt-6-luna", "gpt-6.1-terra"], help="Explicit, test-only reconstruction review model override.")
+    parser.add_argument("--analysis-effort", choices=["low", "medium"], help="Test analysis reasoning separately from the model default.")
     parser.add_argument("--photos", type=Path, nargs="+", required=True)
     parser.add_argument("--room-type", choices=["bedroom", "living_room"], default="bedroom")
     parser.add_argument("--width", type=float, required=True)

@@ -8,9 +8,10 @@ from pydantic import ValidationError
 
 from roometry.assessment.schemas import AESTHETIC_INSTRUCTIONS, AestheticComparison
 from roometry.optimization.inventory import catalog_options, scene_supports
-from roometry.optimization.policy import MAX_OTHER_SCORE_DROP, REPORT_SCORE_DROP
 from roometry.optimization.planning import planning_context
+from roometry.optimization.policy import MAX_OTHER_SCORE_DROP, REPORT_SCORE_DROP
 from roometry.optimization.schemas import CandidateProposal, CandidateReview
+from roometry.scenes.scoring import STORAGE_TYPES
 from roometry.vision.analyzer import response_json
 from roometry.vision.errors import AnalysisFailure
 from roometry.vision.evidence import strict_schema
@@ -134,7 +135,7 @@ class OptimizationProvider:
         if not self.settings.analysis_enabled:
             raise AnalysisFailure(503, "analysis_unavailable", "Model calls are disabled.")
         payload = {"model": self.settings.model_route(name).model, "instructions": instructions,
-            "input": [{"role": "user", "content": [{"type": "input_text", "text": json.dumps(data, allow_nan=False)}, *images]}],
+            "input": [{"role": "user", "content": [{"type": "input_text", "text": json.dumps(data, allow_nan=False, separators=(",", ":"))}, *images]}],
             "text": {"format": {"type": "json_schema", "name": name, "strict": True, "schema": strict_schema(model)}},
             "max_output_tokens": self.settings.optimization_max_output_tokens, "store": False, "tools": [], "truncation": "disabled"}
         if len(json.dumps(payload).encode()) > (self.settings.analysis_max_request_bytes if images else self.settings.agent_max_request_bytes):
@@ -152,11 +153,21 @@ class OptimizationProvider:
 
     async def propose(self, run, source, catalog):
         scene = run.result_scene or run.source_scene
+        # A category-only request needs relevant additions and replacements of
+        # existing functions. Free-text requests retain the full type coverage,
+        # including TVs and their mounts; this is not a catalog availability gate.
+        addition_types = None
+        if not (run.instruction or run.preferences.style or run.preferences.constraints) and run.focus != "aesthetics":
+            addition_types = {o.type for o in scene.objects} | STORAGE_TYPES
+            if run.focus == "workspace":
+                addition_types |= {"desk", "chair", "monitor", "table_lamp"}
         return await self._request(CandidateProposal, "optimization_proposal", {
             "focus": run.focus, "preferences": run.preferences.model_dump(mode="json", exclude={"budget"}),
             "refinement_instruction": run.instruction,
-            "scene": scene.model_dump(mode="json"), "measures": (run.result_assessment or run.baseline_assessment).model_dump(mode="json"),
-            "appearance_controls": {o.id: appearance_controls(o) for o in scene.objects},
+            "scene": scene.model_dump(mode="json", exclude_none=True, exclude={"estimate_corrections", "interpretation_corrections", "appearance_corrections", "assumptions", "warnings"}),
+            "measures": (run.result_assessment or run.baseline_assessment).model_dump(mode="json"),
+            "appearance_controls": {o.id: {field: {"value": control["value"], "region": control["region"]}
+                for field, control in appearance_controls(o).items()} for o in scene.objects},
             "description": source.input_options.description,
             "confirmed_facing": source.reconstruction_constraints.facing_targets,
             "feedback": [a.model_dump(mode="json", exclude={"proposal"}) for a in run.attempts],
@@ -168,6 +179,7 @@ class OptimizationProvider:
             "catalog_addition_options": catalog_options(
                 run.instruction or run.preferences.style or "",
                 required_ids=[o.asset_id for o in scene.objects],
+                object_types=addition_types,
             ),
             "scene_support_surfaces": scene_supports(scene),
             "planning_geometry": await anyio.to_thread.run_sync(lambda: planning_context(scene)),
