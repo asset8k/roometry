@@ -98,6 +98,19 @@ def corner_model(*, mirror=False, slab=False, upper=False):
 
 
 def worktop_base(style):
+    if style.startswith("counter_l_sink"):
+        # Keep the inset cutout and its true ledge supports. A full rear solid
+        # or a continuous worktop would bury the basin and block its interior.
+        rear = combine(
+            fit(base_cabinet(top_y=.74, worktop=True), scale=(.43, 1., .35), at=(-.285, 0., -.325), prefix="rear_left_"),
+            fit(sink_counter(), scale=(.5, 1., .35), at=(.18, 0., -.315), prefix="inset_"),
+            fit(base_cabinet(top_y=.74, worktop=True), scale=(.07, 1., .35), at=(.465, 0., -.325), prefix="rear_right_"),
+        )
+        corner_parts, corner_surfaces = corner_model()
+        returning = ([p for p in corner_parts if p.name.startswith("return_")],
+                     [s for s in corner_surfaces if s.part.startswith("return_")])
+        model = combine(rear, fit(returning, scale=(1., .74, 1.)))
+        return fit(model, mirror=style.endswith("right"))
     if style.startswith("counter_l") or style.startswith("corner_base") or style == "upper_corner":
         return corner_model(mirror=style.endswith("right"), upper=style == "upper_corner")
     if style == "counter_run":
@@ -525,7 +538,7 @@ def build(spec: ExpansionSpec):
     style = spec.recipe
     if style in {"low_metal_shelf", "medium_metal_shelf"}:
         return metal_shelf(2 if style == "low_metal_shelf" else 3)
-    if style in {"drawer_base", "single_base", "corner_base_left", "corner_base_right", "counter_run", "counter_l_left", "counter_l_right", "peninsula", "waterfall", "butcher_block", "upper_corner"}:
+    if style in {"drawer_base", "single_base", "corner_base_left", "corner_base_right", "counter_run", "counter_l_left", "counter_l_right", "counter_l_sink_left", "counter_l_sink_right", "peninsula", "waterfall", "butcher_block", "upper_corner"}:
         return worktop_base(style)
     if style in {"tall_pantry", "tall_appliance", "glass_pantry", "upper_single", "upper_glass", "upper_open", "medicine_cabinet"}:
         p, areas = cabinet_shell(levels=4 if style.startswith("tall") or style == "glass_pantry" else 2,

@@ -46,9 +46,9 @@ def asset_scene(asset, placement):
 
 
 def test_expansion_inventory_is_exact_and_contains_geometry_changes():
-    assert len(EXPANSION_SPECS) == len(EXPANSION_CATALOG) == 108
-    assert len(ASSET_CATALOG) == len(ASSET_REGISTRY) == 214
-    assert Counter(s.batch for s in EXPANSION_SPECS) == {'kitchen': 32, 'bathroom': 24, 'furniture': 36, 'finishing': 16}
+    assert len(EXPANSION_SPECS) == len(EXPANSION_CATALOG) == 110
+    assert len(ASSET_CATALOG) == len(ASSET_REGISTRY) == 216
+    assert Counter(s.batch for s in EXPANSION_SPECS) == {'kitchen': 34, 'bathroom': 24, 'furniture': 36, 'finishing': 16}
     # No two additions are merely a relabel/recolor of identical parts and sizes.
     recipes = [(a.dimensions_m, a.parts, a.placement_dimensions_m) for a in EXPANSION_CATALOG.values()]
     assert len(set(recipes)) == len(recipes)

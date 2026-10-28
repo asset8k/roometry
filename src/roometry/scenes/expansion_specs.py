@@ -42,7 +42,7 @@ def finishing(kind, variant, label, size, recipe, **kw):
 
 
 EXPANSION_SPECS = (
-    # Kitchen — 32 models. Fitted runs and inset fixtures are single assemblies.
+    # Kitchen — fitted runs and inset fixtures are single assemblies.
     kitchen("kitchen_cabinet", "drawers", "Three-drawer base cabinet", (.6, .9, .6), "drawer_base", support=True),
     kitchen("kitchen_cabinet", "single_door", "Single-door base cabinet", (.45, .9, .6), "single_base", support=True),
     kitchen("kitchen_cabinet", "corner_left", "Left corner base cabinet", (1.2, .9, 1.2), "corner_base_left", support=True),
@@ -57,6 +57,8 @@ EXPANSION_SPECS = (
     kitchen("kitchen_counter", "run", "Three-cabinet run with continuous worktop", (2.4, .9, .65), "counter_run", support=True),
     kitchen("kitchen_counter", "l_left", "L-shaped fitted counter, left return", (2.4, .9, 1.8), "counter_l_left", support=True),
     kitchen("kitchen_counter", "l_right", "L-shaped fitted counter, right return", (2.4, .9, 1.8), "counter_l_right", support=True),
+    kitchen("kitchen_counter", "l_sink_left", "L-shaped fitted counter with inset sink and faucet, left return", (2.6, 1.24, 1.8), "counter_l_sink_left", support=True),
+    kitchen("kitchen_counter", "l_sink_right", "L-shaped fitted counter with inset sink and faucet, right return", (2.6, 1.24, 1.8), "counter_l_sink_right", support=True),
     kitchen("kitchen_counter", "peninsula", "Breakfast peninsula with seating overhang", (1.8, .9, .9), "peninsula", support=True),
     kitchen("kitchen_counter", "waterfall", "Waterfall stone kitchen island", (2., .9, 1.), "waterfall", support=True),
     kitchen("kitchen_counter", "butcher_block", "Paneled island with thick wood worktop", (1.8, .9, .9), "butcher_block", support=True),

@@ -328,6 +328,8 @@ export type AssetId =
   | "kitchen_counter_run_01"
   | "kitchen_counter_l_left_01"
   | "kitchen_counter_l_right_01"
+  | "kitchen_counter_l_sink_left_01"
+  | "kitchen_counter_l_sink_right_01"
   | "kitchen_counter_peninsula_01"
   | "kitchen_counter_waterfall_01"
   | "kitchen_counter_butcher_block_01"

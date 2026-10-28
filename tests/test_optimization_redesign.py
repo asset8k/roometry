@@ -321,8 +321,12 @@ async def test_non_improving_aesthetic_rubric_cannot_override_acceptance(harness
 
 
 async def test_trivial_candidate_gets_feedback_without_review_or_touching_the_original(
-    harness,
+    harness, monkeypatch,
 ):
+    # This test exercises model feedback; local-search recovery has its own
+    # integration tests and must not consume this scripted provider response.
+    from roometry.optimization.placements import PlacementSearch
+    monkeypatch.setattr("roometry.optimization.graph.plan_placements", lambda *args, **kwargs: PlacementSearch())
     app, _, calls, actions = harness
     scene, plan = scenario("openness")
     run = policy_run(scene)

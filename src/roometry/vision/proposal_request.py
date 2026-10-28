@@ -29,6 +29,7 @@ from roometry.vision.wall_axes import AXIS_WALLS
 from roometry.vision.context_budget import compact_context, compact_schema, select_photo_ids, photo_references, photo_reference_schema
 from roometry.vision.prompts import COMPACT_SCENE_INSTRUCTIONS
 from roometry.vision.assembly_context import assembly_features, component_feedback, construction_sequence
+from roometry.vision.features import required_features, retains_features
 
 
 def build_proposal_request(
@@ -45,6 +46,7 @@ def build_proposal_request(
     for obj in analysis.observations.objects:
         models = []
         options = candidates(obj.type, obj.placement) if obj.type is not None else ()
+        options = [a for a in options if retains_features(a, obj, analysis.observations.objects)]
         for asset in options:
             configurations = {}
             for placement in sorted(ASSET_REGISTRY[asset.asset_id].placements):
@@ -70,6 +72,7 @@ def build_proposal_request(
             {
                 "id": obj.id,
                 "models": models,
+                "required_components": sorted(required_features(obj, analysis.observations.objects)),
                 **(
                     {
                         "opening_ids": [
@@ -174,6 +177,9 @@ def build_proposal_request(
         "repair": {
             "mode": "upsert", "deletions_allowed": False,
             "editable_entity_ids": sorted(repair_scope(analysis, draft, issues)),
+            "missing_entity_ids": [item.id for item in [*analysis.observations.objects, *analysis.observations.openings]
+                                   if item.id not in {entry.id for entry in [*draft.objects, *draft.openings]}
+                                   and item.id in repair_scope(analysis, draft, issues)],
             "instruction": "Return only changed or restored observed entries. Omitted entries remain unchanged. Keep unaffected entries byte-for-byte if repeated. raw_previous_draft is the merge base; previous_draft shows attachment-adjusted coordinates used by geometry checks.",
         } if operation == "scene_repair" and draft is not None else None,
         "attachment_constraints": attachment_constraints,
@@ -204,6 +210,16 @@ def build_proposal_request(
     if editable is not None and not wall_repair_allowed(analysis, issues):
         schema["properties"]["wall_assignments"]["maxItems"] = 0
     object_ids = [obj.id for obj in analysis.observations.objects if editable is None or obj.id in editable]
+    represented = {obj.id for obj in draft.objects} if draft is not None else set()
+    required_objects = [binding["id"] for binding in bindings if binding["models"]
+                        and binding["id"] not in represented
+                        and (editable is None or binding["id"] in editable)]
+    context["required_object_ids"] = required_objects
+    context["inventory_rule"] = "Return each required_object_id exactly once. Preserve its observed components and supports; estimate uncertain poses within the confirmed shell. Unsupported observations remain explicit unresolved items."
+    # A repair returning [] used to consume the only recovery call while
+    # silently restoring none of the missing, representable fixtures.
+    schema["properties"]["objects"]["minItems"] = len(required_objects)
+    schema["properties"]["objects"]["maxItems"] = len(object_ids)
     if object_ids:
         schema["$defs"]["DraftObject"]["properties"]["id"]["enum"] = object_ids
     else:

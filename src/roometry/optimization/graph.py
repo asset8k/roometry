@@ -16,6 +16,7 @@ from roometry.assessment.metrics import measure_room, with_recommendation
 from roometry.model_calls import observe_model_calls
 from roometry.optimization.context import refinement_message
 from roometry.optimization.policy import evaluate, meaningful_gain
+from roometry.optimization.placements import plan_placements
 from roometry.optimization.provider import OptimizationProvider
 from roometry.optimization.schemas import (
     CandidateProposal,
@@ -30,6 +31,8 @@ class GraphState(TypedDict, total=False):
     run: dict
     proposal: dict | None
     candidate: dict | None
+    placement_options: list[dict]
+    placement_search_done: bool
 
 
 @dataclass
@@ -77,12 +80,33 @@ async def propose(state, runtime: Runtime[OptimizationContext]):
     if stop: return stop
     if context.budget.usage.model_calls >= run.limits.max_model_calls:
         return saved(run, context, status="budget_exhausted", stage="finished", message="The improvement call limit was reached. The original and best validated candidate are retained.")
-    with observe_model_calls(context.budget), anyio.fail_after(run.limits.step_timeout_seconds):
-        proposal = await context.provider.propose(run, context.source, context.catalog)
+    # A rejected coordinate guess should lead to a geometric search, not just
+    # another guess. Complete patches remain subject to validation and visual
+    # review below. Checkpoint the options so reconnect/resume never repeats it.
+    options = state.get("placement_options", [])
+    search_done = state.get("placement_search_done", False)
+    eligible = not run.instruction and run.focus in {"openness", "storage"} and not run.result_scene
+    if eligible and run.attempts and not search_done:
+        await context.budget.reserve_tool()
+        result = await anyio.to_thread.run_sync(lambda: plan_placements(
+            run, context.source, max_seconds=min(12., run.limits.step_timeout_seconds / 3)))
+        options = [p.model_dump() for p in result.proposals]
+        search_done = True
+        await context.authorize()
+        if context.cancelled(): return await stopped(run, context)
+    used = [a.proposal for a in run.attempts if a.proposal is not None]
+    planned = next((CandidateProposal.model_validate(p) for p in options
+                    if CandidateProposal.model_validate(p) not in used), None)
+    if planned is not None:
+        proposal = planned
+    else:
+        with observe_model_calls(context.budget), anyio.fail_after(run.limits.step_timeout_seconds):
+            proposal = await context.provider.propose(run, context.source, context.catalog)
     await context.authorize()
     if context.cancelled(): return await stopped(run, context)
     proposal = CandidateProposal.model_validate(proposal)
-    return {**saved(run, context, stage="validating", suggestions=proposal.suggestions), "proposal": proposal.model_dump(), "candidate": None}
+    return {**saved(run, context, stage="validating", suggestions=proposal.suggestions), "proposal": proposal.model_dump(), "candidate": None,
+        "placement_options": options, "placement_search_done": search_done}
 
 
 def attempt(run, proposal, *, outcome, issues, before=None, after=None, changed=(), review=None):
@@ -98,6 +122,10 @@ async def validate(state, runtime: Runtime[OptimizationContext]):
     if run.status != "running": return saved(run, context)
     proposal = CandidateProposal.model_validate(state['proposal'])
     if not proposal.has_operations:
+        if (not run.instruction and run.focus in {"openness", "storage"}
+                and not run.result_scene and not state.get("placement_search_done")):
+            return {**saved(run, context, stage="proposing", attempts=attempt(run, proposal,
+                outcome="no_gain", issues=["No arrangement was proposed; check locally validated placement options."])), "candidate": None}
         return saved(run, context, status="completed" if run.result_scene else "no_improvement", stage="finished",
             message="The best validated layout is retained." if run.result_scene else "No useful layout change was proposed. Your original room is retained; review the suggestions.")
     await context.budget.reserve_tool()  # Atomic assembly and geometry/clearance.

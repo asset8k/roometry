@@ -21,6 +21,7 @@ from roometry.vision.proposal_schemas import (
 )
 from roometry.vision.schemas import ObjectObservation, RoomAnalysisResponse
 from roometry.vision.context_budget import shortlist
+from roometry.vision.features import required_features, retains_features
 
 BindingIssue = Literal[
     "identity_mismatch",
@@ -62,10 +63,13 @@ def bind_catalog(
             )
             continue
         options = candidates(source.type, obj.placement)
+        required = required_features(source, analysis.observations.objects)
+        options = [a for a in options if retains_features(a, source, analysis.observations.objects)]
         if not options:
             fail(
                 "unsupported_placement",
-                "No model of this type supports the requested placement.",
+                (f"Choose a compatible model retaining the observed components: {', '.join(sorted(required))}."
+                 if required else "No model of this type supports the requested placement."),
                 obj.id,
             )
             continue
@@ -88,6 +92,9 @@ def bind_catalog(
                 "Choose an approved model matching this observation's type and placement.",
                 obj.id,
             )
+            continue
+        if not retains_features(asset, source, analysis.observations.objects):
+            fail("asset_mismatch", f"The selected model drops observed components: {', '.join(sorted(required))}. Choose a fitted assembly that includes them or retain their separately observed fixture IDs.", obj.id)
             continue
         if asset not in options:
             fail(
