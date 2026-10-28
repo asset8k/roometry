@@ -159,6 +159,24 @@ async def test_registered_run_is_not_owned_by_its_old_guest_cookie(harness, tmp_
         assert len(calls) == 3
 
 
+async def test_recent_rooms_exclude_stopped_attempts_without_deleting_them(harness, tmp_path):
+    app, _, _, calls, actions = await setup(harness, tmp_path)
+    async with (
+        app.router.lifespan_context(app),
+        httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://testserver") as client,
+    ):
+        state, owner, _ = await paused(app, client, actions)
+        key = (UUID(owner.split(":")[1]), state["run_id"])
+        for status in ("queued", "running", "awaiting_answer", "completed", "partial", "failed", "cancelled"):
+            with app.state.database.sessions.begin() as db:
+                db.get(RuntimeRun, key).status = status
+            listed = (await client.get("/api/projects/runs")).json()
+            assert [item["id"] for item in listed] == ([] if status in ("failed", "cancelled") else [state["run_id"]])
+        with app.state.database.sessions() as db:
+            assert db.get(RuntimeRun, key) is not None
+        assert len(calls) == 3
+
+
 async def test_registered_optimization_and_saved_room_reopen_do_not_replay_paid_calls(
     harness, tmp_path
 ):

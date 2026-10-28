@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Button, GlassPanel, Icon } from '../ui/primitives'
 import Dialog from '../ui/Dialog'
 import type { AccountUser } from '../../lib/auth'
-import { projectsClient } from '../../lib/projects'
+import { projectsClient, recoverableRuns } from '../../lib/projects'
 import type { ProjectSummary, RecentRun } from '../../lib/projects'
 
 export function MyRooms({ onSignIn, onCreate, user }: { onSignIn: () => void; onCreate: () => void; user?: AccountUser | null }) {
@@ -20,6 +20,7 @@ export function MyRooms({ onSignIn, onCreate, user }: { onSignIn: () => void; on
     return () => abort.abort()
   }, [user?.id, refresh])
   const own = user && data?.owner === user.id ? data : null
+  const unsaved = own ? recoverableRuns(own.runs) : []
   const runLabels: Record<string, string> = { awaiting_answer: 'Answer needed', completed: 'Ready to save', running: 'In progress', queued: 'In progress', partial: 'Partial reconstruction', cancelled: 'Cancelled', failed: 'Stopped' }
   return <section className="library-page" aria-labelledby="my-rooms-title">
     <div className="page-heading"><div><h1 id="my-rooms-title">My rooms</h1><p>Private rooms and recoverable work.</p></div><Button onClick={onCreate}>New room<Icon name="arrow"/></Button></div>
@@ -27,7 +28,7 @@ export function MyRooms({ onSignIn, onCreate, user }: { onSignIn: () => void; on
       : <>
         {error && <div className="input-notice error" role="alert"><p>{error}</p><Button onClick={() => setRefresh(value => value + 1)}>Retry loading</Button></div>}
         {!own && !error && <p role="status">Loading your rooms…</p>}
-        {own && !own.rooms.length && !own.runs.length && <GlassPanel className="library-empty"><Icon name="folder"/><h2>Your rooms will live here.</h2><p>Create a room, then save it privately.</p><Button variant="primary" onClick={onCreate}>Create a room</Button></GlassPanel>}
+        {own && !own.rooms.length && !unsaved.length && <GlassPanel className="library-empty"><Icon name="folder"/><h2>Your rooms will live here.</h2><p>Create a room, then save it privately.</p><Button variant="primary" onClick={onCreate}>Create a room</Button></GlassPanel>}
         {own && <div className="private-room-grid">{own.rooms.map(room => <GlassPanel key={room.id} className="private-room-card">
           <span className="section-label">Private · {room.room_type.replaceAll('_', ' ')}</span><h2>{room.title}</h2>
           <div className="input-actions"><a className="ui-button ui-button--primary" href={`#room/${room.id}`}>Open room<Icon name="arrow"/></a>
@@ -40,7 +41,7 @@ export function MyRooms({ onSignIn, onCreate, user }: { onSignIn: () => void; on
             setData(previous => previous?.owner === user.id ? { ...previous, rooms: [...previous.rooms, ...rooms] } : previous); setMore(rooms.length === 50)
           }).catch(reason => setError((reason as Error).message)).finally(() => setBusy(false))
         }}>Load more rooms</Button>}
-        {own && own.runs.length > 0 && <><h2 className="recovery-heading">Recent reconstructions</h2><div className="private-room-grid">{own.runs.map(run => <GlassPanel key={run.id} className="private-room-card"><span className="section-label">{runLabels[run.status] ?? 'Reconstruction'}</span><h3>Your {run.room_type.replaceAll('_', ' ')}</h3><a className="ui-button" href={`#run/${run.id}`}>{run.status === 'awaiting_answer' ? 'Answer question' : 'Open reconstruction'}<Icon name="arrow"/></a></GlassPanel>)}</div></>}
+        {own && unsaved.length > 0 && <><h2 className="recovery-heading">Unsaved rooms</h2><div className="private-room-grid">{unsaved.map(run => <GlassPanel key={run.id} className="private-room-card"><span className="section-label">{runLabels[run.status] ?? 'Reconstruction'}</span><h3>Your {run.room_type.replaceAll('_', ' ')}</h3><a className="ui-button" href={`#run/${run.id}`}>{run.status === 'awaiting_answer' ? 'Answer question' : ['completed', 'partial'].includes(run.status) ? 'Open room' : 'Continue reconstruction'}<Icon name="arrow"/></a></GlassPanel>)}</div></>}
       </>}
     {action && own && <Dialog title={action.kind === 'rename' ? 'Rename room' : 'Delete room?'} onClose={() => { if (!busy) setAction(null) }} dismissible={!busy}>{dismiss => <>
       <form className="account-form" onSubmit={event => {

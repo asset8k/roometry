@@ -38,7 +38,12 @@ export class SceneComparison {
   static restore(saved: OpenedProject, client?: EditClient): SceneComparison {
     const result = new SceneComparison(saved.run.working_scene!, client)
     const snapshot = saved.project.snapshot
-    for (const improvement of Object.values(snapshot.improvements)) result.offer(improvement, improvement.source_scene)
+    // JSONB object keys are unordered. Restore the actual run chronology, with
+    // the saved manifest as a stable tie-breaker for identical timestamps.
+    const order = new Map(snapshot.versions.map((version, index) => [version.key, index]))
+    const improvements = Object.values(snapshot.improvements).sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at)
+      || (order.get(a.run_id) ?? 0) - (order.get(b.run_id) ?? 0))
+    for (const improvement of improvements) result.offer(improvement, improvement.source_scene)
     const versions = new Map(saved.project.versions.map(version => [version.id, version.scene]))
     let legacyEdits = false
     for (const version of snapshot.versions.filter(item => item.key.startsWith('manual:'))) {

@@ -512,6 +512,22 @@ select option { color: var(--text); background: var(--surface); }
 .unified-workspace .assessment-card { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 6px 10px; padding: 14px; border-radius: 20px; }
 .unified-workspace .assessment-card h3 { font-size: 12px; }
 .unified-workspace .assessment-rating { grid-column: 2; grid-row: 1; font-size: 24px; margin: 0; }
+.assessment-rating-value { display: inline-block; font-weight: inherit; font-variant-numeric: tabular-nums; animation: rating-arrive 650ms var(--motion-ease); }
+.assessment-change { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--muted); font-size: 11px; }
+.unified-workspace .assessment-change { grid-column: 1 / -1; justify-content: flex-end; }
+.assessment-change strong { font-weight: 500; }
+.assessment-change--up strong, .improvement-score-change--up > strong { color: var(--lime); }
+.assessment-change--down strong { color: var(--warning); }
+.improvement-score-change { display: grid; gap: 4px; margin: 16px 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 16px; animation: rating-arrive 650ms var(--motion-ease); }
+.improvement-score-change > span { color: var(--muted); font-size: 11px; }
+.improvement-score-change > strong { font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.improvement-score-change small { font-size: 12px; color: var(--muted); font-weight: 400; }
+@keyframes rating-arrive { from { opacity: .35; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.reconstruction-note { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 4px; margin: 0 0 12px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.reconstruction-note > span { color: var(--muted); }
+.reconstruction-note::before { content: ''; width: 5px; height: 5px; margin-right: 3px; border-radius: 50%; background: var(--warning); align-self: center; flex-shrink: 0; }
+.unified-workspace .improvement-request > .reconstruction-note { font-size: 11px; line-height: 1.5; }
+.improvement-request > .improvement-submit-status { margin: 16px 0 0; color: var(--muted); }
 .unified-workspace .assessment-rating .assessment-unrated { font-size: 12px; }
 .unified-workspace .assessment-explanation { grid-column: 1 / -1; margin-top: 0; }
 .unified-workspace .assessment-explanation summary { min-height: 32px; font-size: 11px; }
@@ -735,6 +751,28 @@ select option { color: var(--text); background: var(--surface); }
 .sharing-form textarea { width: 100%; min-height: 80px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 20px; color: var(--text); background: var(--field); font: inherit; font-size: 14px; resize: vertical; }
 .sharing-form .consent-choice { display: flex; gap: 12px; margin-top: 0; min-height: 36px; }
 .sharing-form .consent-choice input { width: 18px; min-width: 18px; height: 18px; min-height: 18px; margin: 0; padding: 0; box-shadow: none; }
+.share-dialog { width: min(560px, calc(100% - 32px)); max-height: calc(100dvh - 32px); overflow: hidden; }
+.share-dialog .dialog-content { display: flex; flex-direction: column; max-height: calc(100dvh - 32px); padding: 24px; overflow: hidden; }
+.share-dialog .dialog-content > h2 { flex-shrink: 0; font-size: 25px; margin-top: 0; }
+.share-dialog .dialog-description { flex-shrink: 0; margin: 0 0 12px; font-size: 12px; }
+.sharing-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; padding: 6px; margin-inline: -6px; }
+.sharing-body .sharing-form { margin-top: 0; }
+.sharing-body .sharing-form fieldset { gap: 12px; }
+.sharing-scene-frame { height: clamp(120px, 22dvh, 168px); overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: #f5f3ed; }
+.sharing-body .sharing-scene-preview { display: block; width: 100%; height: 100%; border: 0; border-radius: 0; transform: scale(1.12); }
+.sharing-form :is(input, textarea):focus-visible { outline-offset: 2px; }
+.sharing-body .sharing-form input:not([type='checkbox']) { min-height: 44px; padding: 10px 14px; }
+.sharing-body .sharing-form .consent-choice { font-size: 12px; line-height: 1.5; }
+.sharing-caption summary { min-height: 32px; cursor: pointer; color: var(--muted); font-size: 12px; line-height: 32px; }
+.sharing-caption summary .input-help { margin-left: 5px; }
+.sharing-caption textarea { display: block; margin-top: 6px; min-height: 64px; }
+.sharing-feedback { margin: 10px 0 0; color: var(--lime); font-size: 12px; line-height: 1.5; }
+.sharing-footer { flex-shrink: 0; display: grid; gap: 10px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+.sharing-footer > .ui-button { width: 100%; }
+.sharing-footer-secondary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.sharing-footer-secondary > .ui-button { min-height: 40px; padding: 10px 14px; font-size: 12px; }
+.sharing-footer-secondary > .ui-button:first-child { margin-right: auto; }
+.recovered-run-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 24px; }
 @media (max-width: 700px) { .sharing-form textarea { font-size: 16px; } }
 .public-room-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 24px; margin: 28px 0; }
 .public-room-card { display: block; overflow: hidden; padding: 0; color: var(--text); text-decoration: none; transition: transform 220ms var(--motion-ease), box-shadow 220ms ease; }
@@ -746,6 +784,10 @@ select option { color: var(--text); background: var(--surface); }
 .public-room-card p { font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .public-room-cta { display: inline-flex; align-items: center; gap: 10px; margin-top: 14px; font-size: 13px; color: var(--lime); }
 .public-room-page .page-heading p { max-width: 680px; overflow-wrap: anywhere; }
+.public-room-page { padding-top: 28px; }
+.public-room-page .page-heading { align-items: flex-start; padding-block: 4px; gap: 20px; }
+.public-room-page .page-heading h1 { margin: 0; }
+.public-room-page .page-heading > .ui-button { margin-top: 4px; flex-shrink: 0; }
 .public-room-viewer { overflow: hidden; }
 .public-room-viewer .renderer-canvas { height: min(68vh, 720px); min-height: 340px; }
 .public-room-caption { padding: 16px 24px 0; font-size: 12px; color: var(--muted); }

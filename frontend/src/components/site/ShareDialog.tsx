@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import type { RoomScene } from '../../lib/scene.generated'
 import { apiAsset, feedClient } from '../../lib/feed'
 import type { SharingOptions } from '../../lib/feed'
@@ -16,6 +16,7 @@ export default function ShareDialog({ scene, sourceRunId, onClose, onSignIn, sig
   const [consent, setConsent] = useState(false), [retry, setRetry] = useState(0)
   const [error, setError] = useState<string | null>(null), [notice, setNotice] = useState<string | null>(null)
   const request = useRef<AbortController | null>(null)
+  const formId = useId()
   useWorkspaceGuard({ dirty: false, saving: pending, hasWork: false })
   useEffect(() => () => request.current?.abort(), [])
   useEffect(() => {
@@ -47,28 +48,33 @@ export default function ShareDialog({ scene, sourceRunId, onClose, onSignIn, sig
     } catch (reason) { if (!abort.signal.aborted) setError((reason as Error).message) }
     finally { if (!abort.signal.aborted) setPending(false); if (request.current === abort) request.current = null }
   }
-  return <Dialog title="Share your space." onClose={onClose} dismissible={!pending}>{dismiss => <>
+  return <Dialog className="share-dialog" title="Share your space." onClose={onClose} dismissible={!pending}>{dismiss => <>
     <p className="dialog-description">Share one saved layout. Photos and chat stay private.</p>
+    <div className="sharing-body">
     {loading && <p role="status">Loading saved layouts…</p>}
     {!loading && !options && !error && <>
       <div className="sharing-preview"><Icon name="room"/><div><strong>Your {scene.room.room_type.replaceAll('_', ' ')}</strong><span>Private</span></div></div>
       <p className="feature-notice">{signedIn ? 'Save your room before sharing it.' : 'Sign in and save your room before sharing it.'}</p>
       {!signedIn && <Button variant="primary" onClick={() => dismiss(onSignIn)}>Sign in</Button>}
     </>}
-    {options && !loading && <form className="account-form sharing-form" onSubmit={event => { event.preventDefault(); void submit() }}>
+    {options && !loading && <form id={formId} className="account-form sharing-form" onSubmit={event => { event.preventDefault(); void submit() }}>
       <fieldset disabled={pending}>
         <GlassSelect label="Layout to share" value={version} options={[{ value: '', label: 'Choose a saved layout' }, ...options.versions.map(item => ({ value: item.id, label: item.label }))]} onChange={value => { setVersion(value); setConsent(false); setNotice(null) }} />
         {!options.selected_version_id && <p className="input-help">Your current changes aren’t saved. Choose a saved layout or save first.</p>}
-        {selected && <img className="sharing-scene-preview" src={apiAsset(selected.preview_url)} crossOrigin="use-credentials" alt={`Preview of ${selected.label}`}/>}
+        {selected && <div className="sharing-scene-frame"><img className="sharing-scene-preview" src={apiAsset(selected.preview_url)} crossOrigin="use-credentials" alt={`Preview of ${selected.label}`}/></div>}
         <label>Public title<input data-initial-focus required maxLength={80} value={title} onChange={event => { setTitle(event.target.value); setConsent(false); setNotice(null) }}/></label>
-        <label><span>Caption <span className="input-help">Optional</span></span><textarea maxLength={240} rows={2} value={summary} onChange={event => { setSummary(event.target.value); setConsent(false); setNotice(null) }}/></label>
+        <details className="sharing-caption"><summary>Caption <span className="input-help">Optional</span></summary><label className="visually-hidden" htmlFor={`${formId}-caption`}>Caption</label><textarea id={`${formId}-caption`} maxLength={240} rows={2} value={summary} onChange={event => { setSummary(event.target.value); setConsent(false); setNotice(null) }}/></details>
         <label className="consent-choice"><input type="checkbox" checked={consent} onChange={event => setConsent(event.target.checked)}/><span>Publish this layout and preview to Explore.</span></label>
-        <Button variant="primary" type="submit" disabled={!consent || !selected || !title.trim()}>{pending ? 'Updating…' : options.publication?.active ? 'Update sharing' : 'Share to Explore'}<Icon name="share"/></Button>
       </fieldset>
     </form>}
-    {options?.publication?.active && <div className="dialog-actions"><a className="ui-button" href={`#shared/${options.publication.id}`} target="_blank" rel="noreferrer">View shared room<Icon name="arrow"/></a><Button disabled={pending} onClick={() => void submit(true)}>Unpublish</Button></div>}
     {error && <div className="input-notice error" role="alert"><p>{error}</p><Button disabled={pending} onClick={() => setRetry(value => value + 1)}>Reload sharing</Button></div>}
-    {notice && <p className="input-notice success" role="status">{notice}</p>}
-    <Button variant="quiet" disabled={pending} onClick={() => dismiss()}>Back to room</Button>
+    {notice && <p className="sharing-feedback" role="status">{notice}</p>}
+    </div>
+    <div className="sharing-footer">
+      {options && !loading && <Button variant="primary" type="submit" form={formId} disabled={pending || !consent || !selected || !title.trim()}>{pending ? 'Updating…' : options.publication?.active ? 'Update sharing' : 'Share to Explore'}<Icon name="share"/></Button>}
+      <div className="sharing-footer-secondary"><Button variant="quiet" disabled={pending} onClick={() => dismiss()}>Back to room</Button>
+        {options?.publication?.active && <><a className="ui-button" href={`#shared/${options.publication.id}`} target="_blank" rel="noreferrer">View shared room<Icon name="arrow"/></a><Button variant="quiet" disabled={pending} onClick={() => void submit(true)}>Unpublish</Button></>}
+      </div>
+    </div>
   </>}</Dialog>
 }

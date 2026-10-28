@@ -358,6 +358,7 @@ class RegisteredRuns:
                     .where(
                         RuntimeRun.user_id == account,
                         RuntimeRun.kind == "reconstruction",
+                        RuntimeRun.status.in_(("queued", "running", "awaiting_answer", "completed", "partial")),
                         RuntimeRun.project_id.is_(None),
                         RuntimeRun.request_id.is_not(None),
                         RuntimeRun.expires_at > self.now(),

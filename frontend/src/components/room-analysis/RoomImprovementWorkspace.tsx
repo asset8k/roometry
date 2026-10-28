@@ -19,6 +19,7 @@ import { conciseText, readableText } from '../../lib/display-text'
 import { useAllowance } from '../../lib/quota'
 import AllowanceNotice from './AllowanceNotice'
 import { useSiteActions } from '../site/SiteActions'
+import { assessmentForLayout, formatRating, improvementRatings, ratingChange } from '../../lib/assessment-display'
 
 export default function RoomImprovementWorkspace({ run, onConnectionChange, restored }: { run: AgentState; onConnectionChange: (online: boolean) => void; restored?: OpenedProject }) {
   const [controller] = useState(() => new OptimizationController(run))
@@ -50,11 +51,12 @@ export default function RoomImprovementWorkspace({ run, onConnectionChange, rest
   try { signature = savedWorkspaceSignature(run.run_id, comparison.snapshotForSave(), messages) } catch { /* Unfinished edits are dirty until accepted or cancelled. */ }
   const active = ['preparing', 'prepared', 'running', 'cancelling'].includes(state.phase) || state.recovery || !!state.result && ['prepared', 'running'].includes(state.result.status)
   const unsentPreferences = state.phase === 'editing' && (!!state.draft.style.trim() || !!state.draft.constraints.trim())
+  const ratings = assessmentForLayout(run.room_assessment ?? null, views)
   useWorkspaceGuard({ dirty: !savedSignature || signature !== savedSignature || !!draft.trim() || unsentPreferences || editor.busy || editor.dragging,
     active, hasWork: true, priority: 10, leave: controller.leaveWorkspace })
   const overview = <>
     <AllowanceNotice allowance={allowance} room />
-    <RoomAssessmentCards assessment={run.room_assessment ?? null} onImprove={controller.available() ? controller.select : undefined} disabled={busy || actionsUsed} />
+    <RoomAssessmentCards {...ratings} onImprove={controller.available() ? controller.select : undefined} disabled={busy || actionsUsed} />
     {!state.instruction && <ImprovementForm state={state} controller={controller} partial={run.status === 'partial'}
       beforeStart={() => controller.setContext(comparison.currentContext())} />}
   </>
@@ -103,9 +105,11 @@ export function ImprovementForm({ state, controller, partial, beforeStart, compa
   if (!state.focus) return state.error ? <p className="input-notice error" role="alert">{state.error}</p> : null
   const ready = state.result?.status === 'prepared'
   const lastIssue = [...(state.result?.attempts ?? [])].reverse().find(attempt => attempt.issues.length)?.issues[0]
+  const ratings = state.result ? improvementRatings(state.result) : null
+  const gain = state.result && ratings ? ratingChange(ratings.baseline?.[state.result.focus].score, ratings.assessment?.[state.result.focus].score) : null
   return <section ref={form} tabIndex={-1} className="improvement-request" aria-labelledby={compact ? undefined : 'improvement-heading'} aria-label={compact ? 'Refinement status' : undefined}>
     {!compact && <h2 id="improvement-heading">{state.instruction ? 'Room refinement' : improvementLabels[state.focus]}</h2>}
-    {partial && <p className="analysis-caution">Partial reconstruction · Some items remain unresolved.</p>}
+    {partial && <p className="reconstruction-note">Partial reconstruction <span>· Some items remain unresolved.</span></p>}
     {!compact && !state.result && state.phase !== 'expired' && <form onSubmit={event => { event.preventDefault(); beforeStart?.(); void controller.start() }}>
       <p className="input-help">Starts from the visible layout. Preferences are optional.</p>
       <fieldset disabled={controller.locked()}>
@@ -115,8 +119,8 @@ export function ImprovementForm({ state, controller, partial, beforeStart, compa
         <div className="input-actions"><button className="primary-action" type="submit">Improve room</button><button type="button" onClick={controller.close}>Back to ratings</button></div>
       </fieldset>
     </form>}
-    {state.phase === 'preparing' && <p role="status">Saving your improvement request…</p>}
-    {state.phase === 'cancelling' && <p role="status">Cancelling your improvement request…</p>}
+    {state.phase === 'preparing' && <p className="improvement-submit-status" role="status">Saving your improvement request…</p>}
+    {state.phase === 'cancelling' && <p className="improvement-submit-status" role="status">Cancelling your improvement request…</p>}
     {state.error && <p className="input-notice error" role="alert">{state.error}</p>}
     {state.recovery && <button type="button" onClick={() => void controller.retry()}>Retry the same request</button>}
     {ready && state.phase === 'prepared' && <div className="input-notice success" role="status">
@@ -131,6 +135,11 @@ export function ImprovementForm({ state, controller, partial, beforeStart, compa
     </div>}
     {state.result && !['prepared', 'running', 'cancelled'].includes(state.result.status) && <div className="improvement-outcome" role="status">
       {!compact && <h3>{state.result.result_scene ? 'Candidate ready' : 'Previous layout kept'}</h3>}
+      {gain && gain.delta !== 0 && <p key={state.result.run_id} className={`improvement-score-change${gain.delta > 0 ? ' improvement-score-change--up' : ''}`}>
+        <span>{improvementLabels[state.result.focus]}{ratings?.designReview && state.result.focus === 'aesthetics' ? ' · Design review' : ''}</span>
+        <strong>{formatRating(gain.before)} <span aria-hidden="true">→</span> {formatRating(gain.after)} <small>/ 10</small></strong>
+        <span>{`${gain.delta > 0 ? '+' : ''}${formatRating(gain.delta)} points`}</span>
+      </p>}
       {!compact && <p>{conciseText(state.result.message)}</p>}
       {state.result.result_scene && state.result.limitations.filter(note => note.startsWith('Trade-off:')).map((note, i) =>
         <p key={i} className="muted">{conciseText(note)}</p>)}

@@ -75,6 +75,8 @@ describe('saved improvement comparison', () => {
     expect(html).toContain('Previously retained')
     expect(html).toContain('Rendered total')
     expect(html).toContain('The candidate palette is more cohesive.')
+    const row = html.match(/<tr><th scope="row">Aesthetics[\s\S]*?<\/tr>/)?.[0] ?? ''
+    for (const text of ['Design review', '6 / 10', '8 / 10', '+2']) expect(row).toContain(text)
     run.attempts[0]!.review!.aesthetics!.confidence = 'low'
     expect(renderToStaticMarkup(<ImprovementComparison run={run} />)).toContain('no numerical improvement is claimed')
   })

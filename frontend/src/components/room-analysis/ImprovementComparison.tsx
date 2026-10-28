@@ -2,6 +2,7 @@ import { improvementLabels } from '../../lib/optimization'
 import type { OptimizationRun } from '../../lib/optimization'
 import type { RoomScene } from '../../lib/scene.generated'
 import { aestheticCriteria } from './AestheticBreakdown'
+import { improvementRatings } from '../../lib/assessment-display'
 
 const number = (value: number) => value.toFixed(1).replace(/\.0$/, '')
 const words = (value: string) => value.replaceAll('_', ' ')
@@ -31,20 +32,21 @@ export default function ImprovementComparison({ run, labels = {} }: { run: Optim
   if (!run.result_scene) return null
   const changes = sceneChanges(run.source_scene, run.result_scene)
   const compatible = run.baseline_assessment?.policy_version === run.result_assessment?.policy_version
+  const ratings = improvementRatings(run)
   const review = [...run.attempts].reverse().find(attempt => attempt.outcome === 'accepted')?.review
   return <section className="improvement-comparison" aria-labelledby="comparison-summary-heading">
     <div className="comparison-summary-heading"><h3 id="comparison-summary-heading">What changed</h3><span>{run.instruction ? 'Chat refinement' : `Focus: ${improvementLabels[run.focus]}`}</span></div>
     {run.status !== 'completed' && <p className="analysis-caution">This run stopped early. The comparison shows an earlier validated candidate that was retained.</p>}
-    {run.source_status === 'partial' && <p className="analysis-caution">Both views use the same partial reconstruction. Missing or uncertain room elements remain unresolved.</p>}
+    {run.source_status === 'partial' && <p className="reconstruction-note">Both views use the same partial reconstruction. Missing or uncertain room elements remain unresolved.</p>}
     <p>These estimates compare the submitted starting scene with this candidate. Later manual edits are not included.</p>
     <div className="comparison-table-scroll"><table className="comparison-scores"><caption>Saved room estimates, out of 10</caption>
       <thead><tr><th scope="col">Category</th><th scope="col">Starting scene</th><th scope="col">Candidate</th><th scope="col">Change</th></tr></thead>
       <tbody>{(['openness', 'storage', 'workspace', 'aesthetics'] as const).map(key => {
-        const a = run.baseline_assessment?.[key], b = run.result_assessment?.[key]
+        const a = (ratings.baseline ?? run.baseline_assessment)?.[key], b = (ratings.assessment ?? run.result_assessment)?.[key]
         const before = a?.score ?? null, after = b?.score ?? null
         const delta = compatible && before !== null && after !== null ? Math.round((after - before) * 10) / 10 : null
         const score = (card: typeof a) => card?.score != null ? `${number(card.score)} / 10` : card?.status === 'not_applicable' ? 'Not applicable' : 'Not assessed'
-        return <tr key={key}><th scope="row">{improvementLabels[key]}{!run.instruction && run.focus === key && <span className="score-focus">Selected focus</span>}</th>
+        return <tr key={key}><th scope="row">{improvementLabels[key]}{!run.instruction && run.focus === key && <span className="score-focus">Selected focus</span>}{key === 'aesthetics' && ratings.designReview && <span className="score-note">Design review</span>}</th>
           <td>{score(a)}{a?.confidence === 'low' && before !== null && <span className="score-note">Limited evidence</span>}</td>
           <td>{key === 'aesthetics' && run.focus === 'aesthetics' && after === null && review ? 'Reviewed qualitatively' : score(b)}{b?.confidence === 'low' && after !== null && <span className="score-note">Limited evidence</span>}</td>
           <td>{delta === null ? '—' : delta > 0 ? `+${number(delta)}` : delta === 0 ? 'No change' : number(delta)}</td></tr>

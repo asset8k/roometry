@@ -5,7 +5,7 @@ import { Button, Icon } from './primitives'
 import { surfaceMotion } from '../../lib/motion'
 
 /** Native modal semantics provide focus containment, Escape, and inert background. */
-export default function Dialog({ title, onClose, children, dismissible = true }: { title: string; onClose: () => void; children: ReactNode | ((dismiss: (action?: () => void) => void) => ReactNode); dismissible?: boolean }) {
+export default function Dialog({ title, onClose, children, dismissible = true, className = '' }: { title: string; onClose: () => void; children: ReactNode | ((dismiss: (action?: () => void) => void) => ReactNode); dismissible?: boolean; className?: string }) {
   const heading = useId()
   const dialog = useRef<HTMLDialogElement>(null)
   const content = useRef<HTMLDivElement>(null)
@@ -54,7 +54,7 @@ export default function Dialog({ title, onClose, children, dismissible = true }:
       previous?.focus({ preventScroll: true })
     }
   }, [])
-  return <dialog ref={dialog} className="site-dialog" aria-labelledby={heading}
+  return <dialog ref={dialog} className={`site-dialog ${className}`} aria-labelledby={heading}
     onKeyDown={event => {
       if (event.key !== 'Tab') return
       const controls = [...event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]')]

@@ -105,6 +105,10 @@ import { parseOptimization } from './optimization'
 import type { OptimizationRun } from './optimization'
 export interface ProjectSummary { id: string; title: string; revision: number; room_type: string; updated_at: string; visibility: 'private' }
 export interface RecentRun { id: string; status: string; room_type: string; expires_at: string }
+export function recoverableRuns(runs: RecentRun[], now = Date.now()) {
+  return runs.filter(run => ['queued', 'running', 'awaiting_answer', 'completed', 'partial'].includes(run.status)
+    && Date.parse(run.expires_at) > now)
+}
 export interface OpenedProject {
   project: { id: string; title: string; revision: number; visibility: 'private'; images: { id: string; url: string }[];
     versions: { id: string; scene: RoomScene }[]; snapshot: { messages: SavedMessage[];
@@ -160,7 +164,7 @@ export const projectsClient = {
   recent: async (signal: AbortSignal): Promise<RecentRun[]> => {
     const value = await projectRequest('/runs', signal)
     if (!Array.isArray(value) || value.some(item => typeof item.id !== 'string' || typeof item.status !== 'string' || typeof item.room_type !== 'string')) throw new ProjectError('Couldn’t read recoverable runs.')
-    return value
+    return recoverableRuns(value)
   },
   open: async (id: string, signal: AbortSignal) => parseOpenedProject(await projectRequest(`/${encodeURIComponent(id)}/open`, signal, 'POST', {})),
   rename: (room: ProjectSummary, title: string, signal: AbortSignal) => projectRequest(`/${room.id}`, signal, 'PATCH', { title, expected_revision: room.revision }),

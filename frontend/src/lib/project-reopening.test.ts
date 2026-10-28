@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, afterEach } from 'vitest'
 import { SceneComparison } from './scene-comparison'
-import { parseOpenedProject, projectsClient } from './projects'
+import { parseOpenedProject, projectsClient, recoverableRuns } from './projects'
 import type { OpenedProject } from './projects'
 import { prepared } from './test-support/room-input'
 import { finishedRun } from './test-support/agent-run'
@@ -31,6 +31,16 @@ function savedWorkspace(): OpenedProject {
 }
 afterEach(() => vi.unstubAllGlobals())
 describe('reopening a private workspace', () => {
+  it('lists only active or usable unsaved rooms and hides failed, cancelled and expired attempts', async () => {
+    const now = Date.now()
+    const statuses = ['queued', 'running', 'awaiting_answer', 'completed', 'partial', 'failed', 'cancelled']
+    const runs = statuses.map(status => ({ id, status, room_type: 'bedroom', expires_at: new Date(now + 60000).toISOString() }))
+    runs.push({ ...runs[0]!, expires_at: new Date(now - 1).toISOString() })
+    expect(recoverableRuns(runs, now).map(run => run.status)).toEqual(statuses.slice(0, 5))
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json(runs)))
+    expect((await projectsClient.recent(new AbortController().signal)).map(run => run.status)).toEqual(statuses.slice(0, 5))
+    expect(runs).toHaveLength(8)
+  })
   it('restores comparison selection, chat, edited colors and locks without changing Original or Improved', () => {
     const saved = parseOpenedProject(savedWorkspace()), comparison = SceneComparison.restore(saved)
     const expected = saved.project.versions.find(version => version.id === `manual:${saved.project.snapshot.comparison.editing_parent_run_id}`)!.scene
@@ -42,6 +52,19 @@ describe('reopening a private workspace', () => {
     comparison.show('editing'); expect(comparison.currentContext().scene).toEqual(expected)
     comparison.getSnapshot().editor.resetLayout()
     expect(Object.keys(comparison.getSnapshot().colors)).not.toHaveLength(0)
+  })
+  it('restores creation order after JSONB reorders improvement keys and preserves the selected version', () => {
+    const saved = savedWorkspace()
+    const storage = Object.values(saved.project.snapshot.improvements)[0]!
+    storage.focus = 'storage'; storage.created_at = '2026-10-28T10:00:00Z'
+    const chat = { ...structuredClone(storage), run_id: '99999999-9999-4999-8999-999999999999',
+      instruction: 'Add a TV.', created_at: '2026-10-28T11:00:00Z' }
+    saved.project.snapshot.improvements = { [chat.run_id]: chat, [storage.run_id]: storage }
+    const comparison = SceneComparison.restore(saved)
+    expect(comparison.getSnapshot().improvements.map(run => run.run_id)).toEqual([storage.run_id, chat.run_id])
+    expect(comparison.getSnapshot().selectedImprovementId).toBe(storage.run_id)
+    expect(comparison.currentContext().scene).toEqual(saved.project.versions.find(version => version.id === `manual:${storage.run_id}`)!.scene)
+    expect(Object.keys(saved.project.snapshot.improvements)).toEqual([chat.run_id, storage.run_id])
   })
   it('rejects missing version links instead of opening a different layout', () => {
     const saved = savedWorkspace(); saved.project.versions = []

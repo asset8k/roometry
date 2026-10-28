@@ -53,6 +53,23 @@ it('shows accepted trade-offs outside the collapsed diagnostics', async () => {
   expect(html.slice(0, html.indexOf('<details>'))).toContain('Trade-off: storage changes')
 })
 
+it('shows the actual focus gain beside the completed outcome rather than hiding it in diagnostics', async () => {
+  const { controller, client, render } = setup()
+  controller.select('storage'); await controller.prepare()
+  const result = retained(controller.getSnapshot().result!)
+  const card = { status: 'rated' as const, score: 5.7, confidence: 'medium' as const, source: 'geometry' as const, explanation: 'Checked storage.', entity_ids: [], metrics: [] as [] }
+  result.baseline_assessment = { policy_version: 'room-assessment-v2', scene_hash: result.source_scene_hash,
+    openness: card, storage: card, workspace: card, aesthetics: card, recommended: 'storage', notes: [] }
+  result.result_assessment = { ...result.baseline_assessment, storage: { ...card, score: 7.1 } }
+  vi.mocked(client.execute).mockResolvedValueOnce(result)
+  await controller.execute()
+  const html = render().split('<details>')[0]!
+  expect(html).toContain('improvement-score-change--up')
+  expect(html).toContain('5.7')
+  expect(html).toContain('7.1')
+  expect(html).toContain('+1.4 points')
+})
+
 it('shows quota exhaustion without locking the viewer into execution recovery', async () => {
   const { controller, client } = setup()
   vi.mocked(client.execute).mockRejectedValueOnce(new AgentRunError('This room has used its AI actions.', 429, 'session_action_limit'))

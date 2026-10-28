@@ -20,7 +20,8 @@ function RecoveredRun({ data, onConnectionChange }: { data: { run: unknown; inpu
   })
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot)
   const active = ['starting', 'running', 'awaiting_answer'].includes(state.phase) || state.cancelling || state.recovery
-  useWorkspaceGuard({ dirty: !state.run?.working_scene || active, active, hasWork: true, priority: 20, leave: controller.leaveWorkspace })
+  const stopped = ['failed', 'cancelled', 'expired'].includes(state.phase) && !state.run?.working_scene
+  useWorkspaceGuard({ dirty: !stopped && (!state.run?.working_scene || active), active, hasWork: true, priority: 20, leave: controller.leaveWorkspace })
   useEffect(controller.connect, [controller])
   const [starting, setStarting] = useState(false), [error, setError] = useState<string | null>(null)
   return <>{state.phase === 'starting' && data.request_id && <Button disabled={starting} onClick={() => {
@@ -28,7 +29,9 @@ function RecoveredRun({ data, onConnectionChange }: { data: { run: unknown; inpu
     const input = parsePreparedInput(data.input)
     void agentClient.start({ input_id: input.input_id, request_id: data.request_id! }, AbortSignal.timeout(1800000))
       .then(run => controller.restore(input, run)).catch(reason => setError((reason as Error).message)).finally(() => setStarting(false))
-  }}>{starting ? 'Continuing…' : 'Continue reconstruction'}</Button>}{error && <p role="alert">{error}</p>}<RoomGenerationWorkspace state={state} controller={controller} onConnectionChange={onConnectionChange}/></>
+  }}>{starting ? 'Continuing…' : 'Continue reconstruction'}</Button>}{error && <p role="alert">{error}</p>}<RoomGenerationWorkspace state={state} controller={controller} onConnectionChange={onConnectionChange}/>
+    {stopped && <div className="recovered-run-actions"><a className="ui-button" href="#my-rooms">Back to my rooms</a><a className="ui-button ui-button--primary" href="#">New room</a></div>}
+  </>
 }
 export default function SavedRoomPage({ id, kind, user, onSignIn, onConnectionChange }: {
   id: string; kind: 'saved' | 'recover'; user: AccountUser | null; onSignIn: () => void; onConnectionChange: (online: boolean) => void
