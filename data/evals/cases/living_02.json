@@ -1,0 +1,103 @@
+{
+  "id": "living_02",
+  "photo_files": [
+    "images/living_02/living_02.jpg"
+  ],
+  "annotation_notes": [
+    "Reference annotations were written after visually inspecting the final image; generation prompts are not ground truth.",
+    "One viewpoint only: exact object dimensions and unseen walls are unassessed. Approximate positions must preserve major relationships, not centimeter accuracy.",
+    "Unannotated small decor is optional; unexpected-major-object checks must not flag incidental cups, books or cushions.",
+    "The cream ottoman is a separate movable item, not an extension of the sofa.",
+    "Walking space is restricted by the table and ottoman; retain an honest baseline."
+  ],
+  "objects": [
+    {
+      "id": "sofa",
+      "types": [
+        "sofa"
+      ],
+      "color": "#26384D"
+    },
+    {
+      "id": "tv",
+      "types": [
+        "tv"
+      ],
+      "color": "#141719"
+    },
+    {
+      "id": "console",
+      "types": [
+        "tv_stand",
+        "sideboard"
+      ],
+      "color": "#73543B"
+    },
+    {
+      "id": "coffee_table",
+      "types": [
+        "coffee_table"
+      ],
+      "color": "#62442F"
+    },
+    {
+      "id": "ottoman",
+      "types": [
+        "ottoman",
+        "bench"
+      ],
+      "color": "#D0BFA3"
+    },
+    {
+      "id": "bookcase",
+      "types": [
+        "shelf"
+      ],
+      "color": "#674D34"
+    },
+    {
+      "id": "floor_lamp",
+      "types": [
+        "floor_lamp"
+      ],
+      "color": "#E0CDA5"
+    },
+    {
+      "id": "rug",
+      "types": [
+        "rug"
+      ],
+      "color": "#9D8B72"
+    },
+    {
+      "id": "window",
+      "opening_type": "window"
+    },
+    {
+      "id": "door",
+      "opening_type": "door"
+    }
+  ],
+  "relationships": [
+    {
+      "kind": "faces",
+      "subject": "sofa",
+      "target": "tv"
+    },
+    {
+      "kind": "near",
+      "subject": "coffee_table",
+      "target": "sofa"
+    },
+    {
+      "kind": "near",
+      "subject": "ottoman",
+      "target": "coffee_table"
+    },
+    {
+      "kind": "near",
+      "subject": "bookcase",
+      "target": "window"
+    }
+  ]
+}

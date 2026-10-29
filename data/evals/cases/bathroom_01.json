@@ -1,0 +1,83 @@
+{
+  "id": "bathroom_01",
+  "photo_files": [
+    "images/bathroom_01/bathroom_01.jpg"
+  ],
+  "annotation_notes": [
+    "Reference annotations were written after visually inspecting the final image; generation prompts are not ground truth.",
+    "One viewpoint only: exact object dimensions and unseen walls are unassessed. Approximate positions must preserve major relationships, not centimeter accuracy.",
+    "Unannotated small decor is optional; unexpected-major-object checks must not flag incidental cups, books or cushions.",
+    "Shower reflections are not additional toilets or fixtures.",
+    "Vanity includes sink; preserve both features without forcing duplicate sink objects.",
+    "No window is visible."
+  ],
+  "objects": [
+    {
+      "id": "vanity",
+      "types": [
+        "vanity",
+        "sink"
+      ],
+      "color": "#AE8350"
+    },
+    {
+      "id": "mirror",
+      "types": [
+        "mirror"
+      ],
+      "color": "#B3B0A3"
+    },
+    {
+      "id": "toilet",
+      "types": [
+        "toilet"
+      ],
+      "color": "#E9E6D9"
+    },
+    {
+      "id": "shower",
+      "types": [
+        "shower"
+      ],
+      "color": "#C2B89D"
+    },
+    {
+      "id": "towel_rail",
+      "types": [
+        "towel_rack"
+      ],
+      "color": "#36372E"
+    },
+    {
+      "id": "basket",
+      "types": [
+        "basket"
+      ],
+      "color": "#947039"
+    },
+    {
+      "id": "mat",
+      "types": [
+        "rug"
+      ],
+      "color": "#BEAD8B"
+    }
+  ],
+  "relationships": [
+    {
+      "kind": "near",
+      "subject": "mirror",
+      "target": "vanity"
+    },
+    {
+      "kind": "near",
+      "subject": "toilet",
+      "target": "shower"
+    },
+    {
+      "kind": "near",
+      "subject": "vanity",
+      "target": "toilet"
+    }
+  ]
+}

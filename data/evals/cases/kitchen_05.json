@@ -1,0 +1,83 @@
+{
+  "id": "kitchen_05",
+  "photo_files": [
+    "images/kitchen_05/kitchen_05.jpg"
+  ],
+  "annotation_notes": [
+    "Reference annotations were written after visually inspecting the final image; generation prompts are not ground truth.",
+    "One viewpoint only: exact object dimensions and unseen walls are unassessed. Approximate positions must preserve major relationships, not centimeter accuracy.",
+    "Unannotated small decor is optional; unexpected-major-object checks must not flag incidental cups, books or cushions.",
+    "A small portion of another worktop is visible in the foreground; its full extent and support are unknown, so it is not a required island.",
+    "Coffee maker and tiny worktop decorations are secondary.",
+    "No refrigerator is visible; do not require or invent one."
+  ],
+  "objects": [
+    {
+      "id": "counter",
+      "types": [
+        "kitchen_counter",
+        "kitchen_cabinet",
+        "sink"
+      ],
+      "color": "#ECEAE1"
+    },
+    {
+      "id": "upper_cabinets",
+      "types": [
+        "wall_cabinet",
+        "kitchen_cabinet"
+      ],
+      "color": "#E8E6DD"
+    },
+    {
+      "id": "cooker",
+      "types": [
+        "cooker",
+        "kitchen_cabinet"
+      ],
+      "color": "#E2E2D8"
+    },
+    {
+      "id": "hood",
+      "types": [
+        "extractor_hood"
+      ],
+      "color": "#E0DFD4"
+    },
+    {
+      "id": "dishwasher",
+      "types": [
+        "dishwasher"
+      ],
+      "color": "#E3E2D8"
+    },
+    {
+      "id": "kettle",
+      "types": [
+        "kettle"
+      ],
+      "color": "#A3A395"
+    },
+    {
+      "id": "window",
+      "opening_type": "window"
+    }
+  ],
+  "relationships": [
+    {
+      "kind": "near",
+      "subject": "hood",
+      "target": "cooker"
+    },
+    {
+      "kind": "near",
+      "subject": "dishwasher",
+      "target": "counter"
+    },
+    {
+      "kind": "near",
+      "subject": "counter",
+      "target": "window"
+    }
+  ]
+}

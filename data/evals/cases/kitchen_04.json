@@ -1,0 +1,143 @@
+{
+  "id": "kitchen_04",
+  "photo_files": [
+    "images/kitchen_04/kitchen_04.jpg"
+  ],
+  "annotation_notes": [
+    "Reference annotations were written after visually inspecting the final image; generation prompts are not ground truth.",
+    "One viewpoint only: exact object dimensions and unseen walls are unassessed. Approximate positions must preserve major relationships, not centimeter accuracy.",
+    "Unannotated small decor is optional; unexpected-major-object checks must not flag incidental cups, books or cushions.",
+    "Three orange island stools are separate from the two gray dining chairs.",
+    "Sink is on the island; the rear run is the cooking zone.",
+    "Dark exterior and blue cast are lighting, not evidence that every cabinet is blue."
+  ],
+  "objects": [
+    {
+      "id": "island",
+      "types": [
+        "kitchen_counter",
+        "sink"
+      ],
+      "color": "#E2E2DB"
+    },
+    {
+      "id": "perimeter_counter",
+      "types": [
+        "kitchen_counter",
+        "kitchen_cabinet"
+      ],
+      "color": "#303332"
+    },
+    {
+      "id": "pantry",
+      "types": [
+        "kitchen_cabinet",
+        "wardrobe"
+      ],
+      "color": "#262B2A"
+    },
+    {
+      "id": "oven_stack",
+      "types": [
+        "cooker",
+        "kitchen_cabinet"
+      ],
+      "color": "#1F2728"
+    },
+    {
+      "id": "refrigerator",
+      "types": [
+        "refrigerator"
+      ],
+      "color": "#A4AAA6"
+    },
+    {
+      "id": "hood",
+      "types": [
+        "extractor_hood"
+      ],
+      "color": "#989F9D"
+    },
+    {
+      "id": "stool_1",
+      "types": [
+        "stool"
+      ],
+      "color": "#A45E2E"
+    },
+    {
+      "id": "stool_2",
+      "types": [
+        "stool"
+      ],
+      "color": "#A45E2E"
+    },
+    {
+      "id": "stool_3",
+      "types": [
+        "stool"
+      ],
+      "color": "#A45E2E"
+    },
+    {
+      "id": "dining_table",
+      "types": [
+        "table"
+      ],
+      "color": "#6C7B79"
+    },
+    {
+      "id": "dining_chair_a",
+      "types": [
+        "chair"
+      ],
+      "color": "#8F9290"
+    },
+    {
+      "id": "dining_chair_b",
+      "types": [
+        "chair"
+      ],
+      "color": "#8F9290"
+    },
+    {
+      "id": "pendants",
+      "types": [
+        "ceiling_light",
+        "chandelier"
+      ],
+      "color": "#A3ABA7"
+    },
+    {
+      "id": "window",
+      "opening_type": "window"
+    }
+  ],
+  "relationships": [
+    {
+      "kind": "near",
+      "subject": "stool_1",
+      "target": "island"
+    },
+    {
+      "kind": "near",
+      "subject": "stool_2",
+      "target": "island"
+    },
+    {
+      "kind": "near",
+      "subject": "stool_3",
+      "target": "island"
+    },
+    {
+      "kind": "near",
+      "subject": "dining_chair_a",
+      "target": "dining_table"
+    },
+    {
+      "kind": "near",
+      "subject": "dining_chair_b",
+      "target": "dining_table"
+    }
+  ]
+}

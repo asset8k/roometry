@@ -1,0 +1,101 @@
+{
+  "id": "office_03",
+  "photo_files": [
+    "images/office_03/office_03.jpg"
+  ],
+  "annotation_notes": [
+    "Reference annotations were written after visually inspecting the final image; generation prompts are not ground truth.",
+    "One viewpoint only: exact object dimensions and unseen walls are unassessed. Approximate positions must preserve major relationships, not centimeter accuracy.",
+    "Unannotated small decor is optional; unexpected-major-object checks must not flag incidental cups, books or cushions.",
+    "Corner desk and desktop hutch may be segmented differently; preserve visible worktop arrangement without demanding a specific mesh.",
+    "One open laptop is visible, not a required separate desktop monitor.",
+    "Small framed photo is excluded from annotations; do not describe or identify its subjects.",
+    "No door or window is visible in this crop."
+  ],
+  "objects": [
+    {
+      "id": "desk",
+      "types": [
+        "desk",
+        "table"
+      ],
+      "color": "#B1895D"
+    },
+    {
+      "id": "hutch",
+      "types": [
+        "shelf",
+        "wall_cabinet"
+      ],
+      "color": "#AA7D4D"
+    },
+    {
+      "id": "chair",
+      "types": [
+        "chair"
+      ],
+      "color": "#252B2D"
+    },
+    {
+      "id": "laptop",
+      "types": [
+        "laptop",
+        "computer"
+      ],
+      "color": "#A2AAA9"
+    },
+    {
+      "id": "drawer_unit",
+      "types": [
+        "dresser",
+        "sideboard"
+      ],
+      "color": "#B79166"
+    },
+    {
+      "id": "printer",
+      "types": [
+        "printer"
+      ],
+      "color": "#414B4D"
+    },
+    {
+      "id": "lamp",
+      "types": [
+        "table_lamp"
+      ],
+      "color": "#9A9582"
+    },
+    {
+      "id": "speaker_a",
+      "types": [
+        "speaker"
+      ],
+      "color": "#A7ADAC"
+    },
+    {
+      "id": "speaker_b",
+      "types": [
+        "speaker"
+      ],
+      "color": "#A7ADAC"
+    }
+  ],
+  "relationships": [
+    {
+      "kind": "faces",
+      "subject": "chair",
+      "target": "laptop"
+    },
+    {
+      "kind": "near",
+      "subject": "laptop",
+      "target": "desk"
+    },
+    {
+      "kind": "near",
+      "subject": "printer",
+      "target": "drawer_unit"
+    }
+  ]
+}

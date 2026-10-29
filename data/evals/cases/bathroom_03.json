@@ -1,0 +1,98 @@
+{
+  "id": "bathroom_03",
+  "photo_files": [
+    "images/bathroom_03/bathroom_03.jpg"
+  ],
+  "annotation_notes": [
+    "Reference annotations were written after visually inspecting the final image; generation prompts are not ground truth.",
+    "One viewpoint only: exact object dimensions and unseen walls are unassessed. Approximate positions must preserve major relationships, not centimeter accuracy.",
+    "Unannotated small decor is optional; unexpected-major-object checks must not flag incidental cups, books or cushions.",
+    "Checkerboard is floor finish, not many small rugs.",
+    "Shower visible in mirror is a reflection of the same enclosure.",
+    "Washing machine is under countertop; do not place another cabinet through it."
+  ],
+  "objects": [
+    {
+      "id": "vanity",
+      "types": [
+        "vanity",
+        "sink"
+      ],
+      "color": "#E8E5D8"
+    },
+    {
+      "id": "washer",
+      "types": [
+        "washing_machine"
+      ],
+      "color": "#E6E6DE"
+    },
+    {
+      "id": "toilet",
+      "types": [
+        "toilet"
+      ],
+      "color": "#E6E3D6"
+    },
+    {
+      "id": "shower",
+      "types": [
+        "shower"
+      ],
+      "color": "#BDC1B9"
+    },
+    {
+      "id": "mirror",
+      "types": [
+        "mirror"
+      ],
+      "color": "#B5BFB7"
+    },
+    {
+      "id": "wall_cabinet",
+      "types": [
+        "wall_cabinet"
+      ],
+      "color": "#252B29"
+    },
+    {
+      "id": "towel_rail",
+      "types": [
+        "towel_rack",
+        "radiator"
+      ],
+      "color": "#282D29"
+    },
+    {
+      "id": "basket",
+      "types": [
+        "basket"
+      ],
+      "color": "#6F5739"
+    },
+    {
+      "id": "mat",
+      "types": [
+        "rug"
+      ],
+      "color": "#728165"
+    }
+  ],
+  "relationships": [
+    {
+      "kind": "near",
+      "subject": "washer",
+      "target": "vanity"
+    },
+    {
+      "kind": "near",
+      "subject": "mirror",
+      "target": "vanity"
+    },
+    {
+      "kind": "near",
+      "subject": "basket",
+      "target": "shower"
+    }
+  ]
+}

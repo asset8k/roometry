@@ -1,0 +1,98 @@
+{
+  "id": "living_03",
+  "photo_files": [
+    "images/living_03/living_03.jpg"
+  ],
+  "annotation_notes": [
+    "Reference annotations were written after visually inspecting the final image; generation prompts are not ground truth.",
+    "One viewpoint only: exact object dimensions and unseen walls are unassessed. Approximate positions must preserve major relationships, not centimeter accuracy.",
+    "Unannotated small decor is optional; unexpected-major-object checks must not flag incidental cups, books or cushions.",
+    "A sectional chaise must not be treated as an extra standalone sofa.",
+    "Do not interpret foliage reflected in glass or the TV as extra furniture."
+  ],
+  "objects": [
+    {
+      "id": "sofa",
+      "types": [
+        "sofa"
+      ],
+      "color": "#DDD5C5"
+    },
+    {
+      "id": "tv",
+      "types": [
+        "tv"
+      ],
+      "color": "#171918"
+    },
+    {
+      "id": "console",
+      "types": [
+        "tv_stand",
+        "sideboard"
+      ],
+      "color": "#AF8D5F"
+    },
+    {
+      "id": "coffee_table",
+      "types": [
+        "coffee_table"
+      ],
+      "color": "#474B43"
+    },
+    {
+      "id": "chair",
+      "types": [
+        "armchair"
+      ],
+      "color": "#657046"
+    },
+    {
+      "id": "rug",
+      "types": [
+        "rug"
+      ],
+      "color": "#B5ADA1"
+    },
+    {
+      "id": "floating_shelf",
+      "types": [
+        "wall_shelf"
+      ],
+      "color": "#AD8D61"
+    },
+    {
+      "id": "tree",
+      "types": [
+        "plant"
+      ],
+      "color": "#65734D"
+    },
+    {
+      "id": "window",
+      "opening_type": "window"
+    }
+  ],
+  "relationships": [
+    {
+      "kind": "faces",
+      "subject": "sofa",
+      "target": "tv"
+    },
+    {
+      "kind": "near",
+      "subject": "chair",
+      "target": "window"
+    },
+    {
+      "kind": "near",
+      "subject": "tv",
+      "target": "console"
+    },
+    {
+      "kind": "near",
+      "subject": "coffee_table",
+      "target": "sofa"
+    }
+  ]
+}

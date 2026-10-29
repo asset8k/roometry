@@ -1,0 +1,125 @@
+{
+  "id": "office_02",
+  "photo_files": [
+    "images/office_02/office_02.jpg"
+  ],
+  "annotation_notes": [
+    "Reference annotations were written after visually inspecting the final image; generation prompts are not ground truth.",
+    "One viewpoint only: exact object dimensions and unseen walls are unassessed. Approximate positions must preserve major relationships, not centimeter accuracy.",
+    "Unannotated small decor is optional; unexpected-major-object checks must not flag incidental cups, books or cushions.",
+    "The visible desks are separate units along the same main wall; do not force the prompted L-shaped configuration.",
+    "A small white drawer pedestal is visible beneath left desk; it is a secondary desk component.",
+    "Both workstations must remain functional during storage optimization."
+  ],
+  "objects": [
+    {
+      "id": "desk_a",
+      "types": [
+        "desk"
+      ],
+      "color": "#E7E9E4"
+    },
+    {
+      "id": "desk_b",
+      "types": [
+        "desk"
+      ],
+      "color": "#E7E9E4"
+    },
+    {
+      "id": "chair_green",
+      "types": [
+        "chair"
+      ],
+      "color": "#6A893F"
+    },
+    {
+      "id": "chair_gray",
+      "types": [
+        "chair"
+      ],
+      "color": "#9AA2A5"
+    },
+    {
+      "id": "monitor_a",
+      "types": [
+        "monitor",
+        "computer"
+      ],
+      "color": "#1C2427"
+    },
+    {
+      "id": "monitor_b",
+      "types": [
+        "monitor",
+        "computer"
+      ],
+      "color": "#1C2427"
+    },
+    {
+      "id": "cabinet",
+      "types": [
+        "sideboard",
+        "dresser"
+      ],
+      "color": "#C6AB79"
+    },
+    {
+      "id": "printer",
+      "types": [
+        "printer"
+      ],
+      "color": "#252E31"
+    },
+    {
+      "id": "radiator",
+      "types": [
+        "radiator"
+      ],
+      "color": "#E4E4D9"
+    },
+    {
+      "id": "basket",
+      "types": [
+        "basket"
+      ],
+      "color": "#A28A5E"
+    },
+    {
+      "id": "window",
+      "opening_type": "window"
+    }
+  ],
+  "relationships": [
+    {
+      "kind": "faces",
+      "subject": "chair_green",
+      "target": "desk_a"
+    },
+    {
+      "kind": "faces",
+      "subject": "chair_gray",
+      "target": "desk_b"
+    },
+    {
+      "kind": "near",
+      "subject": "monitor_a",
+      "target": "desk_a"
+    },
+    {
+      "kind": "near",
+      "subject": "monitor_b",
+      "target": "desk_b"
+    },
+    {
+      "kind": "near",
+      "subject": "printer",
+      "target": "cabinet"
+    },
+    {
+      "kind": "near",
+      "subject": "radiator",
+      "target": "window"
+    }
+  ]
+}

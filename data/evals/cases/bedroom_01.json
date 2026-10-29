@@ -1,0 +1,92 @@
+{
+  "id": "bedroom_01",
+  "photo_files": [
+    "images/bedroom_01/bedroom_01.jpg"
+  ],
+  "annotation_notes": [
+    "Reference annotations were written after visually inspecting the final image; generation prompts are not ground truth.",
+    "One viewpoint only: exact object dimensions and unseen walls are unassessed. Approximate positions must preserve major relationships, not centimeter accuracy.",
+    "Unannotated small decor is optional; unexpected-major-object checks must not flag incidental cups, books or cushions.",
+    "Two independent bedside tables and two supported lamps are visible.",
+    "There is no visible desk or computer; workspace is absent rather than a broken desk."
+  ],
+  "objects": [
+    {
+      "id": "bed",
+      "types": [
+        "bed"
+      ],
+      "color": "#E2E0D2"
+    },
+    {
+      "id": "nightstand_left",
+      "types": [
+        "nightstand",
+        "side_table"
+      ],
+      "color": "#99723F"
+    },
+    {
+      "id": "nightstand_right",
+      "types": [
+        "nightstand",
+        "side_table"
+      ],
+      "color": "#99723F"
+    },
+    {
+      "id": "lamp_left",
+      "types": [
+        "table_lamp"
+      ],
+      "color": "#D4BE8D"
+    },
+    {
+      "id": "lamp_right",
+      "types": [
+        "table_lamp"
+      ],
+      "color": "#D4BE8D"
+    },
+    {
+      "id": "wardrobe",
+      "types": [
+        "wardrobe"
+      ],
+      "color": "#E0DCCB"
+    },
+    {
+      "id": "rug",
+      "types": [
+        "rug"
+      ],
+      "color": "#9E9D91"
+    },
+    {
+      "id": "window",
+      "opening_type": "window"
+    }
+  ],
+  "relationships": [
+    {
+      "kind": "near",
+      "subject": "nightstand_left",
+      "target": "bed"
+    },
+    {
+      "kind": "near",
+      "subject": "nightstand_right",
+      "target": "bed"
+    },
+    {
+      "kind": "near",
+      "subject": "lamp_left",
+      "target": "nightstand_left"
+    },
+    {
+      "kind": "near",
+      "subject": "lamp_right",
+      "target": "nightstand_right"
+    }
+  ]
+}

@@ -1,0 +1,103 @@
+{
+  "id": "kitchen_03",
+  "photo_files": [
+    "images/kitchen_03/kitchen_03.jpg"
+  ],
+  "annotation_notes": [
+    "Reference annotations were written after visually inspecting the final image; generation prompts are not ground truth.",
+    "One viewpoint only: exact object dimensions and unseen walls are unassessed. Approximate positions must preserve major relationships, not centimeter accuracy.",
+    "Unannotated small decor is optional; unexpected-major-object checks must not flag incidental cups, books or cushions.",
+    "Large rear wall area is visibly unused; useful storage improvement need not obstruct the aisle.",
+    "Only two white upper cabinet groups are visible.",
+    "The red floor is a room finish, not an area rug."
+  ],
+  "objects": [
+    {
+      "id": "counter",
+      "types": [
+        "kitchen_counter",
+        "kitchen_cabinet",
+        "sink"
+      ],
+      "color": "#416895"
+    },
+    {
+      "id": "cooker",
+      "types": [
+        "cooker",
+        "kitchen_cabinet"
+      ],
+      "color": "#232D32"
+    },
+    {
+      "id": "refrigerator",
+      "types": [
+        "refrigerator"
+      ],
+      "color": "#E6E6DE"
+    },
+    {
+      "id": "upper_cabinets",
+      "types": [
+        "wall_cabinet",
+        "kitchen_cabinet"
+      ],
+      "color": "#E8E6DC"
+    },
+    {
+      "id": "cart",
+      "types": [
+        "kitchen_counter",
+        "shelf"
+      ],
+      "color": "#9A9E94"
+    },
+    {
+      "id": "breakfast_table",
+      "types": [
+        "table",
+        "desk"
+      ],
+      "color": "#D0B18A"
+    },
+    {
+      "id": "stool_a",
+      "types": [
+        "stool"
+      ],
+      "color": "#A2B233"
+    },
+    {
+      "id": "stool_b",
+      "types": [
+        "stool"
+      ],
+      "color": "#A2B233"
+    },
+    {
+      "id": "window",
+      "opening_type": "window"
+    },
+    {
+      "id": "door",
+      "opening_type": "door"
+    }
+  ],
+  "relationships": [
+    {
+      "kind": "near",
+      "subject": "stool_a",
+      "target": "breakfast_table"
+    },
+    {
+      "kind": "near",
+      "subject": "stool_b",
+      "target": "breakfast_table"
+    },
+    {
+      "kind": "near",
+      "subject": "cooker",
+      "target": "counter"
+    }
+  ]
+}

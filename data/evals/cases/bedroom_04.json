@@ -1,0 +1,85 @@
+{
+  "id": "bedroom_04",
+  "photo_files": [
+    "images/bedroom_04/bedroom_04.jpg"
+  ],
+  "annotation_notes": [
+    "Reference annotations were written after visually inspecting the final image; generation prompts are not ground truth.",
+    "One viewpoint only: exact object dimensions and unseen walls are unassessed. Approximate positions must preserve major relationships, not centimeter accuracy.",
+    "Unannotated small decor is optional; unexpected-major-object checks must not flag incidental cups, books or cushions.",
+    "Both bed headboards are on the same rear wall; the beds extend toward the camera.",
+    "Two skylights are roof openings; current wall-only opening geometry cannot reproduce their mounting.",
+    "Do not turn skylights into fabricated vertical-wall windows.",
+    "Bed-color identity must be matched before scoring repeated instances."
+  ],
+  "objects": [
+    {
+      "id": "bed_yellow",
+      "types": [
+        "bed"
+      ],
+      "color": "#DEBC55"
+    },
+    {
+      "id": "bed_green",
+      "types": [
+        "bed"
+      ],
+      "color": "#879D71"
+    },
+    {
+      "id": "dresser",
+      "types": [
+        "dresser"
+      ],
+      "color": "#798F9B"
+    },
+    {
+      "id": "nightstand_left",
+      "types": [
+        "nightstand",
+        "side_table"
+      ],
+      "color": "#B89362"
+    },
+    {
+      "id": "nightstand_right",
+      "types": [
+        "nightstand",
+        "side_table"
+      ],
+      "color": "#B89362"
+    },
+    {
+      "id": "wardrobe",
+      "types": [
+        "wardrobe"
+      ],
+      "color": "#E5E2D7"
+    },
+    {
+      "id": "rug",
+      "types": [
+        "rug"
+      ],
+      "color": "#B5A182"
+    }
+  ],
+  "relationships": [
+    {
+      "kind": "same_end",
+      "subject": "bed_yellow",
+      "target": "bed_green"
+    },
+    {
+      "kind": "near",
+      "subject": "bed_yellow",
+      "target": "dresser"
+    },
+    {
+      "kind": "near",
+      "subject": "bed_green",
+      "target": "dresser"
+    }
+  ]
+}

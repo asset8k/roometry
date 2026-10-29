@@ -1,0 +1,70 @@
+{
+  "id": "bathroom_04",
+  "photo_files": [
+    "images/bathroom_04/bathroom_04.jpg"
+  ],
+  "annotation_notes": [
+    "Reference annotations were written after visually inspecting the final image; generation prompts are not ground truth.",
+    "One viewpoint only: exact object dimensions and unseen walls are unassessed. Approximate positions must preserve major relationships, not centimeter accuracy.",
+    "Unannotated small decor is optional; unexpected-major-object checks must not flag incidental cups, books or cushions.",
+    "No toilet is visible; do not infer a toilet hidden behind the open door.",
+    "Three blue bath mats are visible but are secondary repeated details.",
+    "Double vanity can be grouped as one assembly if both basins remain represented."
+  ],
+  "objects": [
+    {
+      "id": "vanity",
+      "types": [
+        "vanity",
+        "sink"
+      ],
+      "color": "#EAEAE4"
+    },
+    {
+      "id": "mirror",
+      "types": [
+        "mirror"
+      ],
+      "color": "#B7BABB"
+    },
+    {
+      "id": "shower",
+      "types": [
+        "shower"
+      ],
+      "color": "#D1D7D2"
+    },
+    {
+      "id": "bathtub",
+      "types": [
+        "bathtub"
+      ],
+      "color": "#E9EAE4"
+    },
+    {
+      "id": "door",
+      "opening_type": "door"
+    },
+    {
+      "id": "window",
+      "opening_type": "window"
+    }
+  ],
+  "relationships": [
+    {
+      "kind": "near",
+      "subject": "mirror",
+      "target": "vanity"
+    },
+    {
+      "kind": "near",
+      "subject": "bathtub",
+      "target": "shower"
+    },
+    {
+      "kind": "opposite_end",
+      "subject": "bathtub",
+      "target": "vanity"
+    }
+  ]
+}

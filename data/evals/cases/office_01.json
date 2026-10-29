@@ -1,0 +1,99 @@
+{
+  "id": "office_01",
+  "photo_files": [
+    "images/office_01/office_01.jpg"
+  ],
+  "annotation_notes": [
+    "Reference annotations were written after visually inspecting the final image; generation prompts are not ground truth.",
+    "One viewpoint only: exact object dimensions and unseen walls are unassessed. Approximate positions must preserve major relationships, not centimeter accuracy.",
+    "Unannotated small decor is optional; unexpected-major-object checks must not flag incidental cups, books or cushions.",
+    "The cabinet behind the chair constrains usable chair space; do not delete it silently.",
+    "Monitor and laptop are two separate devices supported by the desk.",
+    "No bed, rug or wardrobe is visible."
+  ],
+  "objects": [
+    {
+      "id": "desk",
+      "types": [
+        "desk"
+      ],
+      "color": "#AA8554"
+    },
+    {
+      "id": "chair",
+      "types": [
+        "chair"
+      ],
+      "color": "#325687"
+    },
+    {
+      "id": "monitor",
+      "types": [
+        "monitor",
+        "computer"
+      ],
+      "color": "#1E2323"
+    },
+    {
+      "id": "laptop",
+      "types": [
+        "laptop"
+      ],
+      "color": "#A7ABA9"
+    },
+    {
+      "id": "cabinet",
+      "types": [
+        "sideboard",
+        "dresser",
+        "kitchen_cabinet"
+      ],
+      "color": "#5D6464"
+    },
+    {
+      "id": "shelf",
+      "types": [
+        "shelf"
+      ],
+      "color": "#655F48"
+    },
+    {
+      "id": "floor_lamp",
+      "types": [
+        "floor_lamp"
+      ],
+      "color": "#282B29"
+    },
+    {
+      "id": "window",
+      "opening_type": "window"
+    }
+  ],
+  "relationships": [
+    {
+      "kind": "faces",
+      "subject": "chair",
+      "target": "desk"
+    },
+    {
+      "kind": "near",
+      "subject": "monitor",
+      "target": "desk"
+    },
+    {
+      "kind": "near",
+      "subject": "laptop",
+      "target": "desk"
+    },
+    {
+      "kind": "near",
+      "subject": "cabinet",
+      "target": "chair"
+    },
+    {
+      "kind": "opposite_end",
+      "subject": "desk",
+      "target": "cabinet"
+    }
+  ]
+}

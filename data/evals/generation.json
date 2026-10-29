@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "records": [
+    {
+      "case_id": "living_01",
+      "method": "built_in_imagegen",
+      "generated_on": "2026-10-29",
+      "model_id": null,
+      "model_id_note": "The built-in tool did not report a model identifier.",
+      "prompt": "Use case: photorealistic-natural. Asset type: public synthetic room-reconstruction evaluation input, case living_01. Create one realistic ordinary apartment living room photograph, landscape 4:3, eye-level corner viewpoint, no people, no text, no logos. A compact rectangular living room with a light gray straight three-seat sofa against the left wall facing a black television on a low walnut console against the right wall. An oak rectangular coffee table stands on a muted blue rug between them. One large window on the far wall, a green floor plant beside it, a warm floor lamp beside the sofa, and a plain white door near the camera on the right. Natural daylight, realistic upholstery seams and wood grain, ordinary lived-in interior rather than a luxury show home. Show the floor and three walls clearly. This is a wholly fictional room; do not reproduce any room or image from conversation history."
+    },
+    {
+      "case_id": "living_02",
+      "method": "built_in_imagegen",
+      "generated_on": "2026-10-29",
+      "model_id": null,
+      "model_id_note": "The built-in tool did not report a model identifier.",
+      "prompt": "Use case: photorealistic-natural. Asset type: public synthetic room-reconstruction evaluation input. Create ONE photorealistic ordinary residential interior photograph, landscape 4:3, eye-level corner viewpoint. Realistic materials and everyday imperfections, floor and room boundaries visible where possible, natural perspective. No people, faces, logos, readable personal text, watermark, collage, labels, measurements or floor-plan overlay. This is a wholly fictional room; do not reproduce any room or image from conversation history. Case living_02. A narrow lived-in living room. A dark blue straight sofa along the right wall faces a wall-mounted television on the left. A bulky rectangular brown coffee table and a separate cream ottoman clutter the walking space in the center. A full-height narrow wooden bookcase at the far end, one window behind the sofa end, a floor lamp, a rug, and a plain door visible at the near left. Moderately cluttered, not unsafe or hoarded. Furniture is entirely inside the room."
+    },
+    {
+      "case_id": "living_03",
+      "method": "built_in_imagegen",
+      "generated_on": "2026-10-29",
+      "model_id": null,
+      "model_id_note": "The built-in tool did not report a model identifier.",
+      "prompt": "Use case: photorealistic-natural. Asset type: public synthetic room-reconstruction evaluation input. Create ONE photorealistic ordinary residential interior photograph, landscape 4:3, eye-level corner viewpoint. Realistic materials and everyday imperfections, floor and room boundaries visible where possible, natural perspective. No people, faces, logos, readable personal text, watermark, collage, labels, measurements or floor-plan overlay. This is a wholly fictional room; do not reproduce any room or image from conversation history. Case living_03. An L-shaped light beige sectional with a clearly visible chaise return faces a black TV resting on a low fluted oak media console on the opposite wall. Round glass coffee table with slender black legs, olive accent armchair near the far window, large gray rug, two plants of different sizes, floating shelf above TV. Daylight, room photographed diagonally with both sofa and media wall visible. Distinguish the accent chair from sofa and avoid mirror duplicates."
+    },
+    {
+      "case_id": "living_04",
+      "method": "built_in_imagegen",
+      "generated_on": "2026-10-29",
+      "model_id": null,
+      "model_id_note": "The built-in tool did not report a model identifier.",
+      "prompt": "Use case: photorealistic-natural. Asset type: public synthetic room-reconstruction evaluation input. Create ONE photorealistic ordinary residential interior photograph, landscape 4:3, eye-level corner viewpoint. Realistic materials and everyday imperfections, floor and room boundaries visible where possible, natural perspective. No people, faces, logos, readable personal text, watermark, collage, labels, measurements or floor-plan overlay. This is a wholly fictional room; do not reproduce any room or image from conversation history. Case living_04. A modest eclectic living room in need of a more cohesive appearance: terracotta straight sofa, a mismatched teal armchair, yellow side table, walnut TV console with television, rectangular black coffee table, small patterned rug, white floor lamp, three empty decorative frames on one wall. One far-wall window. Realistic everyday furniture with varied but plausible colors, daylight, clear floor."
+    },
+    {
+      "case_id": "living_05",
+      "method": "built_in_imagegen",
+      "generated_on": "2026-10-29",
+      "model_id": null,
+      "model_id_note": "The built-in tool did not report a model identifier.",
+      "prompt": "Use case: photorealistic-natural. Asset type: public synthetic room-reconstruction evaluation input. Create ONE photorealistic ordinary residential interior photograph, landscape 4:3, eye-level corner viewpoint. Realistic materials and everyday imperfections, floor and room boundaries visible where possible, natural perspective. No people, faces, logos, readable personal text, watermark, collage, labels, measurements or floor-plan overlay. This is a wholly fictional room; do not reproduce any room or image from conversation history. Case living_05. An open-plan apartment showing a living zone and small dining zone together. Pale gray sofa facing a black TV on a white low console; round oak coffee table and cream rug. In the foreground a rectangular dark wood dining table with FOUR clearly distinguishable dining chairs. Three-bulb pendant over dining table, sliding glass door on rear wall with curtains, one tall plant. Photograph captures both zones, some natural occlusion is fine; keep the chairs physical and separate."
+    },
+    {
+      "case_id": "living_06",
+      "method": "built_in_imagegen",
+      "generated_on": "2026-10-29",
+      "model_id": null,
+      "model_id_note": "The built-in tool did not report a model identifier.",
+      "prompt": "Use case: photorealistic-natural. Asset type: public synthetic room-reconstruction evaluation input. Create ONE photorealistic ordinary residential interior photograph, landscape 4:3, eye-level corner viewpoint. Realistic materials and everyday imperfections, floor and room boundaries visible where possible, natural perspective. No people, faces, logos, readable personal text, watermark, collage, labels, measurements or floor-plan overlay. This is a wholly fictional room; do not reproduce any room or image from conversation history. Case living_06. A small minimally furnished living room photographed from a near doorway so part of one side wall is out of view. Compact tan loveseat faces an upright black television sitting ON a low white console, oval wooden coffee table, one low open shelving unit with books, narrow vertical window near the far corner, portable floor fan and a plant. Two plain framed botanical prints above sofa. Modest natural daylight and some shadows. No giant furniture, no ceiling luxury lighting."
+    },
+    {
+      "case_id": "bedroom_01",
+      "method": "built_in_imagegen",
+      "generated_on": "2026-10-29",
+      "model_id": null,
+      "model_id_note": "The built-in tool did not report a model identifier.",
+      "prompt": "Use case: photorealistic-natural. Asset type: public synthetic room-reconstruction evaluation input. Create ONE photorealistic ordinary residential interior photograph, landscape 4:3, eye-level corner viewpoint. Realistic materials and everyday imperfections, floor and room boundaries visible where possible, natural perspective. No people, faces, logos, readable personal text, watermark, collage, labels, measurements or floor-plan overlay. This is a wholly fictional room; do not reproduce any room or image from conversation history. Case bedroom_01. A simple square guest bedroom. A double bed with a muted sage upholstered headboard against the far wall, one narrow oak bedside table on EACH side, two warm table lamps, a freestanding cream two-door wardrobe on the left wall, plain window on right wall, medium gray rug under the foot of bed. Clear furniture silhouettes, restful daylight. No desk or computer. Show enough side walls to understand the bed-wall arrangement."
+    },
+    {
+      "case_id": "bedroom_02",
+      "method": "built_in_imagegen",
+      "generated_on": "2026-10-29",
+      "model_id": null,
+      "model_id_note": "The built-in tool did not report a model identifier.",
+      "prompt": "Use case: photorealistic-natural. Asset type: public synthetic room-reconstruction evaluation input. Create ONE photorealistic ordinary residential interior photograph, landscape 4:3, eye-level corner viewpoint. Realistic materials and everyday imperfections, floor and room boundaries visible where possible, natural perspective. No people, faces, logos, readable personal text, watermark, collage, labels, measurements or floor-plan overlay. This is a wholly fictional room; do not reproduce any room or image from conversation history. Case bedroom_02. A small student bedroom in a converted industrial loft. Cool overcast light from a narrow HIGH window on the LEFT SIDE WALL, exposed red brick back wall, gray concrete floor, black metal single bed with dusty blue bedding along back wall. White compact desk on right wall, black monitor and silver laptop on desk, red office chair facing the desk; a dark low dresser behind chair constrains chair space. One black freestanding open shelf and an exposed pipe radiator. Camera from front-left corner looking diagonally across bed and workstation; avoid centered rear windows, oak floors, curtains and hotel-like styling. Mild everyday clutter, no text."
+    },
+    {
+      "case_id": "bedroom_03",
+      "method": "built_in_imagegen",
+      "generated_on": "2026-10-29",
+      "model_id": null,
+      "model_id_note": "The built-in tool did not report a model identifier.",
+      "prompt": "Use case: photorealistic-natural. Asset type: public synthetic room-reconstruction evaluation input. Create ONE photorealistic ordinary residential interior photograph, landscape 4:3, eye-level corner viewpoint. Realistic materials and everyday imperfections, floor and room boundaries visible where possible, natural perspective. No people, faces, logos, readable personal text, watermark, collage, labels, measurements or floor-plan overlay. This is a wholly fictional room; do not reproduce any room or image from conversation history. Case bedroom_03. A long narrow inexpensive bedroom photographed in cool evening LED light, no plants or luxury d\u00e9cor. A wood double bed runs CROSSWISE into the middle of the room, with a separate gray bench at its foot restricting passage; a tall white wardrobe against right rear wall and a small brown chest on left. One small rectangular window on near left wall and a visible door near camera on right. Dark brown laminate floor, pale blue walls. Oblique doorway viewpoint shows both bed sides and narrow routes. Bed and bench must be distinct furniture."
+    },
+    {
+      "case_id": "bedroom_04",
+      "method": "built_in_imagegen",
+      "generated_on": "2026-10-29",
+      "model_id": null,
+      "model_id_note": "The built-in tool did not report a model identifier.",
+      "prompt": "Use case: photorealistic-natural. Asset type: public synthetic room-reconstruction evaluation input. Create ONE photorealistic ordinary residential interior photograph, landscape 4:3, eye-level corner viewpoint. Realistic materials and everyday imperfections, floor and room boundaries visible where possible, natural perspective. No people, faces, logos, readable personal text, watermark, collage, labels, measurements or floor-plan overlay. This is a wholly fictional room; do not reproduce any room or image from conversation history. Case bedroom_04. An airy attic bedroom with a sloping white ceiling and TWO roof skylights, pale pink walls, plain white painted floorboards. Two separate simple single beds with yellow and green bedding against opposite side walls, shared low blue dresser at far end, two little bedside tables, a white wardrobe in near corner and a small woven basket. No people or names, no desktop screens, no rear curtain window. Photograph from a slightly elevated doorway angle, enough floor visible to read the two bed arrangements."
+    },
+    {
+      "case_id": "bedroom_05",
+      "method": "built_in_imagegen",
+      "generated_on": "2026-10-29",
+      "model_id": null,
+      "model_id_note": "The built-in tool did not report a model identifier.",
+      "prompt": "Use case: photorealistic-natural. Asset type: public synthetic room-reconstruction evaluation input. Create ONE photorealistic ordinary residential interior photograph, landscape 4:3, eye-level corner viewpoint. Realistic materials and everyday imperfections, floor and room boundaries visible where possible, natural perspective. No people, faces, logos, readable personal text, watermark, collage, labels, measurements or floor-plan overlay. This is a wholly fictional room; do not reproduce any room or image from conversation history. Case bedroom_05. A minimalist Japanese-inspired adult bedroom with shoji-like plain translucent sliding window panels on LEFT wall, pale plaster back wall, dark floor and one burgundy accent wall. A very low walnut platform double bed with NAVY bedding lies along the RIGHT wall; a white wardrobe at far left, purple low lounge chair near window, short oak dresser and a red bedside table with a cream lamp. No rug, no plants, no framed landscape painting, no centered window behind bed. Diffuse cool morning light, camera sees bed side and foot, imperfect ordinary apartment not luxury."
+    },
+    {
+      "case_id": "kitchen_01",
+      "method": "built_in_imagegen",
+      "generated_on": "2026-10-29",
+      "model_id": null,
+      "model_id_note": "The built-in tool did not report a model identifier.",
+      "prompt": "Use case: photorealistic-natural. Asset type: public synthetic room-reconstruction evaluation input. Create ONE photorealistic ordinary residential interior photograph, landscape 4:3, eye-level corner viewpoint. Realistic materials and everyday imperfections, floor and room boundaries visible where possible, natural perspective. No people, faces, logos, readable personal text, watermark, collage, labels, measurements or floor-plan overlay. This is a wholly fictional room; do not reproduce any room or image from conversation history. Case kitchen_01. A roomy traditional country L-shaped kitchen photographed from a doorway at a diagonal. Cream shaker cabinets with continuous pale stone worktops on rear and right wall; stainless sink and faucet clearly visible UNDER a small right-side window. Black freestanding cooker with broad hood on the back wall, tall white refrigerator at left end. A freestanding butcher-block wood island in the center with TWO dark stools. Upper cupboards, stone tile floor, white plaster walls, one kettle, one bowl. Strong daylight from right, not a living-room-like oak-floor setting. Clearly distinguish installed counters from island."
+    },
+    {
+      "case_id": "kitchen_02",
+      "method": "built_in_imagegen",
+      "generated_on": "2026-10-29",
+      "model_id": null,
+      "model_id_note": "The built-in tool did not report a model identifier.",
+      "prompt": "Use case: photorealistic-natural. Asset type: public synthetic room-reconstruction evaluation input. Create ONE photorealistic ordinary residential interior photograph, landscape 4:3, eye-level corner viewpoint. Realistic materials and everyday imperfections, floor and room boundaries visible where possible, natural perspective. No people, faces, logos, readable personal text, watermark, collage, labels, measurements or floor-plan overlay. This is a wholly fictional room; do not reproduce any room or image from conversation history. Case kitchen_02. A tiny modern urban galley kitchen, two parallel runs of FLAT GREEN base cabinets and gray laminate worktops, pale pink tiled backsplash, terrazzo floor, cool overhead LED strip light. Stainless sink and faucet on left run, built-in black oven and four-ring hob on right run, silver dishwasher beside sink, tall refrigerator at far end beside a small high window. Upper cabinets on one side only, a kettle and toaster. Camera from doorway emphasizes the very narrow central aisle. No island or seating or curtains, no oak flooring."
+    },
+    {
+      "case_id": "kitchen_03",
+      "method": "built_in_imagegen",
+      "generated_on": "2026-10-29",
+      "model_id": null,
+      "model_id_note": "The built-in tool did not report a model identifier.",
+      "prompt": "Use case: photorealistic-natural. Asset type: public synthetic room-reconstruction evaluation input. Create ONE photorealistic ordinary residential interior photograph, landscape 4:3, eye-level corner viewpoint. Realistic materials and everyday imperfections, floor and room boundaries visible where possible, natural perspective. No people, faces, logos, readable personal text, watermark, collage, labels, measurements or floor-plan overlay. This is a wholly fictional room; do not reproduce any room or image from conversation history. Case kitchen_03. A bright unfinished-looking rental kitchenette with one straight run of BLUE base cupboards and a continuous wood countertop against the LEFT wall. Stainless sink and faucet at near end, compact black cooker at far end, short white refrigerator beside the far doorway. Only TWO short upper cabinets. An empty large WHITE back wall, narrow breakfast table and TWO lime green stools on right, a movable chrome kitchen cart awkwardly in center. Red linoleum floor. A small square window high on right, harsh noon daylight. Very modest small space with genuine empty storage opportunities."
+    },
+    {
+      "case_id": "kitchen_04",
+      "method": "built_in_imagegen",
+      "generated_on": "2026-10-29",
+      "model_id": null,
+      "model_id_note": "The built-in tool did not report a model identifier.",
+      "prompt": "Use case: photorealistic-natural. Asset type: public synthetic room-reconstruction evaluation input. Create ONE photorealistic ordinary residential interior photograph, landscape 4:3, eye-level corner viewpoint. Realistic materials and everyday imperfections, floor and room boundaries visible where possible, natural perspective. No people, faces, logos, readable personal text, watermark, collage, labels, measurements or floor-plan overlay. This is a wholly fictional room; do not reproduce any room or image from conversation history. Case kitchen_04. A large contemporary open-plan penthouse kitchen photographed at NIGHT, charcoal walls and gray stone floor, cool blue-white ceiling light. Long WHITE island with inset stainless sink and black faucet, THREE orange upholstered bar stools on near side, behind it black tall pantry cabinets, a black oven stack and silver refrigerator, upper and lower cabinets, white worktop and broad steel range hood. To left, round glass dining table with TWO gray chairs. Two metal pendant lights above island. Large uncurtained window wall on right showing dark exterior. Wider room proportions, not rustic or beige."
+    },
+    {
+      "case_id": "bathroom_01",
+      "method": "built_in_imagegen",
+      "generated_on": "2026-10-29",
+      "model_id": null,
+      "model_id_note": "The built-in tool did not report a model identifier.",
+      "prompt": "Use case: photorealistic-natural. Asset type: public synthetic room-reconstruction evaluation input. Create ONE photorealistic ordinary residential interior photograph, landscape 4:3, eye-level corner viewpoint. Realistic materials and everyday imperfections, floor and room boundaries visible where possible, natural perspective. No people, faces, logos, readable personal text, watermark, collage, labels, measurements or floor-plan overlay. This is a wholly fictional room; do not reproduce any room or image from conversation history. Case bathroom_01. A small warm contemporary bathroom from doorway, no people or reflections of people. White toilet between a floating oak vanity on left and glass walk-in shower at far end. Vanity inset white sink and black faucet; rectangular mirror above. Glass shower with visible rain shower head, black frame and raised tray. Wall towel rail with beige towel, small basket on floor, beige bath mat. Warm beige tiles, realistic glass and metal. Vanity, toilet and shower all clearly visible, no bathtub."
+    },
+    {
+      "case_id": "bathroom_02",
+      "method": "built_in_imagegen",
+      "generated_on": "2026-10-29",
+      "model_id": null,
+      "model_id_note": "The built-in tool did not report a model identifier.",
+      "prompt": "Use case: photorealistic-natural. Asset type: public synthetic room-reconstruction evaluation input. Create ONE photorealistic ordinary residential interior photograph, landscape 4:3, eye-level corner viewpoint. Realistic materials and everyday imperfections, floor and room boundaries visible where possible, natural perspective. No people, faces, logos, readable personal text, watermark, collage, labels, measurements or floor-plan overlay. This is a wholly fictional room; do not reproduce any room or image from conversation history. Case bathroom_02. An old compact family bathroom with BLUE square wall tiles, pinkish vinyl floor and cool fluorescent light. White bathtub lengthwise along left wall with glass shower screen and a chrome shower fitting; separate white toilet at far-right end; pedestal sink along right wall with circular mirror above. A narrow tall mirrored cabinet near door, white wall radiator and dark blue bath mat. Small frosted window high on far wall, no plants or oak vanity. Wide-angle diagonal doorway photo emphasizing actual narrow proportions; no reflected duplicate plumbing."
+    },
+    {
+      "case_id": "bathroom_03",
+      "method": "built_in_imagegen",
+      "generated_on": "2026-10-29",
+      "model_id": null,
+      "model_id_note": "The built-in tool did not report a model identifier.",
+      "prompt": "Use case: photorealistic-natural. Asset type: public synthetic room-reconstruction evaluation input. Create ONE photorealistic ordinary residential interior photograph, landscape 4:3, eye-level corner viewpoint. Realistic materials and everyday imperfections, floor and room boundaries visible where possible, natural perspective. No people, faces, logos, readable personal text, watermark, collage, labels, measurements or floor-plan overlay. This is a wholly fictional room; do not reproduce any room or image from conversation history. Case bathroom_03. A utilitarian bathroom and laundry in a small city apartment, WHITE subway tiles with black grout and black-and-white checker floor, bright neutral electric lighting. White front-loading washing machine beneath a gray countertop on the RIGHT beside a simple white vanity sink and chrome faucet, rectangular mirror above sink; one dark wall cabinet over washer. White toilet against left wall, clear glass shower enclosure at rear-left, black heated towel rail near door and brown laundry basket. Green mat at center. No wood finishes, plants or warm-hotel style. Camera from door at opposite corner."
+    },
+    {
+      "case_id": "office_01",
+      "method": "built_in_imagegen",
+      "generated_on": "2026-10-29",
+      "model_id": null,
+      "model_id_note": "The built-in tool did not report a model identifier.",
+      "prompt": "Use case: photorealistic-natural. Asset type: public synthetic room-reconstruction evaluation input. Create ONE photorealistic ordinary residential interior photograph, landscape 4:3, eye-level corner viewpoint. Realistic materials and everyday imperfections, floor and room boundaries visible where possible, natural perspective. No people, faces, logos, readable personal text, watermark, collage, labels, measurements or floor-plan overlay. This is a wholly fictional room; do not reproduce any room or image from conversation history. Case office_01. An industrial small home office with exposed BRICK on the left wall and gray floor, a high small window on the right side wall, late-afternoon side lighting. A wooden desk against brick wall, black monitor plus open silver laptop on desk, blue task chair facing monitor. A compact gray two-door cabinet immediately behind the chair restricts its movement. Short BLACK open bookcase at rear wall and adjustable black floor lamp. No bed, no centered window, no plants, no curtains, no rug. Diagonal corner viewpoint makes the chair clearance obvious."
+    },
+    {
+      "case_id": "office_02",
+      "method": "built_in_imagegen",
+      "generated_on": "2026-10-29",
+      "model_id": null,
+      "model_id_note": "The built-in tool did not report a model identifier.",
+      "prompt": "Use case: photorealistic-natural. Asset type: public synthetic room-reconstruction evaluation input. Create ONE photorealistic ordinary residential interior photograph, landscape 4:3, eye-level corner viewpoint. Realistic materials and everyday imperfections, floor and room boundaries visible where possible, natural perspective. No people, faces, logos, readable personal text, watermark, collage, labels, measurements or floor-plan overlay. This is a wholly fictional room; do not reproduce any room or image from conversation history. Case office_02. A very bright modern shared home office with TWO separate white desks on adjacent walls, one green task chair and one gray task chair, one black monitor on each desk. White walls, blue carpet, ceiling grid light; large window on left wall and radiator below it. A small low wood cabinet with printer against right wall, books overflowing a single floor basket; unused wall area above desks. No oak floor, cozy curtains, plants or beige palette. Slightly elevated diagonal viewpoint shows both physically separate desks and the limited storage."
+    }
+  ]
+}

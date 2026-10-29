@@ -1,0 +1,108 @@
+{
+  "id": "bedroom_02",
+  "photo_files": [
+    "images/bedroom_02/bedroom_02.jpg"
+  ],
+  "annotation_notes": [
+    "Reference annotations were written after visually inspecting the final image; generation prompts are not ground truth.",
+    "One viewpoint only: exact object dimensions and unseen walls are unassessed. Approximate positions must preserve major relationships, not centimeter accuracy.",
+    "Unannotated small decor is optional; unexpected-major-object checks must not flag incidental cups, books or cushions.",
+    "The dark rear chest is drawers, not a wardrobe with full-height doors.",
+    "The black metal head/foot rails belong to one bed, not two.",
+    "Laptop is on the desk; objects inside the shelf are secondary."
+  ],
+  "objects": [
+    {
+      "id": "bed",
+      "types": [
+        "bed"
+      ],
+      "color": "#7F99A9"
+    },
+    {
+      "id": "desk",
+      "types": [
+        "desk"
+      ],
+      "color": "#E9E8E0"
+    },
+    {
+      "id": "chair",
+      "types": [
+        "chair"
+      ],
+      "color": "#A34F4B"
+    },
+    {
+      "id": "monitor",
+      "types": [
+        "monitor",
+        "computer"
+      ],
+      "color": "#181C1C"
+    },
+    {
+      "id": "laptop",
+      "types": [
+        "laptop"
+      ],
+      "color": "#B8B9B2"
+    },
+    {
+      "id": "dresser",
+      "types": [
+        "dresser",
+        "sideboard"
+      ],
+      "color": "#30302B"
+    },
+    {
+      "id": "shelf",
+      "types": [
+        "shelf"
+      ],
+      "color": "#8A795A"
+    },
+    {
+      "id": "radiator",
+      "types": [
+        "radiator"
+      ],
+      "color": "#8D8E84"
+    },
+    {
+      "id": "nightstand",
+      "types": [
+        "nightstand",
+        "side_table"
+      ],
+      "color": "#785B3C"
+    },
+    {
+      "id": "window",
+      "opening_type": "window"
+    }
+  ],
+  "relationships": [
+    {
+      "kind": "faces",
+      "subject": "chair",
+      "target": "desk"
+    },
+    {
+      "kind": "near",
+      "subject": "laptop",
+      "target": "desk"
+    },
+    {
+      "kind": "near",
+      "subject": "monitor",
+      "target": "desk"
+    },
+    {
+      "kind": "near",
+      "subject": "radiator",
+      "target": "window"
+    }
+  ]
+}

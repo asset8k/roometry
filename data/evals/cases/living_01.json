@@ -1,0 +1,95 @@
+{
+  "id": "living_01",
+  "photo_files": [
+    "images/living_01/living_01.jpg"
+  ],
+  "annotation_notes": [
+    "Reference annotations were written after visually inspecting the final image; generation prompts are not ground truth.",
+    "One viewpoint only: exact object dimensions and unseen walls are unassessed. Approximate positions must preserve major relationships, not centimeter accuracy.",
+    "Unannotated small decor is optional; unexpected-major-object checks must not flag incidental cups, books or cushions.",
+    "The TV is supported by the console, not floating high on the wall.",
+    "Small table plants and cushions are secondary details."
+  ],
+  "objects": [
+    {
+      "id": "sofa",
+      "types": [
+        "sofa"
+      ],
+      "color": "#A6A6A0"
+    },
+    {
+      "id": "tv",
+      "types": [
+        "tv"
+      ],
+      "color": "#151819"
+    },
+    {
+      "id": "console",
+      "types": [
+        "tv_stand",
+        "sideboard"
+      ],
+      "color": "#674B36"
+    },
+    {
+      "id": "coffee_table",
+      "types": [
+        "coffee_table"
+      ],
+      "color": "#A88A60"
+    },
+    {
+      "id": "rug",
+      "types": [
+        "rug"
+      ],
+      "color": "#737D82"
+    },
+    {
+      "id": "floor_lamp",
+      "types": [
+        "floor_lamp"
+      ],
+      "color": "#D7C5A1"
+    },
+    {
+      "id": "floor_plant",
+      "types": [
+        "plant"
+      ],
+      "color": "#497045"
+    },
+    {
+      "id": "window",
+      "opening_type": "window"
+    },
+    {
+      "id": "door",
+      "opening_type": "door"
+    }
+  ],
+  "relationships": [
+    {
+      "kind": "faces",
+      "subject": "sofa",
+      "target": "tv"
+    },
+    {
+      "kind": "near",
+      "subject": "tv",
+      "target": "console"
+    },
+    {
+      "kind": "near",
+      "subject": "coffee_table",
+      "target": "sofa"
+    },
+    {
+      "kind": "opposite_end",
+      "subject": "sofa",
+      "target": "tv"
+    }
+  ]
+}

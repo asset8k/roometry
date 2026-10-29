@@ -1,0 +1,138 @@
+{
+  "id": "living_05",
+  "photo_files": [
+    "images/living_05/living_05.jpg"
+  ],
+  "annotation_notes": [
+    "Reference annotations were written after visually inspecting the final image; generation prompts are not ground truth.",
+    "One viewpoint only: exact object dimensions and unseen walls are unassessed. Approximate positions must preserve major relationships, not centimeter accuracy.",
+    "Unannotated small decor is optional; unexpected-major-object checks must not flag incidental cups, books or cushions.",
+    "Four interior dining chairs can be distinguished despite occlusion.",
+    "Balcony chairs visible beyond the glazing are outside the target room and excluded.",
+    "Three-bulb pendant may be grouped; do not require one particular segmentation."
+  ],
+  "objects": [
+    {
+      "id": "sofa",
+      "types": [
+        "sofa"
+      ],
+      "color": "#C7C5B9"
+    },
+    {
+      "id": "tv",
+      "types": [
+        "tv"
+      ],
+      "color": "#171B1B"
+    },
+    {
+      "id": "console",
+      "types": [
+        "tv_stand",
+        "sideboard"
+      ],
+      "color": "#E8E4DA"
+    },
+    {
+      "id": "coffee_table",
+      "types": [
+        "coffee_table"
+      ],
+      "color": "#A68E6C"
+    },
+    {
+      "id": "rug",
+      "types": [
+        "rug"
+      ],
+      "color": "#D3CDC0"
+    },
+    {
+      "id": "dining_table",
+      "types": [
+        "table"
+      ],
+      "color": "#7D5B3E"
+    },
+    {
+      "id": "dining_chair_1",
+      "types": [
+        "chair"
+      ],
+      "color": "#8D704D"
+    },
+    {
+      "id": "dining_chair_2",
+      "types": [
+        "chair"
+      ],
+      "color": "#8D704D"
+    },
+    {
+      "id": "dining_chair_3",
+      "types": [
+        "chair"
+      ],
+      "color": "#8D704D"
+    },
+    {
+      "id": "dining_chair_4",
+      "types": [
+        "chair"
+      ],
+      "color": "#8D704D"
+    },
+    {
+      "id": "pendant_group",
+      "types": [
+        "chandelier",
+        "ceiling_light"
+      ],
+      "color": "#B49F7A"
+    },
+    {
+      "id": "floor_plant",
+      "types": [
+        "plant"
+      ],
+      "color": "#62704D"
+    },
+    {
+      "id": "glazed_door",
+      "opening_type": "door"
+    }
+  ],
+  "relationships": [
+    {
+      "kind": "faces",
+      "subject": "sofa",
+      "target": "tv"
+    },
+    {
+      "kind": "near",
+      "subject": "coffee_table",
+      "target": "sofa"
+    },
+    {
+      "kind": "near",
+      "subject": "dining_chair_1",
+      "target": "dining_table"
+    },
+    {
+      "kind": "near",
+      "subject": "dining_chair_2",
+      "target": "dining_table"
+    },
+    {
+      "kind": "near",
+      "subject": "dining_chair_3",
+      "target": "dining_table"
+    },
+    {
+      "kind": "near",
+      "subject": "dining_chair_4",
+      "target": "dining_table"
+    }
+  ]
+}

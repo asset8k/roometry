@@ -1,0 +1,80 @@
+{
+  "id": "bedroom_05",
+  "photo_files": [
+    "images/bedroom_05/bedroom_05.jpg"
+  ],
+  "annotation_notes": [
+    "Reference annotations were written after visually inspecting the final image; generation prompts are not ground truth.",
+    "One viewpoint only: exact object dimensions and unseen walls are unassessed. Approximate positions must preserve major relationships, not centimeter accuracy.",
+    "Unannotated small decor is optional; unexpected-major-object checks must not flag incidental cups, books or cushions.",
+    "The floor is dark wood; there is no loose rug.",
+    "Burgundy right wall is an accent wall; a single uniform wall color cannot capture every finish.",
+    "Translucent panels are one glazing assembly; exact sliding-panel segmentation is not a hard count."
+  ],
+  "objects": [
+    {
+      "id": "bed",
+      "types": [
+        "bed"
+      ],
+      "color": "#26334B"
+    },
+    {
+      "id": "wardrobe",
+      "types": [
+        "wardrobe"
+      ],
+      "color": "#E3E0D5"
+    },
+    {
+      "id": "dresser",
+      "types": [
+        "dresser"
+      ],
+      "color": "#AD8D65"
+    },
+    {
+      "id": "chair",
+      "types": [
+        "armchair"
+      ],
+      "color": "#584366"
+    },
+    {
+      "id": "nightstand",
+      "types": [
+        "nightstand",
+        "side_table"
+      ],
+      "color": "#7B302D"
+    },
+    {
+      "id": "lamp",
+      "types": [
+        "table_lamp"
+      ],
+      "color": "#D7CBA6"
+    },
+    {
+      "id": "window",
+      "opening_type": "window"
+    }
+  ],
+  "relationships": [
+    {
+      "kind": "near",
+      "subject": "chair",
+      "target": "window"
+    },
+    {
+      "kind": "near",
+      "subject": "nightstand",
+      "target": "bed"
+    },
+    {
+      "kind": "near",
+      "subject": "lamp",
+      "target": "nightstand"
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "dataset_id": "roometry-reconstruction-v1",
-  "status": "preparing",
+  "status": "annotated_not_run",
   "target_case_count": 25,
   "target_splits": {
     "development": 5,
@@ -30,5 +30,3680 @@
     "publish_to_explore": false,
     "outputs": "artifacts/evaluations"
   },
-  "cases": []
+  "cases": [
+    {
+      "id": "living_01",
+      "room_type": "living_room",
+      "split": "development",
+      "primary_image": "images/living_01/living_01.jpg",
+      "images": [
+        "images/living_01/living_01.jpg"
+      ],
+      "annotation": "cases/living_01.json",
+      "source": {
+        "type": "generated",
+        "publication_permission": "project_generated_asset",
+        "method": "built_in_imagegen",
+        "prompt_record": "generation.json#living_01",
+        "source_inputs": "text_only_no_private_images",
+        "license": "No separate third-party image license; generated project asset."
+      },
+      "diversity": {
+        "style": "warm contemporary",
+        "apparent_size": "compact",
+        "tags": [
+          "opposing_seating_tv",
+          "surface_support",
+          "single_view"
+        ]
+      },
+      "input": {
+        "room_type": "living_room",
+        "dimensions": {
+          "width_m": 4.0,
+          "length_m": 5.0,
+          "height_m": 2.7,
+          "measurements_source": "user_confirmed"
+        }
+      },
+      "clarification_policy": {
+        "measurement_mode": "complete",
+        "dimensions": {
+          "width_m": 4.0,
+          "length_m": 5.0,
+          "height_m": 2.7,
+          "measurements_source": "user_confirmed"
+        },
+        "unknown_dimensions": "not_sure_use_estimate",
+        "wall_axis": "not_sure_use_approximate_orientation",
+        "other_layout_questions": "not_sure_preserve_uncertainty",
+        "maximum_questions": 3
+      },
+      "measurement_note": "Scenario-supplied user input; not metric photo ground truth.",
+      "visual_reference": {
+        "wall_labels": {
+          "left": "Sofa wall",
+          "right": "TV and door wall",
+          "rear": "Window wall"
+        },
+        "entities": [
+          {
+            "id": "sofa",
+            "importance": "major",
+            "visible_location": "Left wall, facing the television on the right.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "tv",
+            "importance": "major",
+            "visible_location": "On the low right-wall console.",
+            "wall_anchor": "right",
+            "support_object_id": "console",
+            "features": [
+              "upright screen with feet on console"
+            ]
+          },
+          {
+            "id": "console",
+            "importance": "major",
+            "visible_location": "Along right wall beneath TV.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "coffee_table",
+            "importance": "major",
+            "visible_location": "Between sofa and TV on the rug.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "rug",
+            "importance": "major",
+            "visible_location": "Under coffee table and in front of sofa.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "floor_lamp",
+            "importance": "major",
+            "visible_location": "At rear end of sofa beside window.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "floor_plant",
+            "importance": "major",
+            "visible_location": "Far right corner beside TV console.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "window",
+            "importance": "major",
+            "visible_location": "Large far-wall window, with curtains.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "door",
+            "importance": "major",
+            "visible_location": "White door leaf at near right edge.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          }
+        ],
+        "required_features": [
+          "Straight sofa; no invented sectional return."
+        ],
+        "uncertainties": [],
+        "support_policy": "Only clearly visible supports are asserted; do not infer hidden mounts.",
+        "grading_scope": "Major arrangements and visible features; minor decor and precise metric localization excluded.",
+        "finishes": {
+          "floor_pattern": "wood",
+          "floor_appearance": "oak",
+          "wall_color_families": [
+            "warm off-white"
+          ],
+          "grading": "Broad appearance only; lighting and white balance change perceived colors."
+        }
+      },
+      "improvement_trial": null,
+      "checksums": {
+        "image_sha256": "3f224c54f74bb20ef15c8295c970b30f520b6caf326c763fe9d0fb01f9f78855",
+        "annotation_sha256": "f2966726f3567f74aac3daf0d67b672dacbcb2aaf1f2a72bde6ed843a437152a"
+      }
+    },
+    {
+      "id": "living_02",
+      "room_type": "living_room",
+      "split": "held_out",
+      "primary_image": "images/living_02/living_02.jpg",
+      "images": [
+        "images/living_02/living_02.jpg"
+      ],
+      "annotation": "cases/living_02.json",
+      "source": {
+        "type": "generated",
+        "publication_permission": "project_generated_asset",
+        "method": "built_in_imagegen",
+        "prompt_record": "generation.json#living_02",
+        "source_inputs": "text_only_no_private_images",
+        "license": "No separate third-party image license; generated project asset."
+      },
+      "diversity": {
+        "style": "crowded traditional",
+        "apparent_size": "narrow",
+        "tags": [
+          "restricted_passage",
+          "movable_ottoman",
+          "wall_tv"
+        ]
+      },
+      "input": {
+        "room_type": "living_room",
+        "dimensions": {
+          "width_m": 3.0,
+          "measurements_source": "user_confirmed"
+        }
+      },
+      "clarification_policy": {
+        "measurement_mode": "partial",
+        "dimensions": {
+          "width_m": 3.0,
+          "measurements_source": "user_confirmed"
+        },
+        "unknown_dimensions": "not_sure_use_estimate",
+        "wall_axis": "not_sure_use_approximate_orientation",
+        "other_layout_questions": "not_sure_preserve_uncertainty",
+        "maximum_questions": 3
+      },
+      "measurement_note": "Scenario-supplied user input; not metric photo ground truth.",
+      "visual_reference": {
+        "wall_labels": {},
+        "entities": [
+          {
+            "id": "sofa",
+            "importance": "major",
+            "visible_location": "Right wall, opposite television.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "tv",
+            "importance": "major",
+            "visible_location": "Mounted on left wall above console.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "console",
+            "importance": "major",
+            "visible_location": "Left wall below TV.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "coffee_table",
+            "importance": "major",
+            "visible_location": "Large central rectangular table.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "ottoman",
+            "importance": "major",
+            "visible_location": "Separate cream upholstered ottoman in foreground.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "bookcase",
+            "importance": "major",
+            "visible_location": "Tall bookcase against far wall, left of window.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "floor_lamp",
+            "importance": "major",
+            "visible_location": "At rear right beside sofa.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "rug",
+            "importance": "major",
+            "visible_location": "Patterned rug beneath table and ottoman.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "window",
+            "importance": "major",
+            "visible_location": "Tall narrow window on far wall.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "door",
+            "importance": "major",
+            "visible_location": "White near-left door.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          }
+        ],
+        "required_features": [
+          "Preserve the bookcase and main seating function during space improvements."
+        ],
+        "uncertainties": [],
+        "support_policy": "Only clearly visible supports are asserted; do not infer hidden mounts.",
+        "grading_scope": "Major arrangements and visible features; minor decor and precise metric localization excluded.",
+        "finishes": {
+          "floor_pattern": "wood",
+          "floor_appearance": "brown wood",
+          "wall_color_families": [
+            "warm cream"
+          ],
+          "grading": "Broad appearance only; lighting and white balance change perceived colors."
+        }
+      },
+      "improvement_trial": {
+        "focus": "openness",
+        "instruction": "Improve walking space without removing the main seating or useful book storage.",
+        "start_from": "this_case_original",
+        "preserve": "confirmed measurements, fixed installations, locked objects and main room functions"
+      },
+      "checksums": {
+        "image_sha256": "8de655e936cc1788fbe2d08f9f74375c16bd00b835a1efcb80eb7b8eef2810b0",
+        "annotation_sha256": "46d510185709635f69f0389529cbd76c7b4aef698ddbcc3f2d44045c79bd2490"
+      }
+    },
+    {
+      "id": "living_03",
+      "room_type": "living_room",
+      "split": "held_out",
+      "primary_image": "images/living_03/living_03.jpg",
+      "images": [
+        "images/living_03/living_03.jpg"
+      ],
+      "annotation": "cases/living_03.json",
+      "source": {
+        "type": "generated",
+        "publication_permission": "project_generated_asset",
+        "method": "built_in_imagegen",
+        "prompt_record": "generation.json#living_03",
+        "source_inputs": "text_only_no_private_images",
+        "license": "No separate third-party image license; generated project asset."
+      },
+      "diversity": {
+        "style": "soft modern",
+        "apparent_size": "medium",
+        "tags": [
+          "sectional_chaise",
+          "glass_table",
+          "accent_chair"
+        ]
+      },
+      "input": {
+        "room_type": "living_room",
+        "dimensions": {
+          "width_m": 5.0,
+          "length_m": 6.0,
+          "height_m": 2.8,
+          "measurements_source": "user_confirmed"
+        }
+      },
+      "clarification_policy": {
+        "measurement_mode": "complete",
+        "dimensions": {
+          "width_m": 5.0,
+          "length_m": 6.0,
+          "height_m": 2.8,
+          "measurements_source": "user_confirmed"
+        },
+        "unknown_dimensions": "not_sure_use_estimate",
+        "wall_axis": "not_sure_use_approximate_orientation",
+        "other_layout_questions": "not_sure_preserve_uncertainty",
+        "maximum_questions": 3
+      },
+      "measurement_note": "Scenario-supplied user input; not metric photo ground truth.",
+      "visual_reference": {
+        "wall_labels": {},
+        "entities": [
+          {
+            "id": "sofa",
+            "importance": "major",
+            "visible_location": "L-shaped sofa along left wall with chaise toward camera.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": [
+              "visible near-camera chaise return"
+            ]
+          },
+          {
+            "id": "tv",
+            "importance": "major",
+            "visible_location": "On right-wall console.",
+            "wall_anchor": "right",
+            "support_object_id": "console",
+            "features": []
+          },
+          {
+            "id": "console",
+            "importance": "major",
+            "visible_location": "Long fluted oak console along right wall.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": [
+              "fluted front"
+            ]
+          },
+          {
+            "id": "coffee_table",
+            "importance": "major",
+            "visible_location": "Round glass-topped table in center.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": [
+              "round glass top",
+              "thin dark frame"
+            ]
+          },
+          {
+            "id": "chair",
+            "importance": "major",
+            "visible_location": "Separate olive chair in front of far window.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "rug",
+            "importance": "major",
+            "visible_location": "Large light rug across seating group.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "floating_shelf",
+            "importance": "major",
+            "visible_location": "Right wall above TV.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "tree",
+            "importance": "major",
+            "visible_location": "Between chair and console near back corner.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "window",
+            "importance": "major",
+            "visible_location": "Wide rear window with curtains.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          }
+        ],
+        "required_features": [
+          "Retain glass/round coffee-table form and separate accent chair."
+        ],
+        "uncertainties": [],
+        "support_policy": "Only clearly visible supports are asserted; do not infer hidden mounts.",
+        "grading_scope": "Major arrangements and visible features; minor decor and precise metric localization excluded.",
+        "finishes": {
+          "floor_pattern": "wood",
+          "floor_appearance": "light wood",
+          "wall_color_families": [
+            "off-white"
+          ],
+          "grading": "Broad appearance only; lighting and white balance change perceived colors."
+        }
+      },
+      "improvement_trial": null,
+      "checksums": {
+        "image_sha256": "0c1ad4d54faa1b04eda781f16adfb4080d35da830d238abe7be1997ac201d112",
+        "annotation_sha256": "14616b6679ab822848019c0a86605d9e839374298899b18d7415c1614f2471b8"
+      }
+    },
+    {
+      "id": "living_04",
+      "room_type": "living_room",
+      "split": "held_out",
+      "primary_image": "images/living_04/living_04.jpg",
+      "images": [
+        "images/living_04/living_04.jpg"
+      ],
+      "annotation": "cases/living_04.json",
+      "source": {
+        "type": "generated",
+        "publication_permission": "project_generated_asset",
+        "method": "built_in_imagegen",
+        "prompt_record": "generation.json#living_04",
+        "source_inputs": "text_only_no_private_images",
+        "license": "No separate third-party image license; generated project asset."
+      },
+      "diversity": {
+        "style": "eclectic mixed palette",
+        "apparent_size": "medium",
+        "tags": [
+          "mismatched_materials",
+          "aesthetics_opportunity"
+        ]
+      },
+      "input": {
+        "room_type": "living_room",
+        "dimensions": {
+          "length_m": 5.0,
+          "measurements_source": "user_confirmed"
+        }
+      },
+      "clarification_policy": {
+        "measurement_mode": "partial",
+        "dimensions": {
+          "length_m": 5.0,
+          "measurements_source": "user_confirmed"
+        },
+        "unknown_dimensions": "not_sure_use_estimate",
+        "wall_axis": "not_sure_use_approximate_orientation",
+        "other_layout_questions": "not_sure_preserve_uncertainty",
+        "maximum_questions": 3
+      },
+      "measurement_note": "Scenario-supplied user input; not metric photo ground truth.",
+      "visual_reference": {
+        "wall_labels": {},
+        "entities": [
+          {
+            "id": "sofa",
+            "importance": "major",
+            "visible_location": "Terracotta sofa on left wall.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "chair",
+            "importance": "major",
+            "visible_location": "Teal chair near rear window.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "console",
+            "importance": "major",
+            "visible_location": "Walnut console on right wall.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "tv",
+            "importance": "major",
+            "visible_location": "Supported on right console.",
+            "wall_anchor": "right",
+            "support_object_id": "console",
+            "features": []
+          },
+          {
+            "id": "coffee_table",
+            "importance": "major",
+            "visible_location": "Black rectangular coffee table in center.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "side_table",
+            "importance": "major",
+            "visible_location": "Small yellow side table beside near sofa arm.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "floor_lamp",
+            "importance": "major",
+            "visible_location": "Behind far sofa end.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "rug",
+            "importance": "major",
+            "visible_location": "Small patterned rug under coffee table.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "window",
+            "importance": "major",
+            "visible_location": "Far wall, light curtains.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          }
+        ],
+        "required_features": [
+          "Aesthetic improvements should preserve usable seating and circulation."
+        ],
+        "uncertainties": [],
+        "support_policy": "Only clearly visible supports are asserted; do not infer hidden mounts.",
+        "grading_scope": "Major arrangements and visible features; minor decor and precise metric localization excluded.",
+        "finishes": {
+          "floor_pattern": "wood",
+          "floor_appearance": "light wood",
+          "wall_color_families": [
+            "cream"
+          ],
+          "grading": "Broad appearance only; lighting and white balance change perceived colors."
+        }
+      },
+      "improvement_trial": {
+        "focus": "aesthetics",
+        "instruction": "Make the room more cohesive while keeping practical seating and circulation.",
+        "start_from": "this_case_original",
+        "preserve": "confirmed measurements, fixed installations, locked objects and main room functions"
+      },
+      "checksums": {
+        "image_sha256": "2ea78516883b6daae4d18829e34f4c623b0ccfd9a370a733ea6639a162d529be",
+        "annotation_sha256": "9cc2ab9c379cb8d7354283661316075e552d188de2372e087dc19c28566dcc62"
+      }
+    },
+    {
+      "id": "living_05",
+      "room_type": "living_room",
+      "split": "held_out",
+      "primary_image": "images/living_05/living_05.jpg",
+      "images": [
+        "images/living_05/living_05.jpg"
+      ],
+      "annotation": "cases/living_05.json",
+      "source": {
+        "type": "generated",
+        "publication_permission": "project_generated_asset",
+        "method": "built_in_imagegen",
+        "prompt_record": "generation.json#living_05",
+        "source_inputs": "text_only_no_private_images",
+        "license": "No separate third-party image license; generated project asset."
+      },
+      "diversity": {
+        "style": "open-plan contemporary",
+        "apparent_size": "large",
+        "tags": [
+          "living_dining_zones",
+          "repeated_chairs",
+          "pendants",
+          "partial_occlusion"
+        ]
+      },
+      "input": {
+        "room_type": "living_room",
+        "dimensions": {
+          "width_m": 5.0,
+          "length_m": 8.0,
+          "height_m": 2.8,
+          "measurements_source": "user_confirmed"
+        }
+      },
+      "clarification_policy": {
+        "measurement_mode": "complete",
+        "dimensions": {
+          "width_m": 5.0,
+          "length_m": 8.0,
+          "height_m": 2.8,
+          "measurements_source": "user_confirmed"
+        },
+        "unknown_dimensions": "not_sure_use_estimate",
+        "wall_axis": "not_sure_use_approximate_orientation",
+        "other_layout_questions": "not_sure_preserve_uncertainty",
+        "maximum_questions": 3
+      },
+      "measurement_note": "Scenario-supplied user input; not metric photo ground truth.",
+      "visual_reference": {
+        "wall_labels": {},
+        "entities": [
+          {
+            "id": "sofa",
+            "importance": "major",
+            "visible_location": "Left rear living zone, facing right-wall TV.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "tv",
+            "importance": "major",
+            "visible_location": "On long white console at right.",
+            "wall_anchor": "right",
+            "support_object_id": "console",
+            "features": []
+          },
+          {
+            "id": "console",
+            "importance": "major",
+            "visible_location": "Along right wall.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "coffee_table",
+            "importance": "major",
+            "visible_location": "Round wood table in rear seating zone.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "rug",
+            "importance": "major",
+            "visible_location": "Cream rug in seating zone.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "dining_table",
+            "importance": "major",
+            "visible_location": "Large rectangular table in left foreground.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "dining_chair_1",
+            "importance": "major",
+            "visible_location": "Near-left foreground edge of dining table.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": [
+              "distinct physical dining chair"
+            ]
+          },
+          {
+            "id": "dining_chair_2",
+            "importance": "major",
+            "visible_location": "Far-left edge beside dining table.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": [
+              "distinct physical dining chair"
+            ]
+          },
+          {
+            "id": "dining_chair_3",
+            "importance": "major",
+            "visible_location": "Far side, near table middle.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": [
+              "distinct physical dining chair"
+            ]
+          },
+          {
+            "id": "dining_chair_4",
+            "importance": "major",
+            "visible_location": "Far side, nearer living zone.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": [
+              "distinct physical dining chair"
+            ]
+          },
+          {
+            "id": "pendant_group",
+            "importance": "major",
+            "visible_location": "Three-bulb fixture above dining table.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": [
+              "three bulbs; one grouped fixture or three pendants acceptable"
+            ]
+          },
+          {
+            "id": "floor_plant",
+            "importance": "major",
+            "visible_location": "Far right corner beside glazing.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "glazed_door",
+            "importance": "major",
+            "visible_location": "Rear sliding glazed opening with balcony beyond.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          }
+        ],
+        "required_features": [
+          "Keep dining and seating zones distinct."
+        ],
+        "uncertainties": [
+          "Unseen room boundary near camera and exact dining-chair dimensions."
+        ],
+        "support_policy": "Only clearly visible supports are asserted; do not infer hidden mounts.",
+        "grading_scope": "Major arrangements and visible features; minor decor and precise metric localization excluded.",
+        "finishes": {
+          "floor_pattern": "wood",
+          "floor_appearance": "light wood",
+          "wall_color_families": [
+            "cream"
+          ],
+          "grading": "Broad appearance only; lighting and white balance change perceived colors."
+        }
+      },
+      "improvement_trial": null,
+      "checksums": {
+        "image_sha256": "545a365527d0e04135a757f28bf9e692258bd087ad46ba350eef67ee235f0285",
+        "annotation_sha256": "2949160f09f648cb0e04c14b7911762d5aacd182eb20543c6ec79ea05452814e"
+      }
+    },
+    {
+      "id": "living_06",
+      "room_type": "living_room",
+      "split": "held_out",
+      "primary_image": "images/living_06/living_06.jpg",
+      "images": [
+        "images/living_06/living_06.jpg"
+      ],
+      "annotation": "cases/living_06.json",
+      "source": {
+        "type": "generated",
+        "publication_permission": "project_generated_asset",
+        "method": "built_in_imagegen",
+        "prompt_record": "generation.json#living_06",
+        "source_inputs": "text_only_no_private_images",
+        "license": "No separate third-party image license; generated project asset."
+      },
+      "diversity": {
+        "style": "sparse neutral apartment",
+        "apparent_size": "small",
+        "tags": [
+          "low_shelving",
+          "standing_tv",
+          "cropped_boundary"
+        ]
+      },
+      "input": {
+        "room_type": "living_room",
+        "dimensions": {
+          "height_m": 2.6,
+          "measurements_source": "user_confirmed"
+        }
+      },
+      "clarification_policy": {
+        "measurement_mode": "partial",
+        "dimensions": {
+          "height_m": 2.6,
+          "measurements_source": "user_confirmed"
+        },
+        "unknown_dimensions": "not_sure_use_estimate",
+        "wall_axis": "not_sure_use_approximate_orientation",
+        "other_layout_questions": "not_sure_preserve_uncertainty",
+        "maximum_questions": 3
+      },
+      "measurement_note": "Scenario-supplied user input; not metric photo ground truth.",
+      "visual_reference": {
+        "wall_labels": {},
+        "entities": [
+          {
+            "id": "sofa",
+            "importance": "major",
+            "visible_location": "Compact two-seat sofa on left.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "tv",
+            "importance": "major",
+            "visible_location": "Upright television on white console at right.",
+            "wall_anchor": "right",
+            "support_object_id": "console",
+            "features": []
+          },
+          {
+            "id": "console",
+            "importance": "major",
+            "visible_location": "Low white console on right.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "coffee_table",
+            "importance": "major",
+            "visible_location": "Oval table at center.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": [
+              "oval wood top"
+            ]
+          },
+          {
+            "id": "low_shelf",
+            "importance": "major",
+            "visible_location": "Low open bookcase against rear wall.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": [
+              "low, approximately sofa-back height; not a tall bookcase"
+            ]
+          },
+          {
+            "id": "fan",
+            "importance": "major",
+            "visible_location": "Pedestal fan between window and television.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "rug",
+            "importance": "major",
+            "visible_location": "Light rug under table.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "window",
+            "importance": "major",
+            "visible_location": "Narrow tall rear-right window.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          }
+        ],
+        "required_features": [],
+        "uncertainties": [],
+        "support_policy": "Only clearly visible supports are asserted; do not infer hidden mounts.",
+        "grading_scope": "Major arrangements and visible features; minor decor and precise metric localization excluded.",
+        "finishes": {
+          "floor_pattern": "wood",
+          "floor_appearance": "light wood",
+          "wall_color_families": [
+            "off-white"
+          ],
+          "grading": "Broad appearance only; lighting and white balance change perceived colors."
+        }
+      },
+      "improvement_trial": null,
+      "checksums": {
+        "image_sha256": "adf58b135781b174d48d594aa86521938935e14626cc0c429aea83d3766ff92e",
+        "annotation_sha256": "633b8bc158de13946235f5f975e40925e8a67c93549fa0db6bf1c009fcff87d8"
+      }
+    },
+    {
+      "id": "living_07",
+      "room_type": "living_room",
+      "split": "held_out",
+      "primary_image": "images/living_07/living_07.jpg",
+      "images": [
+        "images/living_07/living_07.jpg"
+      ],
+      "annotation": "cases/living_07.json",
+      "source": {
+        "type": "photographed",
+        "title": "Apartment Living Room 3 2018-09-28.jpg",
+        "source_url": "https://commons.wikimedia.org/wiki/File:Apartment_Living_Room_3_2018-09-28.jpg",
+        "original_url": "https://upload.wikimedia.org/wikipedia/commons/8/8d/Apartment_Living_Room_3_2018-09-28.jpg",
+        "creator": "FASTILY",
+        "license": "CC BY-SA 4.0",
+        "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+        "publication_permission": "source_license",
+        "retrieved_at": "2026-10-29",
+        "modifications": "Resized without cropping, EXIF orientation applied, re-encoded as JPEG; metadata removed. Image remains under the stated source license."
+      },
+      "diversity": {
+        "style": "unfurnished rental",
+        "apparent_size": "unknown",
+        "tags": [
+          "real_photo",
+          "empty_room",
+          "hallucination_negative",
+          "opening_covers"
+        ]
+      },
+      "input": {
+        "room_type": "living_room",
+        "dimensions": null
+      },
+      "clarification_policy": {
+        "measurement_mode": "unknown",
+        "dimensions": null,
+        "unknown_dimensions": "not_sure_use_estimate",
+        "wall_axis": "not_sure_use_approximate_orientation",
+        "other_layout_questions": "not_sure_preserve_uncertainty",
+        "maximum_questions": 3
+      },
+      "measurement_note": "No dimensions provided; estimation must remain labeled approximate.",
+      "visual_reference": {
+        "wall_labels": {},
+        "entities": [
+          {
+            "id": "door",
+            "importance": "major",
+            "visible_location": "Tall glazed door on left of visible wall, horizontal blinds.",
+            "wall_anchor": "glazed_wall",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "window",
+            "importance": "major",
+            "visible_location": "Window immediately to right of door with vertical blinds.",
+            "wall_anchor": "glazed_wall",
+            "support_object_id": null,
+            "features": []
+          }
+        ],
+        "required_features": [
+          "Keep empty-room baseline empty."
+        ],
+        "uncertainties": [
+          "Room type comes from the public source; opposite walls, depth and ceiling height are not established."
+        ],
+        "support_policy": "Only clearly visible supports are asserted; do not infer hidden mounts.",
+        "grading_scope": "Major arrangements and visible features; minor decor and precise metric localization excluded.",
+        "finishes": {
+          "floor_pattern": "plain",
+          "floor_appearance": "beige fitted carpet",
+          "wall_color_families": [
+            "beige"
+          ],
+          "grading": "Broad appearance only; lighting and white balance change perceived colors."
+        }
+      },
+      "improvement_trial": null,
+      "checksums": {
+        "image_sha256": "599688206e09243d4db76df0f989bfb5092277504ac3c5de03aa962b7560e449",
+        "annotation_sha256": "86c4bc65dd9a24213474c363df6a260b62b4f94fb7fdf627235d5ee55284ab79"
+      }
+    },
+    {
+      "id": "bedroom_01",
+      "room_type": "bedroom",
+      "split": "development",
+      "primary_image": "images/bedroom_01/bedroom_01.jpg",
+      "images": [
+        "images/bedroom_01/bedroom_01.jpg"
+      ],
+      "annotation": "cases/bedroom_01.json",
+      "source": {
+        "type": "generated",
+        "publication_permission": "project_generated_asset",
+        "method": "built_in_imagegen",
+        "prompt_record": "generation.json#bedroom_01",
+        "source_inputs": "text_only_no_private_images",
+        "license": "No separate third-party image license; generated project asset."
+      },
+      "diversity": {
+        "style": "soft guest bedroom",
+        "apparent_size": "medium",
+        "tags": [
+          "two_nightstands",
+          "symmetry",
+          "no_workspace"
+        ]
+      },
+      "input": {
+        "room_type": "bedroom",
+        "dimensions": {
+          "width_m": 4.0,
+          "length_m": 4.0,
+          "height_m": 2.7,
+          "measurements_source": "user_confirmed"
+        }
+      },
+      "clarification_policy": {
+        "measurement_mode": "complete",
+        "dimensions": {
+          "width_m": 4.0,
+          "length_m": 4.0,
+          "height_m": 2.7,
+          "measurements_source": "user_confirmed"
+        },
+        "unknown_dimensions": "not_sure_use_estimate",
+        "wall_axis": "not_sure_use_approximate_orientation",
+        "other_layout_questions": "not_sure_preserve_uncertainty",
+        "maximum_questions": 3
+      },
+      "measurement_note": "Scenario-supplied user input; not metric photo ground truth.",
+      "visual_reference": {
+        "wall_labels": {},
+        "entities": [
+          {
+            "id": "bed",
+            "importance": "major",
+            "visible_location": "Centered headboard against far wall.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": [
+              "sage upholstered headboard"
+            ]
+          },
+          {
+            "id": "nightstand_left",
+            "importance": "major",
+            "visible_location": "Left side of bed.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "nightstand_right",
+            "importance": "major",
+            "visible_location": "Right side of bed.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "lamp_left",
+            "importance": "major",
+            "visible_location": "On left bedside table.",
+            "wall_anchor": null,
+            "support_object_id": "nightstand_left",
+            "features": []
+          },
+          {
+            "id": "lamp_right",
+            "importance": "major",
+            "visible_location": "On right bedside table.",
+            "wall_anchor": null,
+            "support_object_id": "nightstand_right",
+            "features": []
+          },
+          {
+            "id": "wardrobe",
+            "importance": "major",
+            "visible_location": "Tall wardrobe along left wall.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "rug",
+            "importance": "major",
+            "visible_location": "Gray rug at bed foot.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "window",
+            "importance": "major",
+            "visible_location": "Large right-wall window with curtains.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          }
+        ],
+        "required_features": [],
+        "uncertainties": [],
+        "support_policy": "Only clearly visible supports are asserted; do not infer hidden mounts.",
+        "grading_scope": "Major arrangements and visible features; minor decor and precise metric localization excluded.",
+        "finishes": {
+          "floor_pattern": "plain",
+          "floor_appearance": "beige fitted carpet",
+          "wall_color_families": [
+            "warm off-white"
+          ],
+          "grading": "Broad appearance only; lighting and white balance change perceived colors."
+        }
+      },
+      "improvement_trial": null,
+      "checksums": {
+        "image_sha256": "7103aabe14df12f40bc14e0bf1d7cb1ee0ca9f620a9f9939182edc3fb26587ed",
+        "annotation_sha256": "289b1efe4b8f2771d176db7b4b23a913b71d11b2336fa991a940fcda744fc1e2"
+      }
+    },
+    {
+      "id": "bedroom_02",
+      "room_type": "bedroom",
+      "split": "held_out",
+      "primary_image": "images/bedroom_02/bedroom_02.jpg",
+      "images": [
+        "images/bedroom_02/bedroom_02.jpg"
+      ],
+      "annotation": "cases/bedroom_02.json",
+      "source": {
+        "type": "generated",
+        "publication_permission": "project_generated_asset",
+        "method": "built_in_imagegen",
+        "prompt_record": "generation.json#bedroom_02",
+        "source_inputs": "text_only_no_private_images",
+        "license": "No separate third-party image license; generated project asset."
+      },
+      "diversity": {
+        "style": "industrial student room",
+        "apparent_size": "compact",
+        "tags": [
+          "brick_wall",
+          "mixed_sleep_work",
+          "chair_clearance",
+          "high_window"
+        ]
+      },
+      "input": {
+        "room_type": "bedroom",
+        "dimensions": {
+          "width_m": 3.0,
+          "measurements_source": "user_confirmed"
+        }
+      },
+      "clarification_policy": {
+        "measurement_mode": "partial",
+        "dimensions": {
+          "width_m": 3.0,
+          "measurements_source": "user_confirmed"
+        },
+        "unknown_dimensions": "not_sure_use_estimate",
+        "wall_axis": "not_sure_use_approximate_orientation",
+        "other_layout_questions": "not_sure_preserve_uncertainty",
+        "maximum_questions": 3
+      },
+      "measurement_note": "Scenario-supplied user input; not metric photo ground truth.",
+      "visual_reference": {
+        "wall_labels": {},
+        "entities": [
+          {
+            "id": "bed",
+            "importance": "major",
+            "visible_location": "Black metal single bed against rear brick wall.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "desk",
+            "importance": "major",
+            "visible_location": "White work desk on right side.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "chair",
+            "importance": "major",
+            "visible_location": "Red task chair immediately in front of desk.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": [
+              "faces desk, not bed"
+            ]
+          },
+          {
+            "id": "monitor",
+            "importance": "major",
+            "visible_location": "On right desk; partly cropped at image edge.",
+            "wall_anchor": null,
+            "support_object_id": "desk",
+            "features": []
+          },
+          {
+            "id": "laptop",
+            "importance": "major",
+            "visible_location": "Open laptop on desk.",
+            "wall_anchor": null,
+            "support_object_id": "desk",
+            "features": []
+          },
+          {
+            "id": "dresser",
+            "importance": "major",
+            "visible_location": "Tall dark chest on rear wall to right of bed.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "shelf",
+            "importance": "major",
+            "visible_location": "Black framed open shelf at left wall.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "radiator",
+            "importance": "major",
+            "visible_location": "On left wall under high window.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "nightstand",
+            "importance": "major",
+            "visible_location": "Between bed and rear dresser.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "window",
+            "importance": "major",
+            "visible_location": "High left-wall window.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          }
+        ],
+        "required_features": [
+          "Retain brick/concrete finish impression and blue bed/red chair identity."
+        ],
+        "uncertainties": [],
+        "support_policy": "Only clearly visible supports are asserted; do not infer hidden mounts.",
+        "grading_scope": "Major arrangements and visible features; minor decor and precise metric localization excluded.",
+        "finishes": {
+          "floor_pattern": "plain",
+          "floor_appearance": "gray concrete",
+          "wall_color_families": [
+            "red-brown brick",
+            "off-white plaster"
+          ],
+          "grading": "Broad appearance only; lighting and white balance change perceived colors."
+        }
+      },
+      "improvement_trial": {
+        "focus": "workspace",
+        "instruction": "Improve usable desk and chair space while keeping a bed and clothing storage.",
+        "start_from": "this_case_original",
+        "preserve": "confirmed measurements, fixed installations, locked objects and main room functions"
+      },
+      "checksums": {
+        "image_sha256": "007989dcd07359f70ce748c3e172f9b0bc6b88cbc4ee9950c2663a26d31da0e4",
+        "annotation_sha256": "805d8ffe5849472c4bb9ed61592f09c81b2bb1ed91e5d5ec738f84b88506a8df"
+      }
+    },
+    {
+      "id": "bedroom_03",
+      "room_type": "bedroom",
+      "split": "held_out",
+      "primary_image": "images/bedroom_03/bedroom_03.jpg",
+      "images": [
+        "images/bedroom_03/bedroom_03.jpg"
+      ],
+      "annotation": "cases/bedroom_03.json",
+      "source": {
+        "type": "generated",
+        "publication_permission": "project_generated_asset",
+        "method": "built_in_imagegen",
+        "prompt_record": "generation.json#bedroom_03",
+        "source_inputs": "text_only_no_private_images",
+        "license": "No separate third-party image license; generated project asset."
+      },
+      "diversity": {
+        "style": "inexpensive narrow bedroom",
+        "apparent_size": "narrow",
+        "tags": [
+          "crosswise_bed",
+          "blocked_passage",
+          "night_light"
+        ]
+      },
+      "input": {
+        "room_type": "bedroom",
+        "dimensions": {
+          "width_m": 3.0,
+          "length_m": 5.0,
+          "height_m": 2.6,
+          "measurements_source": "user_confirmed"
+        }
+      },
+      "clarification_policy": {
+        "measurement_mode": "complete",
+        "dimensions": {
+          "width_m": 3.0,
+          "length_m": 5.0,
+          "height_m": 2.6,
+          "measurements_source": "user_confirmed"
+        },
+        "unknown_dimensions": "not_sure_use_estimate",
+        "wall_axis": "not_sure_use_approximate_orientation",
+        "other_layout_questions": "not_sure_preserve_uncertainty",
+        "maximum_questions": 3
+      },
+      "measurement_note": "Scenario-supplied user input; not metric photo ground truth.",
+      "visual_reference": {
+        "wall_labels": {},
+        "entities": [
+          {
+            "id": "bed",
+            "importance": "major",
+            "visible_location": "Bed projects across room from left wall.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "bench",
+            "importance": "major",
+            "visible_location": "Separate upholstered bench at foot of bed.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "wardrobe",
+            "importance": "major",
+            "visible_location": "Far wall, to right of bed.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "dresser",
+            "importance": "major",
+            "visible_location": "Chest against near-left wall.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "nightstand",
+            "importance": "major",
+            "visible_location": "Small table with lamp at far side of bed.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "lamp",
+            "importance": "major",
+            "visible_location": "Lamp on bedside table.",
+            "wall_anchor": null,
+            "support_object_id": "nightstand",
+            "features": []
+          },
+          {
+            "id": "window",
+            "importance": "major",
+            "visible_location": "Small high window above left side of bed.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "door",
+            "importance": "major",
+            "visible_location": "White open door in near-right foreground.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          }
+        ],
+        "required_features": [],
+        "uncertainties": [
+          "Door belongs to near/camera boundary; assigning its exact compass wall is uncertain."
+        ],
+        "support_policy": "Only clearly visible supports are asserted; do not infer hidden mounts.",
+        "grading_scope": "Major arrangements and visible features; minor decor and precise metric localization excluded.",
+        "finishes": {
+          "floor_pattern": "wood",
+          "floor_appearance": "dark brown wood",
+          "wall_color_families": [
+            "pale blue-gray"
+          ],
+          "grading": "Broad appearance only; lighting and white balance change perceived colors."
+        }
+      },
+      "improvement_trial": {
+        "focus": "openness",
+        "instruction": "Improve the route around the bed while keeping a bed and clothing storage.",
+        "start_from": "this_case_original",
+        "preserve": "confirmed measurements, fixed installations, locked objects and main room functions"
+      },
+      "checksums": {
+        "image_sha256": "8618827188a6792d0a479b15f508d7bcc8e4d3730837df7635ed340d00577f0a",
+        "annotation_sha256": "7cb0000ca453785712d223618dd758ce634d7cc787e632b017a8531e68168be5"
+      }
+    },
+    {
+      "id": "bedroom_04",
+      "room_type": "bedroom",
+      "split": "held_out",
+      "primary_image": "images/bedroom_04/bedroom_04.jpg",
+      "images": [
+        "images/bedroom_04/bedroom_04.jpg"
+      ],
+      "annotation": "cases/bedroom_04.json",
+      "source": {
+        "type": "generated",
+        "publication_permission": "project_generated_asset",
+        "method": "built_in_imagegen",
+        "prompt_record": "generation.json#bedroom_04",
+        "source_inputs": "text_only_no_private_images",
+        "license": "No separate third-party image license; generated project asset."
+      },
+      "diversity": {
+        "style": "pastel attic shared bedroom",
+        "apparent_size": "medium",
+        "tags": [
+          "two_beds",
+          "sloped_ceiling",
+          "skylights",
+          "repeated_instances"
+        ]
+      },
+      "input": {
+        "room_type": "bedroom",
+        "dimensions": null
+      },
+      "clarification_policy": {
+        "measurement_mode": "unknown",
+        "dimensions": null,
+        "unknown_dimensions": "not_sure_use_estimate",
+        "wall_axis": "not_sure_use_approximate_orientation",
+        "other_layout_questions": "not_sure_preserve_uncertainty",
+        "maximum_questions": 3
+      },
+      "measurement_note": "No dimensions provided; estimation must remain labeled approximate.",
+      "visual_reference": {
+        "wall_labels": {},
+        "entities": [
+          {
+            "id": "bed_yellow",
+            "importance": "major",
+            "visible_location": "Left single bed, head against low rear wall.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "bed_green",
+            "importance": "major",
+            "visible_location": "Right single bed, head against low rear wall.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "dresser",
+            "importance": "major",
+            "visible_location": "Blue chest between beds against rear wall.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "nightstand_left",
+            "importance": "major",
+            "visible_location": "Between yellow bed and dresser.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "nightstand_right",
+            "importance": "major",
+            "visible_location": "Between green bed and dresser.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "wardrobe",
+            "importance": "major",
+            "visible_location": "White wardrobe near right foreground.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "rug",
+            "importance": "major",
+            "visible_location": "Central woven rug between beds.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "skylight_left",
+            "importance": "representation_gap",
+            "visible_location": "Left roof skylight.",
+            "wall_anchor": "roof",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "skylight_right",
+            "importance": "representation_gap",
+            "visible_location": "Right roof skylight.",
+            "wall_anchor": "roof",
+            "support_object_id": null,
+            "features": []
+          }
+        ],
+        "required_features": [
+          "Two single beds and shared dresser arrangement are essential."
+        ],
+        "uncertainties": [
+          "Sloping roof and roof windows are an explicit representation gap; acceptable output may label these unresolved."
+        ],
+        "support_policy": "Only clearly visible supports are asserted; do not infer hidden mounts.",
+        "grading_scope": "Major arrangements and visible features; minor decor and precise metric localization excluded.",
+        "finishes": {
+          "floor_pattern": "wood",
+          "floor_appearance": "white painted floorboards",
+          "wall_color_families": [
+            "pastel pink"
+          ],
+          "grading": "Broad appearance only; lighting and white balance change perceived colors."
+        }
+      },
+      "improvement_trial": null,
+      "checksums": {
+        "image_sha256": "97902ef4560c92b1fe70f5e0a1c25e8f7ff44921f63255ceaab4019d0370effc",
+        "annotation_sha256": "2c93257ec8a268869fdd8626cc7f1b2018b5f1419da2037c2e7a0fb29ee59a35"
+      }
+    },
+    {
+      "id": "bedroom_05",
+      "room_type": "bedroom",
+      "split": "held_out",
+      "primary_image": "images/bedroom_05/bedroom_05.jpg",
+      "images": [
+        "images/bedroom_05/bedroom_05.jpg"
+      ],
+      "annotation": "cases/bedroom_05.json",
+      "source": {
+        "type": "generated",
+        "publication_permission": "project_generated_asset",
+        "method": "built_in_imagegen",
+        "prompt_record": "generation.json#bedroom_05",
+        "source_inputs": "text_only_no_private_images",
+        "license": "No separate third-party image license; generated project asset."
+      },
+      "diversity": {
+        "style": "Japanese-inspired minimal",
+        "apparent_size": "medium",
+        "tags": [
+          "platform_bed",
+          "sliding_panels",
+          "dark_floor",
+          "color_identity"
+        ]
+      },
+      "input": {
+        "room_type": "bedroom",
+        "dimensions": {
+          "length_m": 4.5,
+          "measurements_source": "user_confirmed"
+        }
+      },
+      "clarification_policy": {
+        "measurement_mode": "partial",
+        "dimensions": {
+          "length_m": 4.5,
+          "measurements_source": "user_confirmed"
+        },
+        "unknown_dimensions": "not_sure_use_estimate",
+        "wall_axis": "not_sure_use_approximate_orientation",
+        "other_layout_questions": "not_sure_preserve_uncertainty",
+        "maximum_questions": 3
+      },
+      "measurement_note": "Scenario-supplied user input; not metric photo ground truth.",
+      "visual_reference": {
+        "wall_labels": {},
+        "entities": [
+          {
+            "id": "bed",
+            "importance": "major",
+            "visible_location": "Low wood platform bed with navy bedding along right wall.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "wardrobe",
+            "importance": "major",
+            "visible_location": "White wardrobe at left foreground.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "dresser",
+            "importance": "major",
+            "visible_location": "Oak chest at far wall.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "chair",
+            "importance": "major",
+            "visible_location": "Low purple chair beside left glazing.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "nightstand",
+            "importance": "major",
+            "visible_location": "Small red table at far side of bed.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "lamp",
+            "importance": "major",
+            "visible_location": "Cream lamp on red bedside table.",
+            "wall_anchor": null,
+            "support_object_id": "nightstand",
+            "features": []
+          },
+          {
+            "id": "window",
+            "importance": "major",
+            "visible_location": "Large translucent grid-panel glazing along left wall.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          }
+        ],
+        "required_features": [
+          "Navy bed, purple chair and red table are intentional baseline colors."
+        ],
+        "uncertainties": [],
+        "support_policy": "Only clearly visible supports are asserted; do not infer hidden mounts.",
+        "grading_scope": "Major arrangements and visible features; minor decor and precise metric localization excluded.",
+        "finishes": {
+          "floor_pattern": "wood",
+          "floor_appearance": "dark wood",
+          "wall_color_families": [
+            "off-white",
+            "burgundy accent"
+          ],
+          "grading": "Broad appearance only; lighting and white balance change perceived colors."
+        }
+      },
+      "improvement_trial": {
+        "focus": "aesthetics",
+        "instruction": "Improve color and material cohesion while preserving sleeping and storage functions.",
+        "start_from": "this_case_original",
+        "preserve": "confirmed measurements, fixed installations, locked objects and main room functions"
+      },
+      "checksums": {
+        "image_sha256": "29687cbd01f860ddeb1fc03ec7188a149a21e538410cbf58abdc7e465fde31ba",
+        "annotation_sha256": "7f6a393d67c3d34d1df7277b38d6f43e1a1c5767b2e3931534471cae2956b442"
+      }
+    },
+    {
+      "id": "bedroom_06",
+      "room_type": "bedroom",
+      "split": "held_out",
+      "primary_image": "images/bedroom_06/bedroom_06.jpg",
+      "images": [
+        "images/bedroom_06/bedroom_06.jpg"
+      ],
+      "annotation": "cases/bedroom_06.json",
+      "source": {
+        "type": "photographed",
+        "title": "Bedroom in a serviced apartment in London.jpg",
+        "source_url": "https://commons.wikimedia.org/wiki/File:Bedroom_in_a_serviced_apartment_in_London.jpg",
+        "original_url": "https://upload.wikimedia.org/wikipedia/commons/6/63/Bedroom_in_a_serviced_apartment_in_London.jpg",
+        "creator": "Mx. Granger",
+        "license": "CC0",
+        "license_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+        "publication_permission": "source_license",
+        "retrieved_at": "2026-10-29",
+        "modifications": "Resized without cropping, EXIF orientation applied, re-encoded as JPEG; metadata removed. Image remains under the stated source license."
+      },
+      "diversity": {
+        "style": "serviced apartment",
+        "apparent_size": "compact",
+        "tags": [
+          "real_photo",
+          "large_glazing",
+          "cropped_bedside_table"
+        ]
+      },
+      "input": {
+        "room_type": "bedroom",
+        "dimensions": null
+      },
+      "clarification_policy": {
+        "measurement_mode": "unknown",
+        "dimensions": null,
+        "unknown_dimensions": "not_sure_use_estimate",
+        "wall_axis": "not_sure_use_approximate_orientation",
+        "other_layout_questions": "not_sure_preserve_uncertainty",
+        "maximum_questions": 3
+      },
+      "measurement_note": "No dimensions provided; estimation must remain labeled approximate.",
+      "visual_reference": {
+        "wall_labels": {},
+        "entities": [
+          {
+            "id": "bed",
+            "importance": "major",
+            "visible_location": "Double bed, head against far-right wall.",
+            "wall_anchor": "bed_wall",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "nightstand_left",
+            "importance": "major",
+            "visible_location": "Left of headboard near glazing.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "nightstand_right",
+            "importance": "major",
+            "visible_location": "Right edge of bed, partly cropped.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "lamp_left",
+            "importance": "major",
+            "visible_location": "Black-shade lamp on left bedside table.",
+            "wall_anchor": null,
+            "support_object_id": "nightstand_left",
+            "features": []
+          },
+          {
+            "id": "lamp_right",
+            "importance": "major",
+            "visible_location": "Black-shade lamp on right bedside table.",
+            "wall_anchor": null,
+            "support_object_id": "nightstand_right",
+            "features": []
+          },
+          {
+            "id": "pendant",
+            "importance": "major",
+            "visible_location": "Yellow drum ceiling pendant above bed area.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "window",
+            "importance": "major",
+            "visible_location": "Large multi-panel left-wall glazing with roller blinds.",
+            "wall_anchor": "glazed_wall",
+            "support_object_id": null,
+            "features": []
+          }
+        ],
+        "required_features": [],
+        "uncertainties": [
+          "Unseen wardrobe, door, room width and room depth must not be invented."
+        ],
+        "support_policy": "Only clearly visible supports are asserted; do not infer hidden mounts.",
+        "grading_scope": "Major arrangements and visible features; minor decor and precise metric localization excluded.",
+        "finishes": {
+          "floor_pattern": "plain",
+          "floor_appearance": "light gray fitted carpet",
+          "wall_color_families": [
+            "off-white"
+          ],
+          "grading": "Broad appearance only; lighting and white balance change perceived colors."
+        }
+      },
+      "improvement_trial": null,
+      "checksums": {
+        "image_sha256": "0fb274db8ab0dbd4f366a95aa2895528d8b707c71bb6371fab24343b739cfe27",
+        "annotation_sha256": "664dff033d92aa1b797106a96dc3e1f2b38eb41b2987a9d4168b0ebbe9babe87"
+      }
+    },
+    {
+      "id": "kitchen_01",
+      "room_type": "kitchen",
+      "split": "development",
+      "primary_image": "images/kitchen_01/kitchen_01.jpg",
+      "images": [
+        "images/kitchen_01/kitchen_01.jpg"
+      ],
+      "annotation": "cases/kitchen_01.json",
+      "source": {
+        "type": "generated",
+        "publication_permission": "project_generated_asset",
+        "method": "built_in_imagegen",
+        "prompt_record": "generation.json#kitchen_01",
+        "source_inputs": "text_only_no_private_images",
+        "license": "No separate third-party image license; generated project asset."
+      },
+      "diversity": {
+        "style": "country shaker",
+        "apparent_size": "large",
+        "tags": [
+          "l_shaped_counter",
+          "sink_in_worktop",
+          "island",
+          "two_stools"
+        ]
+      },
+      "input": {
+        "room_type": "kitchen",
+        "dimensions": {
+          "width_m": 5.0,
+          "length_m": 5.0,
+          "height_m": 2.8,
+          "measurements_source": "user_confirmed"
+        }
+      },
+      "clarification_policy": {
+        "measurement_mode": "complete",
+        "dimensions": {
+          "width_m": 5.0,
+          "length_m": 5.0,
+          "height_m": 2.8,
+          "measurements_source": "user_confirmed"
+        },
+        "unknown_dimensions": "not_sure_use_estimate",
+        "wall_axis": "not_sure_use_approximate_orientation",
+        "other_layout_questions": "not_sure_preserve_uncertainty",
+        "maximum_questions": 3
+      },
+      "measurement_note": "Scenario-supplied user input; not metric photo ground truth.",
+      "visual_reference": {
+        "wall_labels": {},
+        "entities": [
+          {
+            "id": "perimeter_counter",
+            "importance": "major",
+            "visible_location": "Continuous cream base/worktop run around rear and right walls.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": [
+              "L-shaped continuous worktop",
+              "visible sink and faucet under right window"
+            ]
+          },
+          {
+            "id": "upper_cabinets",
+            "importance": "major",
+            "visible_location": "Grouped upper cupboards on rear wall and right corner.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": [
+              "cupboard run may be split into modules"
+            ]
+          },
+          {
+            "id": "cooker",
+            "importance": "major",
+            "visible_location": "Black cooker in rear run beneath hood.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "hood",
+            "importance": "major",
+            "visible_location": "Black hood directly over cooker.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "refrigerator",
+            "importance": "major",
+            "visible_location": "Tall white refrigerator at left end.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "island",
+            "importance": "major",
+            "visible_location": "Freestanding butcher-block island in center.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "stool_a",
+            "importance": "major",
+            "visible_location": "Near-left side of island.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "stool_b",
+            "importance": "major",
+            "visible_location": "Far-left side of island.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "kettle",
+            "importance": "secondary",
+            "visible_location": "On rear worktop near inner corner.",
+            "wall_anchor": null,
+            "support_object_id": "perimeter_counter",
+            "features": []
+          },
+          {
+            "id": "window",
+            "importance": "major",
+            "visible_location": "Wide right-wall window above sink.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          }
+        ],
+        "required_features": [
+          "Continuous L-shaped worktop",
+          "Sink/faucet on window run",
+          "Cooker below hood",
+          "Separate island with two stools"
+        ],
+        "uncertainties": [],
+        "support_policy": "Only clearly visible supports are asserted; do not infer hidden mounts.",
+        "grading_scope": "Major arrangements and visible features; minor decor and precise metric localization excluded.",
+        "finishes": {
+          "floor_pattern": "tile",
+          "floor_appearance": "beige stone",
+          "wall_color_families": [
+            "cream",
+            "pale stone backsplash"
+          ],
+          "grading": "Broad appearance only; lighting and white balance change perceived colors."
+        }
+      },
+      "improvement_trial": null,
+      "checksums": {
+        "image_sha256": "7d9763397be70256cc83d1d5b15618ea674ee9592c8e1c117ac37295ed74e5e6",
+        "annotation_sha256": "8b227d55fa432c41b48721d7ca4c217a1e68eb55ee32163b00ce2e65231d4b9f"
+      }
+    },
+    {
+      "id": "kitchen_02",
+      "room_type": "kitchen",
+      "split": "held_out",
+      "primary_image": "images/kitchen_02/kitchen_02.jpg",
+      "images": [
+        "images/kitchen_02/kitchen_02.jpg"
+      ],
+      "annotation": "cases/kitchen_02.json",
+      "source": {
+        "type": "generated",
+        "publication_permission": "project_generated_asset",
+        "method": "built_in_imagegen",
+        "prompt_record": "generation.json#kitchen_02",
+        "source_inputs": "text_only_no_private_images",
+        "license": "No separate third-party image license; generated project asset."
+      },
+      "diversity": {
+        "style": "green urban galley",
+        "apparent_size": "narrow",
+        "tags": [
+          "parallel_counter_runs",
+          "dishwasher",
+          "built_in_oven",
+          "terrazzo"
+        ]
+      },
+      "input": {
+        "room_type": "kitchen",
+        "dimensions": {
+          "width_m": 2.2,
+          "measurements_source": "user_confirmed"
+        }
+      },
+      "clarification_policy": {
+        "measurement_mode": "partial",
+        "dimensions": {
+          "width_m": 2.2,
+          "measurements_source": "user_confirmed"
+        },
+        "unknown_dimensions": "not_sure_use_estimate",
+        "wall_axis": "not_sure_use_approximate_orientation",
+        "other_layout_questions": "not_sure_preserve_uncertainty",
+        "maximum_questions": 3
+      },
+      "measurement_note": "Scenario-supplied user input; not metric photo ground truth.",
+      "visual_reference": {
+        "wall_labels": {},
+        "entities": [
+          {
+            "id": "sink_run",
+            "importance": "major",
+            "visible_location": "Left green base cabinets with gray worktop and sink.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": [
+              "visible stainless sink and faucet"
+            ]
+          },
+          {
+            "id": "cooking_run",
+            "importance": "major",
+            "visible_location": "Right green cabinet run with inset hob.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": [
+              "black hob in worktop"
+            ]
+          },
+          {
+            "id": "oven",
+            "importance": "major",
+            "visible_location": "Black oven under right hob.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "dishwasher",
+            "importance": "major",
+            "visible_location": "Silver dishwasher under left counter.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "refrigerator",
+            "importance": "major",
+            "visible_location": "Tall silver fridge at far right.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "upper_cabinets",
+            "importance": "major",
+            "visible_location": "Upper cupboard group above counters.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "kettle",
+            "importance": "secondary",
+            "visible_location": "On far left worktop.",
+            "wall_anchor": null,
+            "support_object_id": "sink_run",
+            "features": []
+          },
+          {
+            "id": "toaster",
+            "importance": "secondary",
+            "visible_location": "Beside kettle on left worktop.",
+            "wall_anchor": null,
+            "support_object_id": "sink_run",
+            "features": []
+          },
+          {
+            "id": "window",
+            "importance": "major",
+            "visible_location": "Small high rear window.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          }
+        ],
+        "required_features": [
+          "Sink on left, cooking appliances on right",
+          "Galley aisle",
+          "No island or stools"
+        ],
+        "uncertainties": [],
+        "support_policy": "Only clearly visible supports are asserted; do not infer hidden mounts.",
+        "grading_scope": "Major arrangements and visible features; minor decor and precise metric localization excluded.",
+        "finishes": {
+          "floor_pattern": "tile",
+          "floor_appearance": "light terrazzo",
+          "wall_color_families": [
+            "pale pink backsplash",
+            "white plaster"
+          ],
+          "grading": "Broad appearance only; lighting and white balance change perceived colors."
+        }
+      },
+      "improvement_trial": null,
+      "checksums": {
+        "image_sha256": "6c4e8bb7da45ba9103bf42202a855afb980d732a30ad1470a5269b7f9c552a50",
+        "annotation_sha256": "d319847ac6fd3f4aa37bd1f01db1631ea6f861772496633173d5fba1a78b429c"
+      }
+    },
+    {
+      "id": "kitchen_03",
+      "room_type": "kitchen",
+      "split": "held_out",
+      "primary_image": "images/kitchen_03/kitchen_03.jpg",
+      "images": [
+        "images/kitchen_03/kitchen_03.jpg"
+      ],
+      "annotation": "cases/kitchen_03.json",
+      "source": {
+        "type": "generated",
+        "publication_permission": "project_generated_asset",
+        "method": "built_in_imagegen",
+        "prompt_record": "generation.json#kitchen_03",
+        "source_inputs": "text_only_no_private_images",
+        "license": "No separate third-party image license; generated project asset."
+      },
+      "diversity": {
+        "style": "colorful rental kitchenette",
+        "apparent_size": "small",
+        "tags": [
+          "straight_run",
+          "storage_opportunity",
+          "movable_cart",
+          "bold_floor"
+        ]
+      },
+      "input": {
+        "room_type": "kitchen",
+        "dimensions": {
+          "length_m": 4.0,
+          "measurements_source": "user_confirmed"
+        }
+      },
+      "clarification_policy": {
+        "measurement_mode": "partial",
+        "dimensions": {
+          "length_m": 4.0,
+          "measurements_source": "user_confirmed"
+        },
+        "unknown_dimensions": "not_sure_use_estimate",
+        "wall_axis": "not_sure_use_approximate_orientation",
+        "other_layout_questions": "not_sure_preserve_uncertainty",
+        "maximum_questions": 3
+      },
+      "measurement_note": "Scenario-supplied user input; not metric photo ground truth.",
+      "visual_reference": {
+        "wall_labels": {},
+        "entities": [
+          {
+            "id": "counter",
+            "importance": "major",
+            "visible_location": "Blue base cabinets with wooden worktop on left.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": [
+              "sink and chrome faucet at near end"
+            ]
+          },
+          {
+            "id": "cooker",
+            "importance": "major",
+            "visible_location": "Compact black cooker in far left run.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "refrigerator",
+            "importance": "major",
+            "visible_location": "Tall white fridge beside far doorway.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "upper_cabinets",
+            "importance": "major",
+            "visible_location": "Two short white upper cupboards on left.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "cart",
+            "importance": "major",
+            "visible_location": "Separate wheeled metal work cart in center.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": [
+              "wheels",
+              "open lower shelves",
+              "not a fixed island"
+            ]
+          },
+          {
+            "id": "breakfast_table",
+            "importance": "major",
+            "visible_location": "Narrow table on right wall.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "stool_a",
+            "importance": "major",
+            "visible_location": "Green stool nearer camera beside table.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "stool_b",
+            "importance": "major",
+            "visible_location": "Green stool farther from camera beside table.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "window",
+            "importance": "major",
+            "visible_location": "Small high right-side window.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "door",
+            "importance": "major",
+            "visible_location": "Rear doorway beside fridge.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          }
+        ],
+        "required_features": [
+          "Retain sink/cooking/refrigeration",
+          "Preserve two breakfast seats",
+          "Cart may move; fixed plumbing must stay"
+        ],
+        "uncertainties": [],
+        "support_policy": "Only clearly visible supports are asserted; do not infer hidden mounts.",
+        "grading_scope": "Major arrangements and visible features; minor decor and precise metric localization excluded.",
+        "finishes": {
+          "floor_pattern": "plain",
+          "floor_appearance": "red linoleum",
+          "wall_color_families": [
+            "white"
+          ],
+          "grading": "Broad appearance only; lighting and white balance change perceived colors."
+        }
+      },
+      "improvement_trial": {
+        "focus": "storage",
+        "instruction": "Add accessible storage without moving fixed plumbing or blocking the kitchen aisle.",
+        "start_from": "this_case_original",
+        "preserve": "confirmed measurements, fixed installations, locked objects and main room functions"
+      },
+      "checksums": {
+        "image_sha256": "90a8de869e601989803edb00f383478724aaa91b1c5b7971bc0bef0a9ced5afd",
+        "annotation_sha256": "b99cb48a51ed1b2ecda6d7de37c774c7a826a5b5b0a902ba74a18dbe285a3345"
+      }
+    },
+    {
+      "id": "kitchen_04",
+      "room_type": "kitchen",
+      "split": "held_out",
+      "primary_image": "images/kitchen_04/kitchen_04.jpg",
+      "images": [
+        "images/kitchen_04/kitchen_04.jpg"
+      ],
+      "annotation": "cases/kitchen_04.json",
+      "source": {
+        "type": "generated",
+        "publication_permission": "project_generated_asset",
+        "method": "built_in_imagegen",
+        "prompt_record": "generation.json#kitchen_04",
+        "source_inputs": "text_only_no_private_images",
+        "license": "No separate third-party image license; generated project asset."
+      },
+      "diversity": {
+        "style": "dark contemporary open-plan",
+        "apparent_size": "large",
+        "tags": [
+          "night_lighting",
+          "sink_island",
+          "three_stools",
+          "dining_zone"
+        ]
+      },
+      "input": {
+        "room_type": "kitchen",
+        "dimensions": null
+      },
+      "clarification_policy": {
+        "measurement_mode": "unknown",
+        "dimensions": null,
+        "unknown_dimensions": "not_sure_use_estimate",
+        "wall_axis": "not_sure_use_approximate_orientation",
+        "other_layout_questions": "not_sure_preserve_uncertainty",
+        "maximum_questions": 3
+      },
+      "measurement_note": "No dimensions provided; estimation must remain labeled approximate.",
+      "visual_reference": {
+        "wall_labels": {},
+        "entities": [
+          {
+            "id": "island",
+            "importance": "major",
+            "visible_location": "Large white island at center-right.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": [
+              "inset sink",
+              "black faucet"
+            ]
+          },
+          {
+            "id": "perimeter_counter",
+            "importance": "major",
+            "visible_location": "Dark rear base cabinet run with pale worktop.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "pantry",
+            "importance": "major",
+            "visible_location": "Tall dark storage at left end of rear run.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "oven_stack",
+            "importance": "major",
+            "visible_location": "Black built-in oven stack beside refrigerator.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "refrigerator",
+            "importance": "major",
+            "visible_location": "Silver double-door fridge on rear wall.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "hood",
+            "importance": "major",
+            "visible_location": "Steel hood above rear hob.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "stool_1",
+            "importance": "major",
+            "visible_location": "Orange bar stool 1 along near side of island.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "stool_2",
+            "importance": "major",
+            "visible_location": "Orange bar stool 2 along near side of island.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "stool_3",
+            "importance": "major",
+            "visible_location": "Orange bar stool 3 along near side of island.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "dining_table",
+            "importance": "major",
+            "visible_location": "Round glass dining table in left foreground.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": [
+              "round glass top"
+            ]
+          },
+          {
+            "id": "dining_chair_a",
+            "importance": "major",
+            "visible_location": "Dining chair at left edge, partly cropped.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "dining_chair_b",
+            "importance": "major",
+            "visible_location": "Dining chair nearer fridge.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "pendants",
+            "importance": "major",
+            "visible_location": "Two metal pendants above island.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": [
+              "two pendants; grouped or separate acceptable"
+            ]
+          },
+          {
+            "id": "window",
+            "importance": "major",
+            "visible_location": "Large full-height glazing on right.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          }
+        ],
+        "required_features": [
+          "Retain island sink",
+          "Keep dining and kitchen zones separate",
+          "Built-in oven stack retained as an appliance or an oven-cabinet assembly."
+        ],
+        "uncertainties": [],
+        "support_policy": "Only clearly visible supports are asserted; do not infer hidden mounts.",
+        "grading_scope": "Major arrangements and visible features; minor decor and precise metric localization excluded.",
+        "finishes": {
+          "floor_pattern": "tile",
+          "floor_appearance": "gray stone",
+          "wall_color_families": [
+            "charcoal"
+          ],
+          "grading": "Broad appearance only; lighting and white balance change perceived colors."
+        }
+      },
+      "improvement_trial": null,
+      "checksums": {
+        "image_sha256": "73d2fa2d177a1a252c998feda1cb1861d0f32c980f4748e61cbe523dbbc5ca55",
+        "annotation_sha256": "2ea6420c115690cec1a075dec409c3fac8b1997990aef3be6deb31535ed05f72"
+      }
+    },
+    {
+      "id": "kitchen_05",
+      "room_type": "kitchen",
+      "split": "held_out",
+      "primary_image": "images/kitchen_05/kitchen_05.jpg",
+      "images": [
+        "images/kitchen_05/kitchen_05.jpg"
+      ],
+      "annotation": "cases/kitchen_05.json",
+      "source": {
+        "type": "photographed",
+        "title": "Modern Kitchen.jpg",
+        "source_url": "https://commons.wikimedia.org/wiki/File:Modern_Kitchen.jpg",
+        "original_url": "https://upload.wikimedia.org/wikipedia/commons/d/db/Modern_Kitchen.jpg",
+        "creator": "Pbroks13",
+        "license": "CC BY-SA 3.0",
+        "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+        "publication_permission": "source_license",
+        "retrieved_at": "2026-10-29",
+        "modifications": "Resized without cropping, EXIF orientation applied, re-encoded as JPEG; metadata removed. Image remains under the stated source license."
+      },
+      "diversity": {
+        "style": "traditional white kitchen",
+        "apparent_size": "unknown",
+        "tags": [
+          "real_photo",
+          "l_shaped_counter",
+          "compound_sink",
+          "partial_island"
+        ]
+      },
+      "input": {
+        "room_type": "kitchen",
+        "dimensions": null
+      },
+      "clarification_policy": {
+        "measurement_mode": "unknown",
+        "dimensions": null,
+        "unknown_dimensions": "not_sure_use_estimate",
+        "wall_axis": "not_sure_use_approximate_orientation",
+        "other_layout_questions": "not_sure_preserve_uncertainty",
+        "maximum_questions": 3
+      },
+      "measurement_note": "No dimensions provided; estimation must remain labeled approximate.",
+      "visual_reference": {
+        "wall_labels": {},
+        "entities": [
+          {
+            "id": "counter",
+            "importance": "major",
+            "visible_location": "White L-shaped perimeter counter along left and rear walls.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": [
+              "sink and faucet under left window",
+              "continuous L-shaped worktop"
+            ]
+          },
+          {
+            "id": "upper_cabinets",
+            "importance": "major",
+            "visible_location": "White upper cupboards around window and cooker.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "cooker",
+            "importance": "major",
+            "visible_location": "White freestanding cooker at center-right.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "hood",
+            "importance": "major",
+            "visible_location": "Integrated pale hood above cooker.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "dishwasher",
+            "importance": "major",
+            "visible_location": "Below left worktop, left of sink.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "kettle",
+            "importance": "secondary",
+            "visible_location": "Metal kettle standing on cooker.",
+            "wall_anchor": null,
+            "support_object_id": "cooker",
+            "features": []
+          },
+          {
+            "id": "window",
+            "importance": "major",
+            "visible_location": "Left-wall window above sink.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          }
+        ],
+        "required_features": [
+          "White cabinets and sink retained",
+          "Perimeter worktop continuity"
+        ],
+        "uncertainties": [
+          "Room dimensions, near-side island extent, refrigerator position."
+        ],
+        "support_policy": "Only clearly visible supports are asserted; do not infer hidden mounts.",
+        "grading_scope": "Major arrangements and visible features; minor decor and precise metric localization excluded.",
+        "finishes": {
+          "floor_pattern": null,
+          "floor_appearance": "floor mostly out of frame",
+          "wall_color_families": [
+            "gold patterned backsplash",
+            "white cabinets"
+          ],
+          "grading": "Floor is mostly outside the crop; do not score its material or pattern."
+        }
+      },
+      "improvement_trial": null,
+      "checksums": {
+        "image_sha256": "8bdc20dbe3ac6f333f868c111924fd609c862fd87e35992dc81c764e40f9d982",
+        "annotation_sha256": "e5a6350c0db8f6e520c54e24cfe17a19d9894d272700a1938fdc50bae8a2d14e"
+      }
+    },
+    {
+      "id": "bathroom_01",
+      "room_type": "bathroom",
+      "split": "development",
+      "primary_image": "images/bathroom_01/bathroom_01.jpg",
+      "images": [
+        "images/bathroom_01/bathroom_01.jpg"
+      ],
+      "annotation": "cases/bathroom_01.json",
+      "source": {
+        "type": "generated",
+        "publication_permission": "project_generated_asset",
+        "method": "built_in_imagegen",
+        "prompt_record": "generation.json#bathroom_01",
+        "source_inputs": "text_only_no_private_images",
+        "license": "No separate third-party image license; generated project asset."
+      },
+      "diversity": {
+        "style": "warm compact contemporary",
+        "apparent_size": "small",
+        "tags": [
+          "floating_vanity",
+          "toilet",
+          "glass_shower",
+          "mirror_reflection"
+        ]
+      },
+      "input": {
+        "room_type": "bathroom",
+        "dimensions": {
+          "width_m": 2.2,
+          "length_m": 3.2,
+          "height_m": 2.6,
+          "measurements_source": "user_confirmed"
+        }
+      },
+      "clarification_policy": {
+        "measurement_mode": "complete",
+        "dimensions": {
+          "width_m": 2.2,
+          "length_m": 3.2,
+          "height_m": 2.6,
+          "measurements_source": "user_confirmed"
+        },
+        "unknown_dimensions": "not_sure_use_estimate",
+        "wall_axis": "not_sure_use_approximate_orientation",
+        "other_layout_questions": "not_sure_preserve_uncertainty",
+        "maximum_questions": 3
+      },
+      "measurement_note": "Scenario-supplied user input; not metric photo ground truth.",
+      "visual_reference": {
+        "wall_labels": {},
+        "entities": [
+          {
+            "id": "vanity",
+            "importance": "major",
+            "visible_location": "Floating oak vanity at left with white inset sink.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": [
+              "white basin",
+              "black faucet",
+              "floating drawers"
+            ]
+          },
+          {
+            "id": "mirror",
+            "importance": "major",
+            "visible_location": "Rectangular mirror above vanity.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "toilet",
+            "importance": "major",
+            "visible_location": "Between vanity and shower near back left.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "shower",
+            "importance": "major",
+            "visible_location": "Glass shower occupying far end.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": [
+              "glass enclosure",
+              "white raised tray",
+              "overhead and hand shower"
+            ]
+          },
+          {
+            "id": "towel_rail",
+            "importance": "major",
+            "visible_location": "Right wall beside shower.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "basket",
+            "importance": "secondary",
+            "visible_location": "Floor at right near shower.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "mat",
+            "importance": "major",
+            "visible_location": "Beige mat near vanity.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          }
+        ],
+        "required_features": [
+          "Vanity/sink, toilet and shower must all remain recognizable"
+        ],
+        "uncertainties": [],
+        "support_policy": "Only clearly visible supports are asserted; do not infer hidden mounts.",
+        "grading_scope": "Major arrangements and visible features; minor decor and precise metric localization excluded.",
+        "finishes": {
+          "floor_pattern": "tile",
+          "floor_appearance": "beige tile",
+          "wall_color_families": [
+            "warm beige tile"
+          ],
+          "grading": "Broad appearance only; lighting and white balance change perceived colors."
+        }
+      },
+      "improvement_trial": null,
+      "checksums": {
+        "image_sha256": "8c45402002b3ca15acef7c1a1a596b20e62cbaae5e1aff331b53de5d94343771",
+        "annotation_sha256": "54caaeecc518aac670fe924823d27ae250755723f1b8115942ba04241e350a99"
+      }
+    },
+    {
+      "id": "bathroom_02",
+      "room_type": "bathroom",
+      "split": "held_out",
+      "primary_image": "images/bathroom_02/bathroom_02.jpg",
+      "images": [
+        "images/bathroom_02/bathroom_02.jpg"
+      ],
+      "annotation": "cases/bathroom_02.json",
+      "source": {
+        "type": "generated",
+        "publication_permission": "project_generated_asset",
+        "method": "built_in_imagegen",
+        "prompt_record": "generation.json#bathroom_02",
+        "source_inputs": "text_only_no_private_images",
+        "license": "No separate third-party image license; generated project asset."
+      },
+      "diversity": {
+        "style": "older blue tiled bathroom",
+        "apparent_size": "narrow",
+        "tags": [
+          "bathtub_screen",
+          "pedestal_sink",
+          "frosted_window",
+          "radiator"
+        ]
+      },
+      "input": {
+        "room_type": "bathroom",
+        "dimensions": null
+      },
+      "clarification_policy": {
+        "measurement_mode": "unknown",
+        "dimensions": null,
+        "unknown_dimensions": "not_sure_use_estimate",
+        "wall_axis": "not_sure_use_approximate_orientation",
+        "other_layout_questions": "not_sure_preserve_uncertainty",
+        "maximum_questions": 3
+      },
+      "measurement_note": "No dimensions provided; estimation must remain labeled approximate.",
+      "visual_reference": {
+        "wall_labels": {},
+        "entities": [
+          {
+            "id": "bathtub",
+            "importance": "major",
+            "visible_location": "Bathtub along left wall.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": [
+              "glass shower screen above tub",
+              "wall-mounted shower fitting"
+            ]
+          },
+          {
+            "id": "toilet",
+            "importance": "major",
+            "visible_location": "Far right beneath window area.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "sink",
+            "importance": "major",
+            "visible_location": "Pedestal sink on right.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": [
+              "visible pedestal; not a wide vanity"
+            ]
+          },
+          {
+            "id": "mirror",
+            "importance": "major",
+            "visible_location": "Round mirror above sink.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "cabinet",
+            "importance": "major",
+            "visible_location": "Narrow tall mirrored cabinet at far-left corner.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "radiator",
+            "importance": "major",
+            "visible_location": "Near right wall below/alongside sink.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "mat",
+            "importance": "major",
+            "visible_location": "Dark blue bath mat beside tub.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "window",
+            "importance": "major",
+            "visible_location": "Small frosted rear window.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "door",
+            "importance": "major",
+            "visible_location": "Partly visible brown door at near right.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          }
+        ],
+        "required_features": [],
+        "uncertainties": [],
+        "support_policy": "Only clearly visible supports are asserted; do not infer hidden mounts.",
+        "grading_scope": "Major arrangements and visible features; minor decor and precise metric localization excluded.",
+        "finishes": {
+          "floor_pattern": "plain",
+          "floor_appearance": "pink vinyl",
+          "wall_color_families": [
+            "blue tile"
+          ],
+          "grading": "Broad appearance only; lighting and white balance change perceived colors."
+        }
+      },
+      "improvement_trial": null,
+      "checksums": {
+        "image_sha256": "2a16d431cc86ae85fdf3239f8959261d939661a976f15a51b2a9bb8dcccf22e2",
+        "annotation_sha256": "a6f4720394a8259a02ad04265e5e170c539ee7c78289c16d6541ab501a6f8219"
+      }
+    },
+    {
+      "id": "bathroom_03",
+      "room_type": "bathroom",
+      "split": "held_out",
+      "primary_image": "images/bathroom_03/bathroom_03.jpg",
+      "images": [
+        "images/bathroom_03/bathroom_03.jpg"
+      ],
+      "annotation": "cases/bathroom_03.json",
+      "source": {
+        "type": "generated",
+        "publication_permission": "project_generated_asset",
+        "method": "built_in_imagegen",
+        "prompt_record": "generation.json#bathroom_03",
+        "source_inputs": "text_only_no_private_images",
+        "license": "No separate third-party image license; generated project asset."
+      },
+      "diversity": {
+        "style": "utilitarian monochrome laundry",
+        "apparent_size": "small",
+        "tags": [
+          "washer_under_counter",
+          "combined_laundry",
+          "checker_floor",
+          "reflection"
+        ]
+      },
+      "input": {
+        "room_type": "bathroom",
+        "dimensions": null
+      },
+      "clarification_policy": {
+        "measurement_mode": "unknown",
+        "dimensions": null,
+        "unknown_dimensions": "not_sure_use_estimate",
+        "wall_axis": "not_sure_use_approximate_orientation",
+        "other_layout_questions": "not_sure_preserve_uncertainty",
+        "maximum_questions": 3
+      },
+      "measurement_note": "No dimensions provided; estimation must remain labeled approximate.",
+      "visual_reference": {
+        "wall_labels": {},
+        "entities": [
+          {
+            "id": "vanity",
+            "importance": "major",
+            "visible_location": "White basin/drawers on right beside washer.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": [
+              "chrome faucet",
+              "continuous counter beside washer"
+            ]
+          },
+          {
+            "id": "washer",
+            "importance": "major",
+            "visible_location": "Front-loading washing machine under near right counter.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "toilet",
+            "importance": "major",
+            "visible_location": "Near left wall.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "shower",
+            "importance": "major",
+            "visible_location": "Glass shower at far-left corner.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": [
+              "clear enclosure and shower fittings"
+            ]
+          },
+          {
+            "id": "mirror",
+            "importance": "major",
+            "visible_location": "Large mirror above right vanity.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "wall_cabinet",
+            "importance": "major",
+            "visible_location": "Dark cupboard high at near right.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "towel_rail",
+            "importance": "major",
+            "visible_location": "Dark heated rail near shower and sink.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "basket",
+            "importance": "major",
+            "visible_location": "Tall floor hamper beside shower.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "mat",
+            "importance": "major",
+            "visible_location": "Green central mat.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          }
+        ],
+        "required_features": [
+          "Retain washing machine and all plumbing functions"
+        ],
+        "uncertainties": [],
+        "support_policy": "Only clearly visible supports are asserted; do not infer hidden mounts.",
+        "grading_scope": "Major arrangements and visible features; minor decor and precise metric localization excluded.",
+        "finishes": {
+          "floor_pattern": "tile",
+          "floor_appearance": "black and white checker tile",
+          "wall_color_families": [
+            "white subway tile",
+            "dark grout"
+          ],
+          "grading": "Broad appearance only; lighting and white balance change perceived colors."
+        }
+      },
+      "improvement_trial": null,
+      "checksums": {
+        "image_sha256": "d424a08d03deeab4b4167cfdecf084e1a2cfb842c9130c858711b156a0dde04f",
+        "annotation_sha256": "2146e03f145d0aa007ce9492c9ddd0d6918f981f018f94056da6d02ac8421e6f"
+      }
+    },
+    {
+      "id": "bathroom_04",
+      "room_type": "bathroom",
+      "split": "held_out",
+      "primary_image": "images/bathroom_04/bathroom_04.jpg",
+      "images": [
+        "images/bathroom_04/bathroom_04.jpg"
+      ],
+      "annotation": "cases/bathroom_04.json",
+      "source": {
+        "type": "photographed",
+        "title": "Contemporary bathroom.jpg",
+        "source_url": "https://commons.wikimedia.org/wiki/File:Contemporary_bathroom.jpg",
+        "original_url": "https://upload.wikimedia.org/wikipedia/commons/9/9a/Contemporary_bathroom.jpg",
+        "creator": "OKJaguar",
+        "license": "CC BY 4.0",
+        "license_url": "https://creativecommons.org/licenses/by/4.0",
+        "publication_permission": "source_license",
+        "retrieved_at": "2026-10-29",
+        "modifications": "Resized without cropping, EXIF orientation applied, re-encoded as JPEG; metadata removed. Image remains under the stated source license."
+      },
+      "diversity": {
+        "style": "high-contrast remodeled bathroom",
+        "apparent_size": "unknown",
+        "tags": [
+          "real_photo",
+          "separate_bath_shower",
+          "double_vanity",
+          "open_door"
+        ]
+      },
+      "input": {
+        "room_type": "bathroom",
+        "dimensions": null
+      },
+      "clarification_policy": {
+        "measurement_mode": "unknown",
+        "dimensions": null,
+        "unknown_dimensions": "not_sure_use_estimate",
+        "wall_axis": "not_sure_use_approximate_orientation",
+        "other_layout_questions": "not_sure_preserve_uncertainty",
+        "maximum_questions": 3
+      },
+      "measurement_note": "No dimensions provided; estimation must remain labeled approximate.",
+      "visual_reference": {
+        "wall_labels": {},
+        "entities": [
+          {
+            "id": "vanity",
+            "importance": "major",
+            "visible_location": "Long white double vanity on left.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": [
+              "two inset basins; near one partly cropped"
+            ]
+          },
+          {
+            "id": "mirror",
+            "importance": "major",
+            "visible_location": "Broad mirror above vanity.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "shower",
+            "importance": "major",
+            "visible_location": "Glass enclosure at far-right corner.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": [
+              "separate from bathtub",
+              "glass hinged door"
+            ]
+          },
+          {
+            "id": "bathtub",
+            "importance": "major",
+            "visible_location": "Large inset jetted bath along right wall.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "door",
+            "importance": "major",
+            "visible_location": "White open door on rear wall, left of shower.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "window",
+            "importance": "major",
+            "visible_location": "Frosted/glass-block glazing high on right.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          }
+        ],
+        "required_features": [
+          "Separate bathtub and shower",
+          "White double vanity",
+          "Dark blue upper walls"
+        ],
+        "uncertainties": [
+          "Room dimensions and unseen space behind camera."
+        ],
+        "support_policy": "Only clearly visible supports are asserted; do not infer hidden mounts.",
+        "grading_scope": "Major arrangements and visible features; minor decor and precise metric localization excluded.",
+        "finishes": {
+          "floor_pattern": "tile",
+          "floor_appearance": "white marble-effect tile",
+          "wall_color_families": [
+            "dark blue upper walls",
+            "white lower tile"
+          ],
+          "grading": "Broad appearance only; lighting and white balance change perceived colors."
+        }
+      },
+      "improvement_trial": null,
+      "checksums": {
+        "image_sha256": "b59abeba603970ec9372cdafa80dffedcdd5dd7c28a75b8471184f4b9733db1b",
+        "annotation_sha256": "45b2177aee42a08f72c1df58270b6db888e38aa26e0b0a22987eb85bb0d08a06"
+      }
+    },
+    {
+      "id": "office_01",
+      "room_type": "office",
+      "split": "development",
+      "primary_image": "images/office_01/office_01.jpg",
+      "images": [
+        "images/office_01/office_01.jpg"
+      ],
+      "annotation": "cases/office_01.json",
+      "source": {
+        "type": "generated",
+        "publication_permission": "project_generated_asset",
+        "method": "built_in_imagegen",
+        "prompt_record": "generation.json#office_01",
+        "source_inputs": "text_only_no_private_images",
+        "license": "No separate third-party image license; generated project asset."
+      },
+      "diversity": {
+        "style": "industrial brick workspace",
+        "apparent_size": "small",
+        "tags": [
+          "chair_clearance",
+          "support",
+          "high_side_window"
+        ]
+      },
+      "input": {
+        "room_type": "office",
+        "dimensions": {
+          "width_m": 3.0,
+          "length_m": 4.0,
+          "height_m": 2.7,
+          "measurements_source": "user_confirmed"
+        }
+      },
+      "clarification_policy": {
+        "measurement_mode": "complete",
+        "dimensions": {
+          "width_m": 3.0,
+          "length_m": 4.0,
+          "height_m": 2.7,
+          "measurements_source": "user_confirmed"
+        },
+        "unknown_dimensions": "not_sure_use_estimate",
+        "wall_axis": "not_sure_use_approximate_orientation",
+        "other_layout_questions": "not_sure_preserve_uncertainty",
+        "maximum_questions": 3
+      },
+      "measurement_note": "Scenario-supplied user input; not metric photo ground truth.",
+      "visual_reference": {
+        "wall_labels": {},
+        "entities": [
+          {
+            "id": "desk",
+            "importance": "major",
+            "visible_location": "Long work desk against left brick wall.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "chair",
+            "importance": "major",
+            "visible_location": "Blue task chair facing left-wall desk.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "monitor",
+            "importance": "major",
+            "visible_location": "On left side of desk.",
+            "wall_anchor": null,
+            "support_object_id": "desk",
+            "features": []
+          },
+          {
+            "id": "laptop",
+            "importance": "major",
+            "visible_location": "Open laptop on desk beside monitor.",
+            "wall_anchor": null,
+            "support_object_id": "desk",
+            "features": []
+          },
+          {
+            "id": "cabinet",
+            "importance": "major",
+            "visible_location": "Low gray cabinet behind chair against right wall.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "shelf",
+            "importance": "major",
+            "visible_location": "Short black-framed bookshelf on rear wall.",
+            "wall_anchor": "rear",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "floor_lamp",
+            "importance": "major",
+            "visible_location": "Behind chair at far-right corner.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "window",
+            "importance": "major",
+            "visible_location": "High narrow right-wall window.",
+            "wall_anchor": "right",
+            "support_object_id": null,
+            "features": []
+          }
+        ],
+        "required_features": [
+          "Preserve desktop devices and usable storage when improving workspace"
+        ],
+        "uncertainties": [],
+        "support_policy": "Only clearly visible supports are asserted; do not infer hidden mounts.",
+        "grading_scope": "Major arrangements and visible features; minor decor and precise metric localization excluded.",
+        "finishes": {
+          "floor_pattern": "plain",
+          "floor_appearance": "gray concrete",
+          "wall_color_families": [
+            "red-brown brick",
+            "gray plaster"
+          ],
+          "grading": "Broad appearance only; lighting and white balance change perceived colors."
+        }
+      },
+      "improvement_trial": {
+        "focus": "workspace",
+        "instruction": "Improve chair and desk usability while retaining the desktop devices and storage.",
+        "start_from": "this_case_original",
+        "preserve": "confirmed measurements, fixed installations, locked objects and main room functions"
+      },
+      "checksums": {
+        "image_sha256": "50bde3e5fe1f3f73ab19b7d3d982d1cb680ac0b4becddbc8aa8e3b9c77e3d8b5",
+        "annotation_sha256": "bf8612c813c67879db79166aeeae4ea77569dc950e9ce4305d89a160a4725fae"
+      }
+    },
+    {
+      "id": "office_02",
+      "room_type": "office",
+      "split": "held_out",
+      "primary_image": "images/office_02/office_02.jpg",
+      "images": [
+        "images/office_02/office_02.jpg"
+      ],
+      "annotation": "cases/office_02.json",
+      "source": {
+        "type": "generated",
+        "publication_permission": "project_generated_asset",
+        "method": "built_in_imagegen",
+        "prompt_record": "generation.json#office_02",
+        "source_inputs": "text_only_no_private_images",
+        "license": "No separate third-party image license; generated project asset."
+      },
+      "diversity": {
+        "style": "bright shared workspace",
+        "apparent_size": "medium",
+        "tags": [
+          "two_workstations",
+          "storage_opportunity",
+          "blue_carpet"
+        ]
+      },
+      "input": {
+        "room_type": "office",
+        "dimensions": {
+          "width_m": 4.5,
+          "measurements_source": "user_confirmed"
+        }
+      },
+      "clarification_policy": {
+        "measurement_mode": "partial",
+        "dimensions": {
+          "width_m": 4.5,
+          "measurements_source": "user_confirmed"
+        },
+        "unknown_dimensions": "not_sure_use_estimate",
+        "wall_axis": "not_sure_use_approximate_orientation",
+        "other_layout_questions": "not_sure_preserve_uncertainty",
+        "maximum_questions": 3
+      },
+      "measurement_note": "Scenario-supplied user input; not metric photo ground truth.",
+      "visual_reference": {
+        "wall_labels": {},
+        "entities": [
+          {
+            "id": "desk_a",
+            "importance": "major",
+            "visible_location": "Left workstation nearer window.",
+            "wall_anchor": "desk_wall",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "desk_b",
+            "importance": "major",
+            "visible_location": "Right workstation beside cabinet.",
+            "wall_anchor": "desk_wall",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "chair_green",
+            "importance": "major",
+            "visible_location": "Green task chair in front of left desk.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "chair_gray",
+            "importance": "major",
+            "visible_location": "Gray task chair in front of right desk.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "monitor_a",
+            "importance": "major",
+            "visible_location": "Monitor on left desk.",
+            "wall_anchor": null,
+            "support_object_id": "desk_a",
+            "features": []
+          },
+          {
+            "id": "monitor_b",
+            "importance": "major",
+            "visible_location": "Monitor on right desk.",
+            "wall_anchor": null,
+            "support_object_id": "desk_b",
+            "features": []
+          },
+          {
+            "id": "cabinet",
+            "importance": "major",
+            "visible_location": "Small cabinet at near right.",
+            "wall_anchor": "desk_wall",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "printer",
+            "importance": "major",
+            "visible_location": "Printer on cabinet.",
+            "wall_anchor": null,
+            "support_object_id": "cabinet",
+            "features": []
+          },
+          {
+            "id": "radiator",
+            "importance": "major",
+            "visible_location": "Below left window.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "basket",
+            "importance": "secondary",
+            "visible_location": "Floor basket full of books beside printer cabinet.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "window",
+            "importance": "major",
+            "visible_location": "Large window on left wall.",
+            "wall_anchor": "left",
+            "support_object_id": null,
+            "features": []
+          }
+        ],
+        "required_features": [
+          "Two separate desks, two correctly paired chairs, two monitors",
+          "Unused wall area for storage"
+        ],
+        "uncertainties": [],
+        "support_policy": "Only clearly visible supports are asserted; do not infer hidden mounts.",
+        "grading_scope": "Major arrangements and visible features; minor decor and precise metric localization excluded.",
+        "finishes": {
+          "floor_pattern": "plain",
+          "floor_appearance": "blue fitted carpet",
+          "wall_color_families": [
+            "white"
+          ],
+          "grading": "Broad appearance only; lighting and white balance change perceived colors."
+        }
+      },
+      "improvement_trial": {
+        "focus": "storage",
+        "instruction": "Improve storage while keeping both workstations usable.",
+        "start_from": "this_case_original",
+        "preserve": "confirmed measurements, fixed installations, locked objects and main room functions"
+      },
+      "checksums": {
+        "image_sha256": "8f4bb7c29858f89bf871bd07074c0f6f5b23cca7f45ae358993f927656a0a3c6",
+        "annotation_sha256": "b4c5df4a49e91e8ece9ce69deb194d595c442416e5cad1eeb945f1bb551bacb7"
+      }
+    },
+    {
+      "id": "office_03",
+      "room_type": "office",
+      "split": "held_out",
+      "primary_image": "images/office_03/office_03.jpg",
+      "images": [
+        "images/office_03/office_03.jpg"
+      ],
+      "annotation": "cases/office_03.json",
+      "source": {
+        "type": "photographed",
+        "title": "Home office small office.JPG",
+        "source_url": "https://commons.wikimedia.org/wiki/File:Home_office_small_office.JPG",
+        "original_url": "https://upload.wikimedia.org/wikipedia/commons/d/de/Home_office_small_office.JPG",
+        "creator": "Stubacca",
+        "license": "CC BY-SA 3.0",
+        "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+        "publication_permission": "source_license",
+        "retrieved_at": "2026-10-29",
+        "modifications": "Resized without cropping, EXIF orientation applied, re-encoded as JPEG; metadata removed. Image remains under the stated source license."
+      },
+      "diversity": {
+        "style": "older compact home office",
+        "apparent_size": "unknown",
+        "tags": [
+          "real_photo",
+          "l_shaped_desk",
+          "desk_hutch",
+          "printer_support"
+        ]
+      },
+      "input": {
+        "room_type": "office",
+        "dimensions": null
+      },
+      "clarification_policy": {
+        "measurement_mode": "unknown",
+        "dimensions": null,
+        "unknown_dimensions": "not_sure_use_estimate",
+        "wall_axis": "not_sure_use_approximate_orientation",
+        "other_layout_questions": "not_sure_preserve_uncertainty",
+        "maximum_questions": 3
+      },
+      "measurement_note": "No dimensions provided; estimation must remain labeled approximate.",
+      "visual_reference": {
+        "wall_labels": {},
+        "entities": [
+          {
+            "id": "desk",
+            "importance": "major",
+            "visible_location": "Corner wood worktop with long left return.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": [
+              "L-shaped corner desk; one assembly or connected desk modules acceptable"
+            ]
+          },
+          {
+            "id": "hutch",
+            "importance": "secondary",
+            "visible_location": "Tall wood hutch supported above left desk return.",
+            "wall_anchor": null,
+            "support_object_id": "desk",
+            "features": []
+          },
+          {
+            "id": "chair",
+            "importance": "major",
+            "visible_location": "Black task chair in front of laptop.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "laptop",
+            "importance": "major",
+            "visible_location": "Open silver laptop on far desk section.",
+            "wall_anchor": null,
+            "support_object_id": "desk",
+            "features": []
+          },
+          {
+            "id": "drawer_unit",
+            "importance": "major",
+            "visible_location": "Separate three-drawer unit to right of desk.",
+            "wall_anchor": null,
+            "support_object_id": null,
+            "features": []
+          },
+          {
+            "id": "printer",
+            "importance": "major",
+            "visible_location": "Large dark printer on right drawer unit.",
+            "wall_anchor": null,
+            "support_object_id": "drawer_unit",
+            "features": []
+          },
+          {
+            "id": "lamp",
+            "importance": "secondary",
+            "visible_location": "Adjustable metal desk lamp left of laptop.",
+            "wall_anchor": null,
+            "support_object_id": "desk",
+            "features": []
+          },
+          {
+            "id": "speaker_a",
+            "importance": "secondary",
+            "visible_location": "Left speaker beside laptop.",
+            "wall_anchor": null,
+            "support_object_id": "desk",
+            "features": []
+          },
+          {
+            "id": "speaker_b",
+            "importance": "secondary",
+            "visible_location": "Right speaker beside laptop.",
+            "wall_anchor": null,
+            "support_object_id": "desk",
+            "features": []
+          }
+        ],
+        "required_features": [
+          "Chair faces laptop",
+          "Printer supported by drawer unit",
+          "Corner desk returns retained"
+        ],
+        "uncertainties": [
+          "Whole-room boundaries and metric dimensions are unobserved."
+        ],
+        "support_policy": "Only clearly visible supports are asserted; do not infer hidden mounts.",
+        "grading_scope": "Major arrangements and visible features; minor decor and precise metric localization excluded.",
+        "finishes": {
+          "floor_pattern": "plain",
+          "floor_appearance": "muted beige fitted carpet",
+          "wall_color_families": [
+            "off-white"
+          ],
+          "grading": "Broad appearance only; lighting and white balance change perceived colors."
+        }
+      },
+      "improvement_trial": null,
+      "checksums": {
+        "image_sha256": "53c654c3ceb5f1af1d54a3d2c16d0148e000ea9fd88d0de1f6e05f5cddc94529",
+        "annotation_sha256": "ec9a2bbde93fb42cf3bad0c1ce3538dba810f0b3aa5833f414c0a0443fa85a28"
+      }
+    }
+  ],
+  "created_on": "2026-10-29",
+  "version": 1,
+  "annotation_method": "Codex visual inspection of each final image; no separate judge API",
+  "human_validated": false,
+  "holdout_frozen_on": "2026-10-29",
+  "measurement_policy": "Supplied measurements are fictional test-user inputs, not measurements recovered from generated images. Photographed rooms have no supplied measurements.",
+  "limitations": [
+    "25 small-sample cases; not a representative production-accuracy estimate.",
+    "All public cases are single-view; private multiview regressions remain local and outside benchmark totals.",
+    "Generated rooms may be easier than real user photographs; report photographed and generated results separately.",
+    "Annotations were authored by an LLM after viewing images and are not independently human-validated.",
+    "Roof skylights, sloping ceilings and some mixed finishes exceed the current rectangular-room representation.",
+    "Several early living-room cases share a warm palette; the rest diversify architecture, size, materials, lighting and layout.",
+    "Reference entity IDs are not prescribed to the live model. Repeated items need independent matching before scoring.",
+    "Compound counters/vanities/lights may be grouped or segmented; score retained visible features, not an arbitrary part count."
+  ],
+  "dataset_fingerprint_sha256": "58455354f483ddba4ff0e3c9eebf839dce81d32e0482d2847a45f00f2d9ace77",
+  "generation_sha256": "92375839442882a99d4f3470cd3f83706d8182dd6f4d8f1757c6063e6cbec08f"
 }

@@ -1,0 +1,113 @@
+{
+  "id": "kitchen_01",
+  "photo_files": [
+    "images/kitchen_01/kitchen_01.jpg"
+  ],
+  "annotation_notes": [
+    "Reference annotations were written after visually inspecting the final image; generation prompts are not ground truth.",
+    "One viewpoint only: exact object dimensions and unseen walls are unassessed. Approximate positions must preserve major relationships, not centimeter accuracy.",
+    "Unannotated small decor is optional; unexpected-major-object checks must not flag incidental cups, books or cushions.",
+    "Treat the L-shaped perimeter counter as one semantic assembly; several cabinet modules are acceptable.",
+    "Sink/faucet must remain visible features of that assembly, not an additional duplicate inventory object.",
+    "Island is a separate central assembly; its worktop and two stools must be retained."
+  ],
+  "objects": [
+    {
+      "id": "perimeter_counter",
+      "types": [
+        "kitchen_counter",
+        "kitchen_cabinet",
+        "sink"
+      ],
+      "color": "#DED8C2"
+    },
+    {
+      "id": "upper_cabinets",
+      "types": [
+        "wall_cabinet",
+        "kitchen_cabinet"
+      ],
+      "color": "#DFDAC8"
+    },
+    {
+      "id": "cooker",
+      "types": [
+        "cooker",
+        "kitchen_cabinet"
+      ],
+      "color": "#202222"
+    },
+    {
+      "id": "hood",
+      "types": [
+        "extractor_hood"
+      ],
+      "color": "#1C201C"
+    },
+    {
+      "id": "refrigerator",
+      "types": [
+        "refrigerator"
+      ],
+      "color": "#ECEBE1"
+    },
+    {
+      "id": "island",
+      "types": [
+        "kitchen_counter",
+        "table"
+      ],
+      "color": "#AA7F4C",
+      "label_terms": [
+        "island"
+      ]
+    },
+    {
+      "id": "stool_a",
+      "types": [
+        "stool"
+      ],
+      "color": "#34372D"
+    },
+    {
+      "id": "stool_b",
+      "types": [
+        "stool"
+      ],
+      "color": "#34372D"
+    },
+    {
+      "id": "kettle",
+      "types": [
+        "kettle"
+      ],
+      "color": "#9B9F95"
+    },
+    {
+      "id": "window",
+      "opening_type": "window"
+    }
+  ],
+  "relationships": [
+    {
+      "kind": "near",
+      "subject": "hood",
+      "target": "cooker"
+    },
+    {
+      "kind": "near",
+      "subject": "stool_a",
+      "target": "island"
+    },
+    {
+      "kind": "near",
+      "subject": "stool_b",
+      "target": "island"
+    },
+    {
+      "kind": "near",
+      "subject": "perimeter_counter",
+      "target": "window"
+    }
+  ]
+}

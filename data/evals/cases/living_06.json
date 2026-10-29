@@ -1,0 +1,87 @@
+{
+  "id": "living_06",
+  "photo_files": [
+    "images/living_06/living_06.jpg"
+  ],
+  "annotation_notes": [
+    "Reference annotations were written after visually inspecting the final image; generation prompts are not ground truth.",
+    "One viewpoint only: exact object dimensions and unseen walls are unassessed. Approximate positions must preserve major relationships, not centimeter accuracy.",
+    "Unannotated small decor is optional; unexpected-major-object checks must not flag incidental cups, books or cushions.",
+    "Only part of the doorway and near boundary are shown; no exact opening dimensions are known.",
+    "The low rear shelf must not be substituted by a full-height tower."
+  ],
+  "objects": [
+    {
+      "id": "sofa",
+      "types": [
+        "sofa"
+      ],
+      "color": "#BEAE90"
+    },
+    {
+      "id": "tv",
+      "types": [
+        "tv"
+      ],
+      "color": "#151C20"
+    },
+    {
+      "id": "console",
+      "types": [
+        "tv_stand",
+        "sideboard"
+      ],
+      "color": "#E7E8E2"
+    },
+    {
+      "id": "coffee_table",
+      "types": [
+        "coffee_table"
+      ],
+      "color": "#96735B"
+    },
+    {
+      "id": "low_shelf",
+      "types": [
+        "shelf",
+        "tv_stand"
+      ],
+      "color": "#B69669"
+    },
+    {
+      "id": "fan",
+      "types": [
+        "fan"
+      ],
+      "color": "#373E40"
+    },
+    {
+      "id": "rug",
+      "types": [
+        "rug"
+      ],
+      "color": "#B8B1A1"
+    },
+    {
+      "id": "window",
+      "opening_type": "window"
+    }
+  ],
+  "relationships": [
+    {
+      "kind": "faces",
+      "subject": "sofa",
+      "target": "tv"
+    },
+    {
+      "kind": "near",
+      "subject": "tv",
+      "target": "console"
+    },
+    {
+      "kind": "near",
+      "subject": "low_shelf",
+      "target": "window"
+    }
+  ]
+}

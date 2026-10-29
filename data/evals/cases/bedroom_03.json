@@ -1,0 +1,80 @@
+{
+  "id": "bedroom_03",
+  "photo_files": [
+    "images/bedroom_03/bedroom_03.jpg"
+  ],
+  "annotation_notes": [
+    "Reference annotations were written after visually inspecting the final image; generation prompts are not ground truth.",
+    "One viewpoint only: exact object dimensions and unseen walls are unassessed. Approximate positions must preserve major relationships, not centimeter accuracy.",
+    "Unannotated small decor is optional; unexpected-major-object checks must not flag incidental cups, books or cushions.",
+    "Bed headboard is on left wall, not centered on the wardrobe wall.",
+    "The bench restricts movement at the bed foot and is independently movable.",
+    "The visible white object behind the bed is a wardrobe, not another opening."
+  ],
+  "objects": [
+    {
+      "id": "bed",
+      "types": [
+        "bed"
+      ],
+      "color": "#BEC4C6"
+    },
+    {
+      "id": "bench",
+      "types": [
+        "bench",
+        "ottoman"
+      ],
+      "color": "#777D80"
+    },
+    {
+      "id": "wardrobe",
+      "types": [
+        "wardrobe"
+      ],
+      "color": "#E4E4DF"
+    },
+    {
+      "id": "dresser",
+      "types": [
+        "dresser"
+      ],
+      "color": "#73523A"
+    },
+    {
+      "id": "nightstand",
+      "types": [
+        "nightstand",
+        "side_table"
+      ],
+      "color": "#9E784D"
+    },
+    {
+      "id": "lamp",
+      "types": [
+        "table_lamp"
+      ],
+      "color": "#E7DAB4"
+    },
+    {
+      "id": "window",
+      "opening_type": "window"
+    },
+    {
+      "id": "door",
+      "opening_type": "door"
+    }
+  ],
+  "relationships": [
+    {
+      "kind": "near",
+      "subject": "bench",
+      "target": "bed"
+    },
+    {
+      "kind": "near",
+      "subject": "lamp",
+      "target": "nightstand"
+    }
+  ]
+}

@@ -1,0 +1,101 @@
+{
+  "id": "kitchen_02",
+  "photo_files": [
+    "images/kitchen_02/kitchen_02.jpg"
+  ],
+  "annotation_notes": [
+    "Reference annotations were written after visually inspecting the final image; generation prompts are not ground truth.",
+    "One viewpoint only: exact object dimensions and unseen walls are unassessed. Approximate positions must preserve major relationships, not centimeter accuracy.",
+    "Unannotated small decor is optional; unexpected-major-object checks must not flag incidental cups, books or cushions.",
+    "Keep the two parallel counter runs distinct and the central aisle recognizable.",
+    "Integrated hob and sink are visible assembly features; evaluate them without requiring detached plumbing blocks.",
+    "Exact cupboard-door count and terrazzo speckles are not hard requirements."
+  ],
+  "objects": [
+    {
+      "id": "sink_run",
+      "types": [
+        "kitchen_counter",
+        "kitchen_cabinet",
+        "sink"
+      ],
+      "color": "#637466",
+      "label_terms": [
+        "sink"
+      ]
+    },
+    {
+      "id": "cooking_run",
+      "types": [
+        "kitchen_counter",
+        "kitchen_cabinet"
+      ],
+      "color": "#637466"
+    },
+    {
+      "id": "oven",
+      "types": [
+        "cooker",
+        "kitchen_cabinet"
+      ],
+      "color": "#1C2120"
+    },
+    {
+      "id": "dishwasher",
+      "types": [
+        "dishwasher"
+      ],
+      "color": "#939B96"
+    },
+    {
+      "id": "refrigerator",
+      "types": [
+        "refrigerator"
+      ],
+      "color": "#9FA9A5"
+    },
+    {
+      "id": "upper_cabinets",
+      "types": [
+        "wall_cabinet",
+        "kitchen_cabinet"
+      ],
+      "color": "#617265"
+    },
+    {
+      "id": "kettle",
+      "types": [
+        "kettle"
+      ],
+      "color": "#999F96"
+    },
+    {
+      "id": "toaster",
+      "types": [
+        "toaster"
+      ],
+      "color": "#ACACA2"
+    },
+    {
+      "id": "window",
+      "opening_type": "window"
+    }
+  ],
+  "relationships": [
+    {
+      "kind": "near",
+      "subject": "oven",
+      "target": "cooking_run"
+    },
+    {
+      "kind": "near",
+      "subject": "dishwasher",
+      "target": "sink_run"
+    },
+    {
+      "kind": "opposite_end",
+      "subject": "sink_run",
+      "target": "cooking_run"
+    }
+  ]
+}
