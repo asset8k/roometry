@@ -11,6 +11,7 @@ import logging
 from base64 import b64encode
 from functools import partial
 from typing import TYPE_CHECKING
+from time import perf_counter
 
 import anyio
 from openai import APIError
@@ -249,6 +250,7 @@ class VisualReviewer:
         except anyio.WouldBlock:
             return unavailable()
         state.review_key, state.review_attempted = key, True
+        started = perf_counter()
         try:
             # Finish inside the graph node's deadline so optional work cannot
             # turn a usable base into a step_timeout failure.
@@ -257,6 +259,7 @@ class VisualReviewer:
         except (APIError, AnalysisFailure, ValidationError, ValueError, RecursionError, TimeoutError, OSError) as error:
             logging.getLogger(__name__).warning("Visual review unavailable: analysis_id=%s reason=%s", proposal.analysis_id, error.code if isinstance(error,AnalysisFailure) else type(error).__name__)
             result = unavailable()
+            service.record_repair_outcome(state, "visual_review", "unavailable", started, error=error)
         finally:
             service._capacity.release()
         await service._owned_analysis(proposal.analysis_id, owner)
@@ -301,12 +304,21 @@ class VisualReviewer:
             wall_ids = {item.id for item in analysis.observations.walls}
             room_appearance = any(f.kind == "color" and (not f.entity_ids or set(f.entity_ids) <= wall_ids) for f in actionable)
             try:
+                repair_started = perf_counter()
+                repair_response = None
+                repair_phase = "request_build"
                 required_photos = {key for finding in actionable for key in finding.source_image_ids}
                 color_only = all(f.kind == "color" for f in actionable)
                 if color_only:
                     payload = build_appearance_repair_request(settings, analysis, proposal, constraints, judgment, selected, images)
                 else:
-                    payload = await anyio.to_thread.run_sync(partial(build_proposal_request, operation="scene_repair", mandatory_image_ids=required_photos), settings, analysis, measurements, previous, problems, images)
+                    editable = {key for finding in actionable for key in finding.entity_ids}
+                    while True:
+                        expanded = editable | {obj.id for obj in previous.objects if obj.support_object_id in editable or obj.opening_id in editable}
+                        if expanded == editable:
+                            break
+                        editable = expanded
+                    payload = await anyio.to_thread.run_sync(partial(build_proposal_request, operation="scene_repair", mandatory_image_ids=required_photos, repair_entity_ids=editable), settings, analysis, measurements, previous, problems, images)
                 context = json.loads(payload["input"][0]["content"][0]["text"])
                 if not color_only:
                     context.update(repair_review_context(analysis, proposal.scene, judgment, selected))
@@ -330,13 +342,20 @@ class VisualReviewer:
                 enforce_review_limit(settings, payload)
                 await service._owned_analysis(proposal.analysis_id, owner)
                 state.visual_repair_attempted = True
+                repair_phase = "provider_request"
                 with anyio.fail_after(settings.analysis_timeout_seconds):
                     response = await service.analyzer.request(payload, operation="visual_repair")
+                repair_response = response
                 await service._owned_analysis(proposal.analysis_id, owner)
-                patch = parse_scene_draft(response_json(response, settings.analysis_max_output_bytes), analysis)
+                repair_phase = "response_decode"
+                decoded = response_json(response, settings.analysis_max_output_bytes)
+                repair_phase = "draft_parse"
+                patch = parse_scene_draft(decoded, analysis)
+                repair_phase = "scope_check"
                 draft = merge_repair(analysis, previous, patch, problems, allow_room_appearance=room_appearance)
                 if not patch_matches_findings(previous, draft, actionable):
-                    raise ValueError("The correction exceeds the visual findings.")
+                    raise AnalysisFailure(502, "invalid_analysis", "The correction exceeds the visual findings.", diagnostics={"reason": "repair_scope_violation"})
+                repair_phase = "assembly"
                 candidate, report, candidate_issues = await anyio.to_thread.run_sync(assemble, analysis, measurements, draft)
                 unresolved = []
                 if candidate is None:
@@ -358,7 +377,9 @@ class VisualReviewer:
                     report = validate_geometry(candidate)
                 changed = candidate is not None and reconstruction_changed(proposal.scene, candidate)
                 progress = [finding_progress(proposal.scene, candidate, finding) for finding in actionable] if candidate is not None else []
-                if changed and any(addressed for addressed,_ in progress) and not any(regressed for _,regressed in progress) and candidate_allowed(analysis, proposal.scene, candidate):
+                repair_phase = "acceptance"
+                preserves_scene = candidate is not None and candidate_allowed(analysis, proposal.scene, candidate)
+                if changed and any(addressed for addressed,_ in progress) and not any(regressed for _,regressed in progress) and preserves_scene:
                     result.scene, result.validation = candidate, report
                     result.fidelity = evaluate_fidelity(analysis, candidate)
                     result.issues, result.unresolved_entities = candidate_issues, unresolved
@@ -377,9 +398,17 @@ class VisualReviewer:
                         result.warnings = notes([
                             "Independent valid appearance corrections were retained. Unsuccessful placement changes were rolled back to their previous validated poses."
                         ], result.warnings)
+                service.record_repair_outcome(state, "visual_repair", repair, repair_started, response=repair_response,
+                    details={"reason": "validated_correction" if repair == "accepted" else "candidate_not_accepted",
+                             "phase": repair_phase, "changed": changed, "preserves_scene": preserves_scene,
+                             "progress": any(addressed for addressed, _ in progress), "regressed": any(regressed for _, regressed in progress),
+                             "issue_codes": sorted({problem.code for problem in candidate_issues})[:12],
+                             "geometry_codes": sorted({error.code for error in report.errors})[:12] if report else [],
+                             "selected_entity_ids": sorted({key for finding in actionable for key in finding.entity_ids})[:24]})
             except (APIError, AnalysisFailure, ValidationError, ValueError, RecursionError, TimeoutError) as error:
                 logging.getLogger(__name__).warning("Visual correction retained earlier scene: analysis_id=%s reason=%s", proposal.analysis_id, error.code if isinstance(error,AnalysisFailure) else type(error).__name__)
                 repair = "failed"
+                service.record_repair_outcome(state, "visual_repair", repair, repair_started, response=repair_response, error=error, details={"phase": repair_phase})
         # No second review is implied by a successful geometry check.
         if judgment.verdict != "consistent":
             result.issues = [*result.issues, issue("fidelity", "Visual review found differences or uncertainty. " + ("One correction passed deterministic validation; the revised scene has not received a second visual review." if repair == "accepted" else "The last validated reconstruction is retained with these limitations."))][:50]

@@ -400,6 +400,11 @@ def assemble(
         linked = (
             opening_by_id.get(obj.opening_id) if obj.opening_id is not None else None
         )
+        if obj.opening_id is None and ASSET_REGISTRY[obj.asset_id].allows_unlinked_covering and not any(
+            opening.wall == obj.wall for opening in parsed_openings
+        ):
+            assumptions.append(f"{obj.id}: visible drapes are mounted on the observed wall; the hidden opening and its dimensions remain unknown.")
+            continue
         if linked is None:
             issues.append(
                 issue(

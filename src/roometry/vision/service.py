@@ -71,6 +71,8 @@ class AnalysisState:
     assessment_key: str | None = None
     assessment_attempted: bool = False
     assessment_result: RoomAssessment | None = None
+    # Internal, checkpointed diagnostics; never raw prompts, responses or photos.
+    diagnostics: list[dict[str, object]] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -202,6 +204,7 @@ class AnalysisService:
         # application loggers is normally hidden. Render safe failure diagnostics
         # at WARNING so a 200/incomplete proposal can actually be diagnosed.
         diagnostic = {**response_diagnostics(response), **(details or {})}
+        self._retain_diagnostic(state, {**asdict(record), "diagnostics": diagnostic})
         logging.getLogger(__name__).log(
             logging.INFO if outcome == "success" else logging.WARNING,
             "Room model attempt completed: %s",
@@ -213,6 +216,28 @@ class AnalysisService:
                 "analysis_diagnostics": diagnostic,
             },
         )
+
+    def _retain_diagnostic(self, state, entry):
+        state.diagnostics = [*state.diagnostics[-31:], entry]
+
+    def record_repair_outcome(self, state, operation, outcome, started, *, response=None, error=None, details=None):
+        """Persist useful failure facts without retaining arbitrary exception text."""
+        entry = {"operation": operation, "outcome": outcome,
+                 "elapsed_ms": round((perf_counter()-started)*1000),
+                 **response_diagnostics(response), **(details or {})}
+        if isinstance(error, ValidationError):
+            entry["validation"] = validation_diagnostics(error, SceneDraft)
+            entry["reason"] = "schema_validation"
+        elif isinstance(error, AnalysisFailure):
+            entry["reason"] = error.code
+            if (error.diagnostics or {}).get("reason") in {"repair_scope_violation", "max_output_tokens"}:
+                entry["failure_rule"] = error.diagnostics["reason"]
+        elif error is not None:
+            # Class names come from fixed exception handlers, not error messages.
+            entry["reason"] = type(error).__name__
+        self._retain_diagnostic(state, entry)
+        logging.getLogger(__name__).log(logging.INFO if outcome == "accepted" else logging.WARNING,
+            "Room repair outcome: analysis_id=%s diagnostic=%s", state.analysis_id, json.dumps(entry))
 
     async def analyze(self, input_id: str, owner: str) -> RoomAnalysisResponse:
         key = self.settings.openai_api_key

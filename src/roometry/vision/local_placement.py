@@ -25,7 +25,7 @@ def spatial_failures(analysis, scene):
 
 
 def recover_local_placements(analysis, scene, report):
-    if not report.errors or len(report.errors) > MAX_CONFLICTS:
+    if not report.errors:
         return scene, report
     original = scene
     sources = {obj.id: obj for obj in analysis.observations.objects}
@@ -36,9 +36,10 @@ def recover_local_placements(analysis, scene, report):
         affected = {key for error in report.errors if error.code in {'object_overlap', 'object_outside_room'}
                     for key in error.entity_ids}
         roots = [obj for obj in scene.objects if obj.id in affected and obj.id not in moved
-                 and obj.placement == 'floor' and obj.type != 'rug' and not obj.fixed and not obj.locked
+                 and ((obj.placement == 'floor' and obj.type != 'rug' and not obj.fixed)
+                      or (obj.placement == 'wall' and obj.type in {'tv', 'picture', 'mirror'})) and not obj.locked
                  and obj.provenance == 'photo_observed' and obj.id in sources
-                 and sources[obj.id].appears_fixed is not True]
+                 and (obj.placement == 'wall' or sources[obj.id].appears_fixed is not True)]
         roots.sort(key=lambda obj: (-importance(sources[obj.id]),
                                    {'low': 0, 'medium': 1, 'high': 2}[sources[obj.id].confidence], obj.id))
         before_failures = spatial_failures(analysis, scene)
@@ -54,28 +55,45 @@ def recover_local_placements(analysis, scene, report):
             hx, hz = (px[1]-px[0])/2, (pz[1]-pz[0])/2
             xs = {root.position.x, min(max(root.position.x, hx), scene.room.width_m-hx)}
             zs = {root.position.z, min(max(root.position.z, hz), scene.room.length_m-hz)}
+            ys = {root.position.y}
             others = [obj for obj in scene.objects if obj.id not in group]
             collisions = {key for error in report.errors if set(error.entity_ids) & group
                           for key in error.entity_ids if key not in group}
             for other in others:
                 if other.id not in collisions:
                     continue
-                area = object_bounds(other).footprint
-                x, z = area.project((1, 0)), area.project((0, 1))
-                xs.update((x[0]-hx-.005, x[1]+hx+.005))
-                zs.update((z[0]-hz-.005, z[1]+hz+.005))
-            candidates = sorted(((x, z) for x in xs for z in zs),
-                key=lambda point: (hypot(point[0]-root.position.x, point[1]-root.position.z), point))[:64]
+                areas = [object_bounds(other)]
+                if root.placement == 'wall':
+                    # A media wall is hollow. Moving beyond its whole outer
+                    # box would discard the TV instead of fitting its bay.
+                    areas = [part.bounds for part in component_bounds(other)
+                             if boxes_overlap(object_bounds(root), part.bounds)][:8] or areas
+                for area in areas:
+                    x, z = area.footprint.project((1, 0)), area.footprint.project((0, 1))
+                    xs.update((x[0]-hx-.005, x[1]+hx+.005))
+                    zs.update((z[0]-hz-.005, z[1]+hz+.005))
+                    if root.placement == 'wall':
+                        low, high = area.vertical
+                        ys.update((low-root.dimensions_m.height-.005, high+.005))
+            if root.placement == 'wall':
+                if root.wall in {'north', 'south'}:
+                    zs = {root.position.z}
+                else:
+                    xs = {root.position.x}
+                ys.add(min(max(root.position.y, 0.), scene.room.height_m-root.dimensions_m.height))
+            candidates = sorted(((x, y, z) for x in xs for y in ys for z in zs),
+                key=lambda point: (hypot(point[0]-root.position.x, point[1]-root.position.y, point[2]-root.position.z), point))[:64]
             solids = {obj.id: component_bounds(obj) for obj in others if obj.type != 'rug'}
             obstacle_bounds = {obj.id: object_bounds(obj) for obj in others if obj.type != 'rug'}
-            for x, z in candidates:
-                dx, dz = x-root.position.x, z-root.position.z
-                if not .000001 < hypot(dx, dz) <= MAX_SHIFT_M:
+            for x, y, z in candidates:
+                dx, dy, dz = x-root.position.x, y-root.position.y, z-root.position.z
+                if not .000001 < hypot(dx, dy, dz) <= MAX_SHIFT_M:
                     continue
                 candidate = scene.model_copy(deep=True)
                 translated = [obj for obj in candidate.objects if obj.id in group]
                 for obj in translated:
                     obj.position.x += dx
+                    obj.position.y += dy
                     obj.position.z += dz
                 moved_bounds = {obj.id: object_bounds(obj) for obj in translated}
                 if any(not bounds_inside_room(moved_bounds[obj.id], candidate.room) for obj in translated):
@@ -99,7 +117,7 @@ def recover_local_placements(analysis, scene, report):
                     continue
                 scene, report = candidate, revised
                 moved.update(group)
-                notes.append(f"{root.id}: estimated floor position recovered locally by dx={dx:.3f} m, dz={dz:.3f} m; supported items followed and sizes, orientation and room measurements were preserved.")
+                notes.append(f"{root.id}: estimated {root.placement} position recovered locally by dx={dx:.3f} m, dy={dy:.3f} m, dz={dz:.3f} m; supported items followed and sizes, orientation and room measurements were preserved.")
                 accepted = True
                 break
             if accepted:

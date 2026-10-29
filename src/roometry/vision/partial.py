@@ -10,7 +10,7 @@ from collections import Counter
 
 from roometry.scenes.schemas import RoomScene
 from roometry.scenes.validation import GeometryReport
-from roometry.vision.importance import importance
+from roometry.vision.importance import importance, retention_importance
 from roometry.vision.interpretations import resolve_interpretations
 from roometry.vision.appearance import resolve_appearance
 from roometry.vision.proposal_schemas import ProposalIssue, SceneDraft, UnresolvedEntity
@@ -109,9 +109,9 @@ def assemble_partial(
     def priority(entity_id: str) -> tuple[int, int, int, int, str]:
         source = observed[entity_id]
         return (
+            retention_importance(source),
             {"high": 0, "medium": 1, "low": 2}[source.confidence],
             0 if getattr(source, "appears_fixed", False) else 1,
-            importance(source),
             -dependents[entity_id],
             entity_id,
         )

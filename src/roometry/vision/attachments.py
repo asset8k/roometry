@@ -80,6 +80,15 @@ def anchor_placements(
                         obj.position.x, obj.position.z = x, z
         elif obj.placement == "ceiling":
             obj.position.y = height - obj.dimensions_m.height
+            # Small edge overshoots are common for lights and trim. Fit only
+            # estimates which already fit the shell; preserve sizes/rotations.
+            box = draft_bounds(obj).footprint
+            xs, zs = box.project((1, 0)), box.project((0, 1))
+            hx, hz = (xs[1]-xs[0])/2, (zs[1]-zs[0])/2
+            if 2*hx <= width and 2*hz <= length:
+                x, z = min(max(obj.position.x, hx), width-hx), min(max(obj.position.z, hz), length-hz)
+                if hypot(x-obj.position.x, z-obj.position.z) <= MAX_ATTACHMENT_SHIFT_M:
+                    obj.position.x, obj.position.z = x, z
         elif obj.placement == "wall" and obj.wall is not None:
             obj.rotation_y_rad = WALL_ROTATIONS_RAD[obj.wall]
             depth = obj.dimensions_m.depth / 2

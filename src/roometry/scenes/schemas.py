@@ -227,7 +227,7 @@ class SceneObject(SceneModel):
         if self.placement == "floor" and self.position.y != 0:
             raise ValueError("Floor objects require position.y=0")
         if self.type == "window_covering":
-            if self.opening_id is None:
+            if self.opening_id is None and not asset.allows_unlinked_covering:
                 raise ValueError("Window coverings require opening_id")
         elif self.opening_id is not None:
             raise ValueError("Only window coverings may have opening_id")
@@ -318,6 +318,10 @@ class RoomScene(SceneModel):
             if obj.type == "window_covering":
                 opening_id = obj.opening_id
                 if opening_id is None:
+                    if ASSET_REGISTRY[obj.asset_id].allows_unlinked_covering and not any(
+                        opening.wall == obj.wall for opening in self.openings
+                    ):
+                        continue
                     raise ValueError(f"Object {obj.id} requires opening_id")
                 opening = openings.get(opening_id)
                 # Curtains/blinds may also dress a glazed patio or balcony door.

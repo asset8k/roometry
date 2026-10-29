@@ -7,7 +7,7 @@ from openai.types.responses import ResponseInputContentParam
 from pydantic import BaseModel
 
 from roometry.vision.errors import AnalysisFailure
-from roometry.vision.schemas import ReconstructionConstraints, RoomAnalysisResponse, WallAxisResolution
+from roometry.vision.schemas import MAX_NOTES, ReconstructionConstraints, RoomAnalysisResponse, WallAxisResolution
 
 
 def strict_schema(model: type[BaseModel]) -> dict:
@@ -55,6 +55,10 @@ def apply_constraints(analysis: RoomAnalysisResponse, constraints: Reconstructio
         source = by_id.get(object_id)
         if source is None or source.alternative_type is None or selected not in {source.type, source.alternative_type, None}:
             raise ValueError("Identity answer must choose a recorded hypothesis.")
+        if selected is not None:
+            if selected != source.type:
+                source.label = selected.replace("_", " ").capitalize() + " (user confirmed)"
+            source.notes = [f"User confirmed category: {selected}. Earlier category hypotheses must not override this answer.", *source.notes][:MAX_NOTES]
         source.type = selected
         source.alternative_type = None
     for object_id, target in constraints.facing_targets.items():

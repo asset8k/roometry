@@ -243,8 +243,10 @@ coordinates. Surface items must preserve their observed support_object_id and us
 support_surface_id from its declared surfaces; fit the rotated solid base inside
 that area and below the next shelf. null selects a default area; select worktop
 for desk devices. Supports are floor/wall only, not nested surface supports.
-Curtains use an observed opening_id, mounted on the wall above it, not the floor,
-glass or an invented shelf. Curtain bounds fit wall span and ceiling. Respect
+Curtains use an observed opening_id when that opening is visible. If drapes hide
+the opening, select a model with allows_unlinked_wall_drape and use opening_id=null
+on the observed wall; do not invent an unseen window or its dimensions. Never
+use a null link to avoid a known opening. Curtain bounds fit wall span and ceiling. Respect
 attachment_constraints and previous_draft's checked coordinates in repairs.
 
 When repair.mode=upsert, return only changed/restored repair.editable_entity_ids
@@ -344,6 +346,9 @@ Opening offset runs along x for north/south and z for east/west; door sill=0.
 Only window_covering uses opening_id, pointing to its observed window OR door on
 the same wall. Curtains can dress a glazed patio/balcony door; preserve that door's
 observed type rather than inventing a window or changing the opening's identity.
+If drapes hide the opening completely, choose an allows_unlinked_wall_drape model
+on the observed wall with opening_id=null. Keep the unseen opening unknown; do
+not invent window measurements. A known opening still requires its actual link.
 Only wall placement has wall; only surface placement has support_object_id.
 Allowed placements and surfaces come from server asset_bindings. Never invent assets.
 An explicitly high placement_confidence or high-confidence supported_by relation

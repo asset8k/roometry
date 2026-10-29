@@ -46,7 +46,10 @@ world_z = position.z - local_x * sin(angle) + local_z * cos(angle)
 | `wall` | Host wall, inward orientation, and back-edge contact |
 | `ceiling` | Object top touches the ceiling |
 
-Window coverings reference their opening. Children must fit declared support
+Window coverings reference their observed opening. Approved curtain/sheer models
+can mount on an observed wall without inventing an opening hidden by drapes;
+unlinked drapes still undergo wall, boundary and opening-overlap checks.
+Children must fit declared support
 areas; catalog mounting configurations supply compatible dimensions. Stable IDs
 connect observations, scene instances, support relationships, and later edits.
 

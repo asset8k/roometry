@@ -22,13 +22,13 @@ from roometry.vision.importance import importance
 from roometry.vision.interpretations import resolve_interpretations
 from roometry.vision.recovery import repair_scope, wall_repair_allowed
 from roometry.vision.prompts import SCENE_PROPOSAL_INSTRUCTIONS
-from roometry.vision.proposal_schemas import ProposalIssue, SceneDraft
+from roometry.vision.proposal_schemas import BoundDraft, ProposalIssue, SceneDraft
 from roometry.vision.proposals import Measurements
 from roometry.vision.schemas import RoomAnalysisResponse
 from roometry.vision.wall_axes import AXIS_WALLS
 from roometry.vision.context_budget import compact_context, compact_schema, select_photo_ids, photo_references, photo_reference_schema
 from roometry.vision.prompts import COMPACT_SCENE_INSTRUCTIONS
-from roometry.vision.assembly_context import assembly_features, component_feedback, construction_sequence
+from roometry.vision.assembly_context import assembly_features, boundary_feedback, component_feedback, construction_sequence
 from roometry.vision.features import required_features, retains_features
 
 
@@ -40,12 +40,21 @@ def build_proposal_request(
     issues: list[ProposalIssue],
     images: list[bytes] | None = None,
     *, operation: Literal["scene_proposal", "scene_repair"] = "scene_proposal", mandatory_image_ids=(),
+    repair_entity_ids: set[str] | None = None,
 ) -> ResponseCreateParamsNonStreaming:
+    editable = repair_scope(analysis, draft, issues) if operation == "scene_repair" and draft is not None else None
+    if repair_entity_ids is not None:
+        known = {item.id for item in [*analysis.observations.objects, *analysis.observations.openings]}
+        if editable is None or not repair_entity_ids <= known:
+            raise ValueError("Targeted repair must use observed identities and an existing draft.")
+        editable = repair_entity_ids
     bindings = []
     alternatives = []
     for obj in analysis.observations.objects:
         models = []
         options = candidates(obj.type, obj.placement) if obj.type is not None else ()
+        if obj.type == "window_covering" and not any(obj.wall_id is None or opening.wall_id == obj.wall_id for opening in analysis.observations.openings):
+            options = [a for a in options if ASSET_REGISTRY[a.asset_id].allows_unlinked_covering]
         options = [a for a in options if retains_features(a, obj, analysis.observations.objects)]
         for asset in options:
             configurations = {}
@@ -62,6 +71,7 @@ def build_proposal_request(
                 fields.add("color")
             features = assembly_features(asset)
             models.append({"asset_id": asset.asset_id, "label": asset.label, "configurations": configurations,
+                           **({"allows_unlinked_wall_drape": True} if ASSET_REGISTRY[asset.asset_id].allows_unlinked_covering else {}),
                            **({"included_components": features} if features else {}),
                            "appearance_fields": sorted(fields),
                            "appearance_regions": {field: [p.name for p in asset.parts if
@@ -108,6 +118,15 @@ def build_proposal_request(
                     })
     effective, _ = resolve_interpretations(analysis, draft.interpretation_corrections) if draft is not None else (analysis, [])
     bound, _ = bind_catalog(effective, draft) if draft is not None else (None, [])
+    if bound is None and draft is not None:
+        # Feedback for valid furniture must survive an unrelated unsupported
+        # accessory. These isolated bindings never bypass full scene assembly.
+        entries = []
+        for obj in draft.objects:
+            single, _ = bind_catalog(effective, draft.model_copy(update={"objects": [obj]}))
+            if single is not None:
+                entries.extend(single.objects)
+        bound = BoundDraft.model_validate({**draft.model_dump(), "objects": [o.model_dump() for o in entries]})
     normalized = None
     if bound is not None:
         normalized = bound.model_copy(update={
@@ -176,14 +195,15 @@ def build_proposal_request(
         "raw_previous_draft": draft.model_dump(mode="json") if draft is not None else None,
         "repair": {
             "mode": "upsert", "deletions_allowed": False,
-            "editable_entity_ids": sorted(repair_scope(analysis, draft, issues)),
+            "editable_entity_ids": sorted(editable),
             "missing_entity_ids": [item.id for item in [*analysis.observations.objects, *analysis.observations.openings]
                                    if item.id not in {entry.id for entry in [*draft.objects, *draft.openings]}
-                                   and item.id in repair_scope(analysis, draft, issues)],
+                                   and item.id in editable],
             "instruction": "Return only changed or restored observed entries. Omitted entries remain unchanged. Keep unaffected entries byte-for-byte if repeated. raw_previous_draft is the merge base; previous_draft shows attachment-adjusted coordinates used by geometry checks.",
         } if operation == "scene_repair" and draft is not None else None,
         "attachment_constraints": attachment_constraints,
         "component_conflicts": component_feedback(normalized.objects, issues) if normalized else [],
+        "boundary_repairs": boundary_feedback(normalized.objects, measurements.dimensions) if normalized else [],
         "validation_feedback": [item.model_dump(mode="json") for item in issues],
     }
     schema = strict_schema(SceneDraft)
@@ -192,7 +212,6 @@ def build_proposal_request(
     order = ("wall_assignments", "openings", "interpretation_corrections", "objects", "estimate_corrections", "appearance_corrections", "assumptions", "warnings")
     schema["properties"] = {key: schema["properties"][key] for key in order}
     schema["required"] = list(order)
-    editable = repair_scope(analysis, draft, issues) if operation == "scene_repair" and draft is not None else None
     # Constrain each observed wall's axis at decoding time. Uniqueness and
     # topology still receive deterministic checks after decoding.
     if analysis.observations.walls:
@@ -211,14 +230,20 @@ def build_proposal_request(
         schema["properties"]["wall_assignments"]["maxItems"] = 0
     object_ids = [obj.id for obj in analysis.observations.objects if editable is None or obj.id in editable]
     represented = {obj.id for obj in draft.objects} if draft is not None else set()
+    failed_ids = {key for problem in issues for key in problem.entity_ids}
+    major = {obj.id for obj in analysis.observations.objects if importance(obj) <= 1}
     required_objects = [binding["id"] for binding in bindings if binding["models"]
-                        and binding["id"] not in represented
+                        and (binding["id"] not in represented or binding["id"] in failed_ids & major)
                         and (editable is None or binding["id"] in editable)]
     context["required_object_ids"] = required_objects
+    if context["repair"] is not None:
+        context["repair"]["required_repair_entity_ids"] = required_objects
     context["inventory_rule"] = "Return each required_object_id exactly once. Preserve its observed components and supports; estimate uncertain poses within the confirmed shell. Unsupported observations remain explicit unresolved items."
     # A repair returning [] used to consume the only recovery call while
     # silently restoring none of the missing, representable fixtures.
     schema["properties"]["objects"]["minItems"] = len(required_objects)
+    for axis, limit in (("x", measurements.dimensions.width_m), ("y", measurements.dimensions.height_m), ("z", measurements.dimensions.length_m)):
+        schema["$defs"]["Position"]["properties"][axis].update(minimum=0, maximum=limit)
     schema["properties"]["objects"]["maxItems"] = len(object_ids)
     if object_ids:
         schema["$defs"]["DraftObject"]["properties"]["id"]["enum"] = object_ids

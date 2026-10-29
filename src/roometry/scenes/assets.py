@@ -1,6 +1,6 @@
 """Approved scene asset metadata. No meshes, prices, or retailer offers live here."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from types import MappingProxyType
 from typing import Literal, get_args
 
@@ -163,6 +163,9 @@ class AssetDefinition:
     placements: frozenset[Placement]
     supplies_surface: bool = False
     fixed_by_default: bool = False
+    # Drapes can hide an unobserved opening or dress a plain wall. Blinds still
+    # require an observed opening; this flag never exempts any collision check.
+    allows_unlinked_covering: bool = False
 
 
 def _standard_asset(object_type: ObjectType) -> AssetDefinition:
@@ -258,5 +261,8 @@ for _spec in EXPANSION_SPECS:
     _assets[_spec.asset_id] = AssetDefinition(
         _spec.object_type, frozenset(_spec.placements), _spec.support, _spec.fixed
     )
+
+for _key in ("window_covering_standard_01", "window_covering_curtain_01", "window_covering_sheer_01"):
+    _assets[_key] = replace(_assets[_key], allows_unlinked_covering=True)
 
 ASSET_REGISTRY = MappingProxyType(_assets)

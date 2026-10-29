@@ -6,7 +6,10 @@ the model's interpretation of a photo is correct. Geometry remains independent.
 
 from math import cos, hypot, inf, isclose, sin
 
-from roometry.scenes.catalog import ASSET_CATALOG
+from roometry.scenes.assets import ASSET_REGISTRY
+from roometry.scenes.catalog import ASSET_CATALOG, candidates
+from roometry.vision.context_budget import shortlist
+from roometry.vision.features import retains_features
 from roometry.vision.importance import importance
 from roometry.vision.review_render import material_color
 from roometry.vision.spatial import planar_bounds, planar_gap, relationship_error, relationship_limit, POSITION_TOLERANCE_M, FACING_TOLERANCE_DEG
@@ -70,6 +73,7 @@ def review_targets(analysis, scene):
             "kind": "opening" if source.id in {item.id for item in analysis.observations.openings} else "object",
             "source_image_ids": source.source_image_ids, "retained": source.id in objects or source.id in openings,
             "appearance_controls": appearance_controls(obj) if obj is not None else {},
+            "restoration_models": restoration_models(analysis, source) if obj is None else [],
             "planar_bounds_m": planar_bounds(source.id, scene, walls),
             "opening_gaps_m": {key: round(planar_gap(source.id, key, scene, walls), 3) for key in openings} if obj is not None else {},
         })
@@ -112,8 +116,34 @@ def review_targets(analysis, scene):
     return targets, len(observed) > MAX_REVIEW_ENTITIES
 
 
+def restoration_models(analysis, source):
+    """Missing scene controls do not mean a missing approved catalog model."""
+    if not hasattr(source, 'placement') or source.type is None:
+        return []
+    options = candidates(source.type, source.placement)
+    if source.type == 'window_covering' and not any(source.wall_id is None or o.wall_id == source.wall_id for o in analysis.observations.openings):
+        options = [a for a in options if ASSET_REGISTRY[a.asset_id].allows_unlinked_covering]
+    options = [a for a in options if retains_features(a, source, analysis.observations.objects)]
+    return shortlist([{'asset_id': a.asset_id, 'label': a.label,
+                       'configurations': {p: {} for p in ASSET_REGISTRY[a.asset_id].placements}}
+                      for a in options], source, limit=2)[:2]
+
+
 def select_findings(analysis, judgment, scene=None):
     sources = {item.id: item for item in [*analysis.observations.objects, *analysis.observations.openings]}
+    retained = {item.id for item in [*scene.objects, *scene.openings]} if scene else set()
+    checked = {item.entity_id: item for item in judgment.checks}
+    for finding in judgment.findings:
+        # The server can restore an existing observation, never invent an ID.
+        # Valid agreeing photo checks remain necessary even if the model wrongly
+        # equates missing scene controls with missing catalog capabilities.
+        if scene is not None and finding.kind == 'missing' and finding.entity_ids and all(
+            key not in retained and key in sources and importance(sources[key]) <= 1
+            and key in checked and checked[key].placement == 'difference'
+            and (restoration_models(analysis, sources[key]) or key in {o.id for o in analysis.observations.openings})
+            for key in finding.entity_ids
+        ):
+            finding.repairable = True
     def priority(finding):
         ranks = [importance(sources[key]) for key in finding.entity_ids if key in sources]
         return min(ranks, default=0)

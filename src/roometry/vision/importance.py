@@ -31,8 +31,16 @@ def partial_quality(scene: RoomScene, observed: dict[str, Observation]) -> tuple
     # Only already validated subsets reach this ranking; nothing gets resized
     # or moved, and an invalid anchor can always remain unresolved.
     return (
-        sum(importance(item) == 0 and item.confidence == "high" for item in retained),
-        sum(importance(item) == 0 for item in retained),
-        sum(importance(item) == 1 for item in retained),
+        sum(retention_importance(item) == 0 and item.confidence == "high" for item in retained),
+        sum(retention_importance(item) == 0 for item in retained),
+        sum(retention_importance(item) == 1 for item in retained),
         len(retained),
     )
+
+
+def retention_importance(entity: Observation) -> int:
+    """Being fixed does not make a trim/light more important than furniture."""
+    fixed_decor = {"ceiling_detail", "ceiling_light", "chandelier", "picture", "clock", "window_covering", "wall_panel"}
+    if isinstance(entity, OpeningObservation) or entity.type in _PRIMARY or (entity.appears_fixed and entity.type not in fixed_decor):
+        return 0
+    return 1 if entity.type in _FURNITURE else 2

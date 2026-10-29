@@ -70,3 +70,23 @@ def construction_sequence(analysis):
             sequence.append(obj.id)
             del remaining[obj.id]
     return sequence
+
+
+def boundary_feedback(objects, room):
+    """Give repair precise ranges for the selected size and rotated footprint."""
+    from roometry.vision.attachments import draft_bounds
+
+    result = []
+    for obj in objects:
+        box = draft_bounds(obj)
+        xs, zs = box.footprint.project((1, 0)), box.footprint.project((0, 1))
+        hx, hz = (xs[1]-xs[0])/2, (zs[1]-zs[0])/2
+        ranges = {"x": (hx, room.width_m-hx), "y": (0., room.height_m-obj.dimensions_m.height), "z": (hz, room.length_m-hz)}
+        if all(low-1e-6 <= getattr(obj.position, key) <= high+1e-6 for key, (low, high) in ranges.items()):
+            continue
+        result.append({"object_id": obj.id, "current_position": obj.position.model_dump(),
+                       "valid_bottom_center_ranges_m": {key: [round(low, 6), round(high, 6)] if low <= high else None for key, (low, high) in ranges.items()},
+                       "instruction": "Fit this rotated model inside these ranges; floor y=0, ceiling y=upper limit. Keep its observed wall/facing and supplied sizes. An impossible range needs a supported model/estimate correction, not omission."})
+        if len(result) >= 24:
+            break
+    return result

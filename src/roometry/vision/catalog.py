@@ -3,7 +3,7 @@
 from math import cos, sin
 from typing import Literal
 
-from roometry.scenes.assets import Placement
+from roometry.scenes.assets import ASSET_REGISTRY, Placement
 from roometry.scenes.catalog import (
     ASSET_CATALOG,
     candidates,
@@ -63,6 +63,10 @@ def bind_catalog(
             )
             continue
         options = candidates(source.type, obj.placement)
+        if source.type == "window_covering" and obj.asset_id is None and obj.opening_id is None and not any(
+            source.wall_id is None or opening.wall_id == source.wall_id for opening in analysis.observations.openings
+        ):
+            options = [asset for asset in options if ASSET_REGISTRY[asset.asset_id].allows_unlinked_covering]
         required = required_features(source, analysis.observations.objects)
         options = [a for a in options if retains_features(a, source, analysis.observations.objects)]
         if not options:
