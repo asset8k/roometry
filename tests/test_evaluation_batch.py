@@ -92,6 +92,38 @@ def test_batch_never_connects_and_failures_stay_in_denominator(tmp_path, monkeyp
     assert report["by_source"]["photographed"]["attempted"] == 1
 
 
+def test_photo_verified_extra_does_not_override_other_checks(tmp_path):
+    from tests.test_component_geometry import model
+    candidate = empty_scene()
+    candidate.objects = [model("side_table_standard_01", "small_table", x=1., z=2.)]
+    dump(tmp_path / "empty.json", run_data(candidate))
+    index = recording_index(tmp_path, [trial()])
+    _, before = run_benchmark(MANIFEST, index)
+    assert before["trials"][0]["metrics"]["unsupported_extra_major_objects"] == ["small_table"]
+    evidence = {"small_table": "Photo review confirms the unannotated small table."}
+    index = recording_index(tmp_path, [trial(verified_visible_extras=evidence)])
+    _, after = run_benchmark(MANIFEST, index)
+    old, new = before["trials"][0]["metrics"], after["trials"][0]["metrics"]
+    assert new["unsupported_extra_major_objects"] == []
+    assert new["photo_verified_visible_extras"] == evidence
+    assert new["major_object_coverage"] == old["major_object_coverage"]
+    assert new["hard_issues"] == old["hard_issues"]
+    candidate.objects[0].position.x = -1.
+    dump(tmp_path / "empty.json", run_data(candidate))
+    _, invalid = run_benchmark(MANIFEST, index)
+    assert not invalid["trials"][0]["code_pass"]
+    assert "object_outside_room" in invalid["trials"][0]["metrics"]["hard_issues"]
+
+
+@pytest.mark.parametrize("entity_id", ["not_in_scene", "window"])
+def test_photo_verified_extra_cannot_excuse_unknown_or_matched_anchors(tmp_path, entity_id):
+    dump(tmp_path / "empty.json", run_data())
+    index = recording_index(tmp_path, [trial(verified_visible_extras={entity_id: "Review must name an unmatched retained object."})])
+    _, result = run_benchmark(MANIFEST, index)
+    assert not result["trials"][0]["code_pass"]
+    assert "invalid_trial_evidence" in result["trials"][0]["issues"]
+
+
 @pytest.mark.parametrize("change", ["wrong_fingerprint", "duplicate", "duplicate_improvement", "traversal", "wrong_parent", "repeat_without_primary"])
 def test_invalid_recording_index_cannot_distort_totals(tmp_path, change):
     entries = [trial()]

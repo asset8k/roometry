@@ -55,7 +55,7 @@ def check_measurements(entry, raw, scene):
     return issues
 
 
-def reconstruction_metrics(entry, reference, raw, scene, analysis, identities, likeness):
+def reconstruction_metrics(entry, reference, raw, scene, analysis, identities, likeness, verified_visible_extras=None):
     visual = {item["id"]: item for item in entry.get("visual_reference", {}).get("entities", [])}
     major = [obj for obj in reference.objects if visual.get(obj.id, {}).get("importance", "major") == "major"]
     coverage = sum(obj.id in identities.final for obj in major) / len(major) if major else None
@@ -92,7 +92,11 @@ def reconstruction_metrics(entry, reference, raw, scene, analysis, identities, l
     # Cabinet runs and grouped lights are not one-to-one meshes. Their extra
     # parts go to visual review instead of becoming invented-furniture errors.
     modules = [obj.id for obj in unmatched if obj.type in MODULE_TYPES]
-    extras = [obj.id for obj in unmatched if obj.type in MAJOR_TYPES]
+    extra_candidates = {obj.id for obj in unmatched if obj.type in MAJOR_TYPES}
+    verified_visible_extras = verified_visible_extras or {}
+    if not set(verified_visible_extras) <= extra_candidates:
+        raise ValueError("Visible-extra review must identify unmatched retained furniture.")
+    extras = sorted(extra_candidates - set(verified_visible_extras))
     eligible = [obj for obj in scene.objects if obj.type in MAJOR_TYPES] if scene else []
     precision = (len(eligible) - len(extras)) / len(eligible) if eligible else None
     # If identity is not established, do not fabricate a spatial score from an
@@ -126,6 +130,7 @@ def reconstruction_metrics(entry, reference, raw, scene, analysis, identities, l
         "major_object_coverage": coverage,
         "major_inventory_precision_proxy": precision,
         "unsupported_extra_major_objects": sorted(extras),
+        "photo_verified_visible_extras": verified_visible_extras,
         "grouped_parts_for_visual_review": sorted(modules),
         "ambiguous_reference_ids": sorted(identities.ambiguous),
         "wall_relationships": wall_score, "orientation": facing_score,

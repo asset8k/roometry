@@ -203,6 +203,13 @@ instances are flagged ambiguous; reviewed `identity_matches` can resolve them.
 Interchangeable repeated items may be permuted. Compound fixtures' features are
 reviewed visually rather than demanding an exact mesh count.
 
+Policy v1.1 permits `verified_visible_extras` in a recording: retained entity IDs
+mapped to short evidence from the source photo. Use this only when a visible
+piece of furniture was absent from the reference list. Unknown or already-matched
+IDs are rejected. Missing anchors, placements, supports and geometry still receive
+the same checks; this correction cannot excuse an invented object. Review these
+items against the photo before inspecting scores and preserve the evidence.
+
 For chat review, inspect the photos and all views in `review-packet.json`, fill
 the template, then replay with `--reviews path/to/visual-review.json` into a **new**
 output folder. Do not read app scores or `blind-key.json` before choosing A/B.

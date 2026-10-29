@@ -96,6 +96,12 @@ class RecordedTrial(ReferenceModel):
     # Explicit identity review can resolve ambiguous repeated instances. It
     # identifies objects only; it cannot override geometry or relationship checks.
     identity_matches: dict[Identifier, Identifier] | None = None
+    # Photo review may confirm an unannotated visible item. This cannot restore
+    # missing anchors or override pose, support, geometry or measurement checks.
+    verified_visible_extras: Annotated[
+        dict[Identifier, Annotated[str, Field(min_length=5, max_length=500)]],
+        Field(max_length=64),
+    ] = Field(default_factory=dict)
 
 
 class RecordingIndex(ReferenceModel):

@@ -18,7 +18,7 @@ from roometry.vision.proposal_schemas import SceneDraft, UnresolvedEntity
 from roometry.vision.schemas import RoomAnalysisResponse
 
 
-POLICY_VERSION = "roometry-evaluation-v1"
+POLICY_VERSION = "roometry-evaluation-v1.1"
 
 
 def distribution(values):
@@ -152,7 +152,7 @@ def run_benchmark(manifest_path: Path, recordings_path: Path, *, reviews_path: P
                 likeness = evaluate_reconstruction(reference, analysis, scene, draft=draft, unresolved=unresolved,
                     identity_matches=identities.final, observation_matches=identities.observations)
                 row["likeness"] = likeness.model_dump(mode="json")
-                row["metrics"] = reconstruction_metrics(entry, reference, raw, scene, analysis, identities, likeness)
+                row["metrics"] = reconstruction_metrics(entry, reference, raw, scene, analysis, identities, likeness, trial.verified_visible_extras)
                 row["usable"] = row["metrics"]["usable"]
                 row["code_pass"] = row["usable"] and not identities.ambiguous
                 scenes[trial.evaluation_id] = scene
