@@ -18,6 +18,7 @@ def trace_inventory(
     matched_ids: dict[str, str],
     draft: SceneDraft | None,
     unresolved: list[UnresolvedEntity],
+    *, observation_matches: dict[str, str] | None = None,
 ) -> list[InventoryTrace]:
     observed = (
         [*analysis.observations.objects, *analysis.observations.openings]
@@ -33,11 +34,13 @@ def trace_inventory(
             item for item in observed
             if item.id not in used
             and (item.type == expected.opening_type if expected.opening_type else item.type in expected.types)
-            and (not expected.label_terms or any(
+            and (observation_matches is not None or not expected.label_terms or any(
                 term.lower() in getattr(item, "label", "").lower()
                 for term in expected.label_terms
             ))
         ]
+        if observation_matches is not None:
+            options = [item for item in options if item.id == observation_matches.get(expected.id)]
         # Prefer the final matching for interchangeable instances, then a stable
         # observed ID. Never count the same observed item as two expected ones.
         source = min(options, key=lambda item: (item.id != matched_ids.get(expected.id), item.id)) if options else None
@@ -50,7 +53,7 @@ def trace_inventory(
                 if isinstance(source, ObjectObservation) else True
             )
         drafted = source.id in proposed if source is not None and proposed is not None else None
-        present = (source is not None and source.id in retained) or matched_ids.get(expected.id) in retained
+        present = matched_ids.get(expected.id) in retained
         code = reasons.get(source.id) if source is not None else None
         loss: InventoryLossStage | None = None
         if not present:

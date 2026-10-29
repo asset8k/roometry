@@ -1,4 +1,4 @@
-"""Small, human-annotated photo cases independent of provider observations."""
+"""Independent reference annotations and local-only evaluation recordings."""
 
 from typing import Annotated, Literal
 
@@ -68,3 +68,39 @@ class EvaluationReport(ReferenceModel):
     failures: list[str]
     matched_ids: dict[str, str]
     inventory: list[InventoryTrace] = Field(default_factory=list)
+
+
+class SavedRoomEvidence(ReferenceModel):
+    """Receipt from the authenticated recorder, never credentials or API keys."""
+
+    room_id: str = Field(min_length=1, max_length=128)
+    title: str = Field(min_length=1, max_length=200)
+    account_id: str = Field(min_length=1, max_length=128)
+    published: bool
+
+
+class RecordedTrial(ReferenceModel):
+    """Paths resolve below the recording index directory; URLs are forbidden."""
+
+    evaluation_id: Identifier
+    case_id: Identifier
+    kind: Literal["reconstruction", "improvement"]
+    run: str
+    repeat: bool = False
+    parent_evaluation_id: Identifier | None = None
+    cost: str | None = None
+    timing: str | None = None
+    draft: str | None = None
+    flow_checks: str | None = None
+    saved_room: SavedRoomEvidence | None = None
+    # Explicit identity review can resolve ambiguous repeated instances. It
+    # identifies objects only; it cannot override geometry or relationship checks.
+    identity_matches: dict[Identifier, Identifier] | None = None
+
+
+class RecordingIndex(ReferenceModel):
+    schema_version: Literal[1]
+    recording_mode: Literal["mock", "live"]
+    dataset_fingerprint_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    account_id: str | None = None
+    trials: list[RecordedTrial] = Field(default_factory=list)

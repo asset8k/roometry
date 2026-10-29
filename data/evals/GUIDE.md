@@ -44,8 +44,9 @@ size accuracy can be claimed from these inputs.
 
 The `cases/` files cover inventory, broad colors and supported relationship kinds.
 Additional layout, support and component expectations are in each manifest
-entry's `visual_reference`. These are reference data for the next runner step;
-the existing single-case evaluator does not yet interpret every field.
+entry's `visual_reference`. The batch runner checks explicit supports and passes
+free-text features, photo-relative wall anchors and representation gaps to visual
+review; it does not pretend to grade every descriptive field automatically.
 
 - Reference IDs identify physical instances; they are not model-prescribed IDs.
   Repeated beds, chairs and monitors need independent matching before scoring.
@@ -119,3 +120,93 @@ uv run pytest -q tests/test_evaluation_dataset.py tests/test_evaluation_dataset_
 The reconstruction checks and chat-based visual review will reuse the same saved
 outputs. No extra judge API is required. Raw outputs remain local; publish only a
 separately reviewed, sanitized report. README remains unchanged.
+
+## Offline runner
+
+**This command never starts a generation or calls an API.** It reads previously
+recorded application results; step 4 supplies the signed-in live recordings.
+
+```sh
+uv run python scripts/run_evals.py \
+  --manifest data/evals/manifest.json \
+  --recordings artifacts/evaluations/recordings/index.json \
+  --output artifacts/evaluations/report-01 --render
+```
+
+`index.json` uses this shape. Paths are relative to its directory. Optional cost,
+timing, draft and flow-check artifacts may be omitted; their checks stay unknown.
+
+```json
+{
+  "schema_version": 1,
+  "recording_mode": "live",
+  "dataset_fingerprint_sha256": "<copy from manifest>",
+  "account_id": "<local account ID; never a token>",
+  "trials": [{
+    "evaluation_id": "living_01_original",
+    "case_id": "living_01",
+    "kind": "reconstruction",
+    "run": "living_01/run.json",
+    "cost": "living_01/cost.json",
+    "timing": "living_01/timing.json",
+    "saved_room": {
+      "room_id": "<saved project ID>", "account_id": "<same account ID>",
+      "title": "living_01", "published": false
+    }
+  }]
+}
+```
+
+Improvement entries use `kind: "improvement"` and `parent_evaluation_id` pointing
+to their reconstruction entry. They contain the saved optimization response,
+reuse that room ID/title, and use the goal frozen in the manifest. Only the eight
+subset cases can have primary improvement trials. Explicit `repeat: true` entries
+do not inflate primary success rates. Use `recording_mode: "mock"` for test data.
+
+Cost files contain `calls` with provider response ID, run ID, operation, model,
+input/output/cached/cache-write token counts and service tier. Failed paid calls
+still count. Shared receipts need run IDs; duplicates count once; conflicting,
+missing or unpriced usage makes the total a lower bound. Pinned October 28 rates
+are estimates, not invoices. Timing uses `reconstruction_elapsed_seconds` or
+`optimization_elapsed_seconds`; no latency is inferred from a missing record.
+Flow checks accept optional recorder assertions for replay prevention,
+clarification resumption and tool-error recovery. Final scenes alone cannot prove
+these happened. Account checks likewise assess saved recorder receipts, not a
+new authentication request.
+
+The new output folder contains JSON/CSV results, a short summary, local renders,
+`review-packet.json`, an unfilled `visual-review.json`, and a separate blind key.
+Folders cannot be overwritten or exported into the public dataset. Failed runs
+stay in attempted totals; unrecorded cases are separately labeled **not run**.
+Generated/photographed and development/held-out results are reported separately.
+
+| Layer | Checks and interpretation |
+| --- | --- |
+| Reconstruction code | Schema, geometry, confirmed dimensions, major inventory, broad wall/facing relationships, explicit supports, extra-major-object proxy |
+| Appearance diagnostics | Broad RGB colors, proportions and asset form; minor failures alone do not reject an otherwise usable scene |
+| Improvement code | Original preserved, room/openings/locks/fixed objects unchanged, geometry/clearance and essential functions retained; recomputed goal gain plus a physical change |
+| Visual reconstruction | Five dimensions: major objects, layout, orientation/support, proportions, appearance; each 0 wrong/absent, 1 partly recognizable, 2 consistent with visible evidence |
+| Visual improvement | Blinded A/B preference, meaningful goal improvement, preserved constraints, confidence and short visible evidence |
+
+Initial gates are 90% major coverage and 85% assessed spatial relationships. A
+visual reconstruction passes at 8/10 with no dimension at zero. Medium/high
+confidence is required for combined success. These are explicit starting policy
+thresholds, not measured production guarantees. Walking/door warnings in an
+existing original remain visible; improvements must not worsen checked access.
+Practical goal scores reuse application geometry proxies and are not independent
+proof of usefulness. Aesthetics has no fabricated code score; it needs visual
+review. Descriptions of unknown centimeters are not ground truth.
+
+Identity matching uses analysis descriptions/colors before candidate placement
+scoring. It never chooses pairings to maximize spatial correctness. Distinct tied
+instances are flagged ambiguous; reviewed `identity_matches` can resolve them.
+Interchangeable repeated items may be permuted. Compound fixtures' features are
+reviewed visually rather than demanding an exact mesh count.
+
+For chat review, inspect the photos and all views in `review-packet.json`, fill
+the template, then replay with `--reviews path/to/visual-review.json` into a **new**
+output folder. Do not read app scores or `blind-key.json` before choosing A/B.
+The CPU renders simplify curves, lighting and transparency: use scene JSON for
+occlusions and browser screenshots for inconclusive appearance. Review hashes
+bind judgments to the exact dataset and scenes; stale/invalid judgments are
+isolated. Pending reviews never become successful judgments automatically.

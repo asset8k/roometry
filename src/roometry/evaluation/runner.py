@@ -1,4 +1,4 @@
-"""Offline likeness checks using human annotations, with no model calls.
+"""Offline likeness checks using independent annotations, with no model calls.
 
 Unlike production self-consistency checks this also detects furniture omitted by
 photo analysis. Pass saved agent JSON plus a photo-case annotation to the CLI.
@@ -18,6 +18,8 @@ from roometry.vision.spatial import planar_gap
 def evaluate_reconstruction(
     case: ReconstructionCase, analysis: RoomAnalysisResponse | None, scene: RoomScene | None,
     *, draft: SceneDraft | None = None, unresolved: list[UnresolvedEntity] | None = None,
+    identity_matches: dict[str, str] | None = None,
+    observation_matches: dict[str, str] | None = None,
 ) -> EvaluationReport:
     labels = {o.id: o.label.lower() for o in analysis.observations.objects} if analysis else {}
     items = [*scene.objects, *scene.openings] if scene else []
@@ -80,13 +82,15 @@ def evaluate_reconstruction(
                 else o.type in expected.types
             )
             and (
-                not expected.label_terms
+                identity_matches is not None or not expected.label_terms
                 or any(
                     term.lower() in labels.get(o.id, "")
                     for term in expected.label_terms
                 )
             )
         ]
+        if identity_matches is not None:
+            options = [item for item in options if item.id == identity_matches.get(expected.id)]
         if not options:
             failures.append(
                 f"Missing expected anchor: {expected.id} (including objects photo analysis omitted)."
@@ -222,5 +226,6 @@ def evaluate_reconstruction(
         inventory=trace_inventory(
             case, analysis, scene, {key: value.id for key, value in matched.items()},
             draft, unresolved or [],
+            observation_matches=observation_matches,
         ),
     )
