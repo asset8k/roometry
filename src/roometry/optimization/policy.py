@@ -127,7 +127,8 @@ def meaningful_gain(run, evaluation, source):
         return False
     if a.score is None:
         # Creating a usable missing function is allowed; no fabricated 0/10 baseline.
-        return run.focus in {"workspace", "storage"} and b.score >= 6.
+        return (run.focus == 'storage' and b.score >= 6.) or (
+            run.focus == 'workspace' and b.score >= 6. and any(m.key == 'usable_workstation_count' and m.value >= 1 for m in b.metrics))
     if b.score < a.score + .5 - 1e-8:
         return False
     def value(card, key):
@@ -140,5 +141,7 @@ def meaningful_gain(run, evaluation, source):
                 or bool(old and new and rank.get(new.status, 0) > rank.get(old.status, 0)))
     if run.focus == "storage":
         return (value(b, "accessible_storage_fraction") > value(a, "accessible_storage_fraction") + .05
-                or value(b, "nominal_storage_volume") >= value(a, "nominal_storage_volume") + max(.15, .1 * value(a, "nominal_storage_volume")) - 1e-8)
-    return True
+                or value(b, 'accessible_storage_volume') >= value(a, 'accessible_storage_volume')
+                   + max(.15, .1 * value(a, 'accessible_storage_volume')) - 1e-8)
+    return (value(b, 'usable_workstation_count') > value(a, 'usable_workstation_count')
+            or value(b, 'usable_worktop_area') >= value(a, 'usable_worktop_area') + .1 - 1e-8)

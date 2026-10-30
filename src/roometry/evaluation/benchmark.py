@@ -90,8 +90,10 @@ def _account_checks(index, trial, raw, entry, has_scene, parent, parent_raw):
     account_raw = raw if trial.kind == "reconstruction" else parent_raw
     account = bool(index.account_id) and account_raw.get("persistence") == "account"
     receipt = trial.saved_room
+    stem = Path(entry['primary_image']).stem
+    expected_title = f'{index.run_label} · {stem}' if index.run_label else stem
     saved = bool(receipt and receipt.account_id == index.account_id
-                 and receipt.title == Path(entry["primary_image"]).stem and not receipt.published)
+                 and receipt.title == expected_title and not receipt.published)
     if trial.kind == "improvement" and has_scene:
         saved = saved and parent is not None and parent.saved_room is not None and receipt.room_id == parent.saved_room.room_id
     return {"status": "checked", "signed_in": account, "saved_to_my_rooms": saved if has_scene else None,

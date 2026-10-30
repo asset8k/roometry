@@ -114,6 +114,7 @@ class RecordedTrial(ReferenceModel):
 
 class RecordingIndex(ReferenceModel):
     schema_version: Literal[1]
+    run_label: str | None = Field(default=None, pattern=r'^[A-Za-z0-9][A-Za-z0-9 ._-]{0,63}$')
     recording_mode: Literal["mock", "live"]
     dataset_fingerprint_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
     account_id: str | None = None

@@ -20,8 +20,8 @@ async def improvement_result(operation):
         return await result(operation)
     except OptimizationConflict:
         raise RunFailure(409, "optimization_conflict", "This request ID already identifies a different improvement request.") from None
-    except ReconstructionRequired:
-        raise RunFailure(409, "reconstruction_required", "Finish a complete or partial room reconstruction before requesting an improvement.") from None
+    except ReconstructionRequired as error:
+        raise RunFailure(409, "reconstruction_required", str(error) or "Finish a complete or partial room reconstruction before requesting an improvement.") from None
     except InvalidSceneContext as error:
         raise RunFailure(409, "invalid_scene_context", str(error)) from None
 

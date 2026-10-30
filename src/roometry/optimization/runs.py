@@ -31,6 +31,7 @@ from roometry.progress import ProgressLog
 from roometry.scenes.hashing import scene_hash
 from roometry.scenes.validation import validate_geometry
 from roometry.vision.errors import AnalysisFailure
+from roometry.assessment.readiness import reconstruction_gaps, readiness_message
 
 
 class OptimizationConflict(Exception):
@@ -163,6 +164,10 @@ class OptimizationRuns:
                     starting = await anyio.to_thread.run_sync(lambda: validate_context(base, request.context.scene))
                 except ValueError as error:
                     raise InvalidSceneContext(str(error)) from None
+            if not request.instruction:
+                gaps = await anyio.to_thread.run_sync(reconstruction_gaps, source, starting)
+                if gaps:
+                    raise ReconstructionRequired(readiness_message(gaps))
             await self.reconstructions.read(source_run_id, owner)
             if len(self._runs) >= self.max_runs:
                 raise RunCapacityReached()

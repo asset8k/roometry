@@ -411,3 +411,17 @@ assert "openai" not in sys.modules
         import shutil
         if output.exists():
             shutil.rmtree(output)
+
+
+@pytest.mark.parametrize('label,title,passed',[
+    ('Eval 2','Eval 2 · living_07',True),
+    ('Eval 2','living_07',False),
+    ('Eval 2','Eval 1 · living_07',False),
+    ('Eval 2 pilot','Eval 2 pilot · living_07',True),
+])
+def test_round_labels_keep_saved_rooms_distinct_without_relaxing_receipt_checks(tmp_path,label,title,passed):
+    dump(tmp_path/'empty.json',run_data())
+    receipt={'room_id':'room-123','title':title,'account_id':'account','published':False}
+    index=recording_index(tmp_path,[trial(saved_room=receipt)],recording_mode='live',account_id='account',run_label=label)
+    _,report=run_benchmark(MANIFEST,index)
+    assert report['trials'][0]['account']['passed'] is passed

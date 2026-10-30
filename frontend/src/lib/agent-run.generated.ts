@@ -1467,7 +1467,7 @@ export type WallId2 = string | null;
  * @maxItems 3
  */
 export type ApproximateObjectIds = [] | [string] | [string, string] | [string, string, string];
-export type PolicyVersion4 = "room-assessment-v1" | "room-assessment-v2";
+export type PolicyVersion4 = "room-assessment-v1" | "room-assessment-v2" | "room-assessment-v3";
 export type SceneHash = string;
 export type Status7 = "rated" | "unassessed" | "not_applicable";
 export type Score = number | null;

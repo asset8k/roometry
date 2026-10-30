@@ -135,7 +135,7 @@ async def test_expiry_and_bounded_capacity(harness):
     assert not service._runs
 
 
-async def test_partial_scene_and_its_ratings_are_retained_with_no_new_analysis():
+async def test_incomplete_baseline_requires_restoration_but_keeps_chat_available_without_new_analysis():
     from tests.test_agent_graph import OWNER, Room, pipeline
     from roometry.assessment.metrics import measure_room
     room = Room()
@@ -146,7 +146,13 @@ async def test_partial_scene_and_its_ratings_are_retained_with_no_new_analysis()
     source = await runs.execute(source.run_id, OWNER)
     assert source.status == 'partial'
     service = OptimizationRuns(runs)
-    child = await service.prepare(source.run_id, OWNER, StartOptimizationRequest.model_validate(request('workspace')))
+    from roometry.optimization.runs import ReconstructionRequired
+    with pytest.raises(ReconstructionRequired, match='Bed'):
+        await service.prepare(source.run_id, OWNER, StartOptimizationRequest.model_validate(request('workspace')))
+    assert not service._runs
+    child = await service.prepare(source.run_id, OWNER, StartOptimizationRequest(
+        request_id=str(uuid4()),focus='workspace',instruction='Restore the missing bed using an approximate model.',
+        context={'scene':source.working_scene}))
     assert child.source_status == 'partial'
     assert child.source_scene == source.working_scene
     assert child.baseline_assessment == source.room_assessment

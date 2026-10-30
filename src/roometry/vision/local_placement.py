@@ -44,7 +44,7 @@ def recover_local_placements(analysis, scene, report, *, allowed_ids=None):
                  and ((obj.placement == 'floor' and obj.type != 'rug' and (
                         not obj.fixed or obj.type in {'shower', 'bathtub', 'vanity', 'sink', 'toilet',
                             'kitchen_cabinet', 'kitchen_counter', 'wardrobe', 'cooker'}))
-                      or (obj.placement == 'wall' and obj.type in {'tv', 'picture', 'mirror'})) and not obj.locked
+                      or (obj.placement == 'wall' and obj.type in {'tv', 'picture', 'mirror', 'wall_cabinet', 'extractor_hood'})) and not obj.locked
                  and obj.provenance == 'photo_observed' and obj.id in sources
                  and (obj.placement == 'wall' or sources[obj.id].appears_fixed is not True or obj.type in {
                      'shower', 'bathtub', 'vanity', 'sink', 'toilet', 'kitchen_cabinet', 'kitchen_counter', 'wardrobe', 'cooker'})]

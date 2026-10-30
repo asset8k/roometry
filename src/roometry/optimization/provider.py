@@ -67,7 +67,9 @@ or a better route, and at least 0.5/10 rating gain. A low rating calls for addre
 the obstruction, not a token adjustment. Do not delete the room's useful functions.
 For storage, add usable capacity or unlock inaccessible fronts; do not just recolor.
 For workspace, create a catalog desk/chair group when missing, or fix the working
-side/desk placement. For aesthetics, coordinate visible material colors, suitable
+side/desk placement. Workspace ratings average all workstations, including their
+observed paired chairs and displays; improve a real usable station, not only the
+best desk's proxy. For aesthetics, coordinate visible material colors, suitable
 furniture proportions and visual groupings, not an unrelated tiny decor move.
 Trade-offs are allowed: another practical rating may decrease by up to 1.5/10
 in total from this request's starting layout, not per candidate iteration,

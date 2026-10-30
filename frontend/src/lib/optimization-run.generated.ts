@@ -459,7 +459,7 @@ export type Assumptions = string[];
  */
 export type Warnings = string[];
 export type SourceStatus = "completed" | "partial";
-export type PolicyVersion = "room-assessment-v1" | "room-assessment-v2";
+export type PolicyVersion = "room-assessment-v1" | "room-assessment-v2" | "room-assessment-v3";
 export type SceneHash = string;
 export type Status = "rated" | "unassessed" | "not_applicable";
 export type Score = number | null;

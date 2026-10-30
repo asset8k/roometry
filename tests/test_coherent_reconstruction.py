@@ -298,3 +298,44 @@ async def test_output_exhaustion_uses_one_lean_recovery_and_caches_the_result(ha
     assert len(calls)==3
     records=[row for row in app.state.analysis_service.usage_records if row.stage=='scene_proposal']
     assert len(records)==2 and records[0].outcome=='analysis_incomplete'
+
+
+def test_rounded_cardinal_pose_does_not_discard_a_flush_fitted_sink_run():
+    analysis,draft=case([
+        ('run','kitchen_counter','L shaped sink with faucet','kitchen_counter_l_sink_left_01','floor',
+         (3.1,0.,1.6),(3.2,1.24,1.8),None),
+    ])
+    draft.objects[0].rotation_y_rad=4.71239
+    before=draft.model_dump()
+    result,report,issues=assemble(analysis,measurements(analysis),draft)
+    assert result and report.valid,issues
+    assert result.objects[0].rotation_y_rad==3*pi/2
+    assert result.objects[0].dimensions_m==draft.objects[0].dimensions_m
+    assert draft.model_dump()==before
+    # An intentional visible non-cardinal angle is preserved.
+    draft.objects[0].rotation_y_rad=4.7
+    draft.objects[0].position.x=draft.objects[0].position.z=2.
+    result,report,issues=assemble(analysis,measurements(analysis),draft)
+    assert result and report.valid,issues
+    assert result.objects[0].rotation_y_rad==4.7
+
+
+def test_installed_upper_cabinet_conflicts_recover_without_moving_locks_or_resizing():
+    analysis,draft=case([
+        ('hood','extractor_hood','Wall hood','extractor_hood_chimney_01','wall',(2.75,1.92,.25),None,None),
+        ('upper','wall_cabinet','Upper cabinet','wall_cabinet_single_01','wall',(2.05,1.95,.175),(.8,.75,.35),None),
+    ], wall=True)
+    for source_obj,pose in zip(analysis.observations.objects,draft.objects):
+        source_obj.appears_fixed=True
+        pose.wall='north'
+    result,report,issues=assemble(analysis,measurements(analysis),draft,recover_local=True)
+    assert result and report.valid,issues
+    assert {o.id for o in result.objects}=={'hood','upper'}
+    assert all(o.wall=='north' and o.fixed for o in result.objects)
+    # Installed poses are recoverable estimates; explicit locks remain hard.
+    broken=result.model_copy(deep=True)
+    next(o for o in broken.objects if o.id=='hood').position.x=2.75
+    next(o for o in broken.objects if o.id=='upper').position.x=2.05
+    for o in broken.objects:o.locked=True
+    unchanged,checked=recover_local_placements(analysis,broken,validate_geometry(broken))
+    assert unchanged==broken and not checked.valid

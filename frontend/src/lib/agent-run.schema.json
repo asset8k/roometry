@@ -2826,10 +2826,11 @@
       "additionalProperties": false,
       "properties": {
         "policy_version": {
-          "default": "room-assessment-v2",
+          "default": "room-assessment-v3",
           "enum": [
             "room-assessment-v1",
-            "room-assessment-v2"
+            "room-assessment-v2",
+            "room-assessment-v3"
           ],
           "title": "Policy Version",
           "type": "string"

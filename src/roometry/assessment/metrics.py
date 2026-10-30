@@ -1,13 +1,14 @@
 """Comparable MVP proxies for usable space, storage access and a workstation.
 
 The existing layout-score-v1 API remains available for technical diagnostics.
-These card scores use room-assessment-v2 and cannot be compared across policies.
+These card scores use room-assessment-v3 and cannot be compared across policies.
 """
 
 from math import cos, sin
 from types import SimpleNamespace
 
 from roometry.assessment.schemas import AssessmentCard, RoomAssessment, recommendation
+from roometry.assessment.workspace import workspace_card
 from roometry.assessment.evidence import AssessmentEvidence, GEOMETRY_CATEGORIES
 from roometry.scenes.collision import component_bounds
 from roometry.scenes.geometry import Rectangle, ObjectBounds, boxes_overlap, intervals_overlap, rectangle_contains
@@ -73,7 +74,10 @@ def measure_room(scene: RoomScene, *, incomplete_inventory=False, evidence: Asse
 
     containers = [o for o in scene.objects if o.type in STORAGE_TYPES and o.placement in {"floor", "wall"}
                   and o.id not in evidence.excluded_storage_ids]
-    if not containers:
+    present_ids = {obj.id for obj in scene.objects}
+    if (evidence.missing_storage and not evidence.storage_ids) or evidence.storage_ids - present_ids:
+        storage = unknown('Observed storage remains unresolved. Complete it before rating storage capacity and access.')
+    elif not containers:
         storage = unknown("Observed storage remains unresolved." if evidence.missing_storage else
                           "No storage furniture was identified. Architectural window sills and hidden storage are not rated.")
     else:
@@ -90,45 +94,19 @@ def measure_room(scene: RoomScene, *, incomplete_inventory=False, evidence: Asse
                     for key, parts in solids.items() if key != obj.id for part in parts):
                 accessible.append(obj.id)
         volume = sum(o.dimensions_m.width * o.dimensions_m.height * o.dimensions_m.depth for o in containers)
+        accessible_volume = sum(o.dimensions_m.width * o.dimensions_m.height * o.dimensions_m.depth
+                                for o in containers if o.id in accessible)
         access = len(accessible) / len(containers)
         capacity = volume / (volume + .075 * floor_area)
         storage = AssessmentCard(status="rated", score=round(10 * (.7 * access + .3 * capacity), 1), confidence=confidence("storage"),
             source="geometry", explanation=f"{len(accessible)} of {len(containers)} identified storage pieces have clear front approach space. Capacity is a size estimate; contents and door swings are unknown.",
             entity_ids=[o.id for o in containers], metrics=[metric("accessible_storage_fraction", access, "fraction"),
-                metric("nominal_storage_volume", volume, "m3"), metric("storage_objects", len(containers), "count")])
+                metric("nominal_storage_volume", volume, "m3"), metric("storage_objects", len(containers), "count"),
+                metric('accessible_storage_volume',accessible_volume,'m3')])
 
-    if not any(o.type == "desk" for o in scene.objects):
-        workspace = unknown("An observed workspace remains unresolved." if evidence.missing_workspace else
-            "No dedicated workspace was identified. You can choose to create one later.",
-            status="unassessed" if evidence.missing_workspace else "not_applicable")
-    elif report.workspace.score is None or not report.workstations:
-        workspace = unknown("There is not enough geometry to assess the workstation.")
-    else:
-        def contribution(station):
-            p = report.policy
-            size = min(1., station.worktop_width_m / p.minimum_worktop_width_m) * min(1., station.worktop_depth_m / p.minimum_worktop_depth_m)
-            height_ok = p.minimum_worktop_height_m <= station.worktop_height_m <= p.maximum_worktop_height_m
-            top = 4 * size if height_ok else 0.
-            room = 3. if station.approach_inside_room else 0.
-            clear = 3. if station.approach_clear else 0.
-            value = top + room + clear
-            if station.blocking_object_ids: value = min(value, 5.)
-            if not height_ok or not station.approach_inside_room: value = min(value, 3.)
-            return value, top, room, clear, height_ok
-        station = max(report.workstations, key=lambda s: contribution(s)[0])
-        value, top, room, clear, height_ok = contribution(station)
-        reasons = []
-        if not height_ok: reasons.append("Worktop height falls outside the seated-work range.")
-        if not station.approach_inside_room: reasons.append("The working side lacks room.")
-        if station.blocking_object_ids: reasons.append("Other objects obstruct the working side.")
-        if not reasons: reasons.append("The worktop and working-side space are usable.")
-        cap = 3. if not height_ok or not station.approach_inside_room else 5. if station.blocking_object_ids else 10.
-        if cap < 10: reasons.append(f"This usability problem caps the rating at {cap:g}/10.")
-        workspace = AssessmentCard(status="rated", score=round(value, 1), confidence=confidence("workspace"),
-            source="geometry", explanation=" ".join(reasons) + " Worktop contributes up to 4 points; working-side room and unobstructed access contribute 3 each. Lighting and posture are not measured.",
-            entity_ids=[station.object_id], metrics=[metric("worktop_points", top, "count"),
-                metric("working_side_room_points", room, "count"), metric("clear_approach_points", clear, "count"),
-                metric("usability_cap", cap, "count"), metric("worktop_height", station.worktop_height_m, "m")])
+    workspace = workspace_card(scene, report, evidence, confidence("workspace"))
+    if evidence.missing_floor_ids - present_ids:
+        openness = unknown("Major floor furniture is missing. Complete the reconstruction before rating space and movement.")
     def explain_uncertainty(key, card):
         if key in evidence.uncertain_categories and card.status == "rated":
             return card.model_copy(update={"explanation": (card.explanation + " Relevant room evidence remains uncertain.")[:400]})

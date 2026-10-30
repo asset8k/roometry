@@ -6,6 +6,7 @@ import re
 from roometry.scenes.scoring import STORAGE_TYPES
 from roometry.vision.importance import importance
 from roometry.vision.schemas import OpeningObservation
+from roometry.vision.functional_groups import workstation_pairs
 
 GEOMETRY_CATEGORIES = frozenset({"openness", "storage", "workspace"})
 ARCHITECTURAL_SURFACE = re.compile(r"\b(window\s*sill|windowsill|window ledge|architectural ledge)\b", re.I)
@@ -17,6 +18,11 @@ class AssessmentEvidence:
     excluded_storage_ids: frozenset[str] = frozenset()
     missing_workspace: bool = False
     missing_storage: bool = False
+    workspace_ids: frozenset[str] = frozenset()
+    chair_pairs: tuple[tuple[str, str], ...] = ()
+    workspace_devices: tuple[tuple[str, str], ...] = ()
+    missing_floor_ids: frozenset[str] = frozenset()
+    storage_ids: frozenset[str] = frozenset()
 
 
 def assessment_evidence(analysis=None, proposal=None) -> AssessmentEvidence:
@@ -48,7 +54,28 @@ def assessment_evidence(analysis=None, proposal=None) -> AssessmentEvidence:
             # geometry or invalidate independently visible photo aesthetics.
     if proposal and set(proposal.estimated_axes) & {"width_m", "length_m"}:
         uncertain.update(GEOMETRY_CATEGORIES)
-    return AssessmentEvidence(frozenset(uncertain), excluded, missing_workspace, missing_storage)
+    desks = frozenset(o.id for o in observations.objects if o.type == 'desk')
+    sources = {o.id:o for o in observations.objects}
+    devices = []
+    for obj in observations.objects:
+        if obj.type not in {'monitor', 'computer', 'laptop'}:
+            continue
+        visited, key = set(), obj.support_object_id
+        while key in sources and key not in visited:
+            if key in desks:
+                devices.append((obj.id,key))
+                break
+            visited.add(key)
+            key = sources[key].support_object_id
+    # Missing principal floor furniture cannot earn a high openness rating
+    # merely because valid-subset assembly left its floor area empty.
+    floor_ids = frozenset(item.entity_id for item in proposal.unresolved_entities if (
+        (obj := sources.get(item.entity_id)) is not None and importance(obj) == 0
+        and obj.placement in {'floor', None})) if proposal else frozenset()
+    return AssessmentEvidence(frozenset(uncertain), excluded, missing_workspace, missing_storage,
+        desks, tuple(sorted(workstation_pairs(analysis, observations.objects).items())), tuple(devices), floor_ids,
+        frozenset(item.entity_id for item in proposal.unresolved_entities if item.entity_id in sources
+                  and sources[item.entity_id].type in STORAGE_TYPES and item.entity_id not in excluded) if proposal else frozenset())
 
 
 def evidence_for_run(run) -> AssessmentEvidence:

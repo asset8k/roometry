@@ -35,11 +35,12 @@ def source(scene):
     result.analysis = SimpleNamespace(
         observations=SimpleNamespace(
             objects=[
-                SimpleNamespace(id=o.id, type=o.type, label="Window sill")
+                SimpleNamespace(id=o.id, type=o.type, label="Window sill", support_object_id=None,
+                                appears_fixed=True, placement='wall',confidence='high')
                 for o in scene.objects
                 if "sill" in o.id
             ],
-            openings=[],
+            openings=[], relationships=[],
         )
     )
     return result

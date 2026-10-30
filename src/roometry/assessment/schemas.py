@@ -37,7 +37,7 @@ def recommendation(cards) -> Criterion | None:
 
 
 class RoomAssessment(AssessmentModel):
-    policy_version: Literal["room-assessment-v1", "room-assessment-v2"] = "room-assessment-v2"
+    policy_version: Literal["room-assessment-v1", "room-assessment-v2", "room-assessment-v3"] = "room-assessment-v3"
     scene_hash: str = Field(pattern=r"^[a-f0-9]{64}$")
     openness: AssessmentCard
     storage: AssessmentCard

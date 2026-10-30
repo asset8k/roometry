@@ -1,6 +1,6 @@
 """Resolve approximate attachment poses without resizing or relaxing validation."""
 
-from math import cos, hypot, sin
+from math import cos, hypot, pi, sin
 
 from roometry.scenes.assets import ASSET_REGISTRY
 from roometry.scenes.dependencies import support_order, support_closure
@@ -55,6 +55,12 @@ def anchor_placements(
     for obj in objects:
         if obj.placement == "floor":
             obj.position.y = 0.0
+            # Rounded model JSON (e.g. 4.71239) can put a correctly flush L-run
+            # a few micrometres through a wall. Canonicalize only this numerical
+            # noise, preserving intentional non-cardinal orientations.
+            cardinal = round(obj.rotation_y_rad / (pi/2)) * (pi/2)
+            if abs(obj.rotation_y_rad-cardinal) <= 1e-5:
+                obj.rotation_y_rad = cardinal % (2*pi)
             source = observations.get(obj.id)
             asset = ASSET_REGISTRY.get(obj.asset_id)
             if (

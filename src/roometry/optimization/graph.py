@@ -13,6 +13,7 @@ from roometry.agents.budget import RunBudget
 from roometry.agents.state import AgentState
 from roometry.assessment.evidence import evidence_for_run
 from roometry.assessment.metrics import measure_room, with_recommendation
+from roometry.assessment.readiness import reconstruction_gaps, readiness_message
 from roometry.model_calls import observe_model_calls
 from roometry.optimization.context import refinement_message
 from roometry.optimization.policy import evaluate, meaningful_gain
@@ -64,6 +65,10 @@ async def initialize(state, runtime: Runtime[OptimizationContext]):
     run, context = OptimizationRun.model_validate(state['run']), runtime.context
     stop = await stopped(run, context)
     if stop: return stop
+    if not run.instruction:
+        gaps = await anyio.to_thread.run_sync(reconstruction_gaps, context.source, run.source_scene)
+        if gaps:
+            return saved(run,context,status='no_improvement',stage='finished',message=readiness_message(gaps))
     baseline = await anyio.to_thread.run_sync(lambda: measure_room(run.source_scene, evidence=evidence_for_run(context.source)))
     if run.baseline_assessment:
         baseline = with_recommendation(baseline, aesthetics=run.baseline_assessment.aesthetics.model_dump())
@@ -127,6 +132,7 @@ async def validate(state, runtime: Runtime[OptimizationContext]):
             return {**saved(run, context, stage="proposing", attempts=attempt(run, proposal,
                 outcome="no_gain", issues=["No arrangement was proposed; check locally validated placement options."])), "candidate": None}
         return saved(run, context, status="completed" if run.result_scene else "no_improvement", stage="finished",
+            attempts=attempt(run,proposal,outcome='no_gain',issues=['The proposal contains no layout changes; no improvement is claimed.']),
             message="The best validated layout is retained." if run.result_scene else "No useful layout change was proposed. Your original room is retained; review the suggestions.")
     await context.budget.reserve_tool()  # Atomic assembly and geometry/clearance.
     await context.budget.reserve_tool()  # Fixed-policy score comparison.

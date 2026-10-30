@@ -82,7 +82,7 @@ def test_blocked_workspace_keeps_worktop_credit_without_hiding_the_blocker():
     report = measure_room(case([desk(), blocker]))
     assert 0 < report.workspace.score <= 5
     assert 'obstruct' in report.workspace.explanation
-    assert report.policy_version == 'room-assessment-v2'
+    assert report.policy_version == 'room-assessment-v3'
 
 
 def test_bad_worktop_height_remains_a_low_rating_not_a_good_clearance_score():
@@ -126,7 +126,7 @@ def test_missing_wall_storage_lowers_storage_confidence_only():
     report = measure_room(scene, evidence=assessment_evidence(analysis, unresolved('missing_cabinet')))
     assert report.storage.confidence == 'low'
     assert report.openness.confidence == report.workspace.confidence == 'medium'
-    assert 'uncertain' in report.storage.explanation
+    assert report.storage.score is None and 'unresolved' in report.storage.explanation
 
 
 def test_window_sill_is_not_counted_as_storage_and_other_shelves_still_count():
