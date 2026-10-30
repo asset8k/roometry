@@ -1,0 +1,167 @@
+{
+  "schema_version": 1,
+  "evaluation_round": "Eval 2",
+  "review_date": "2026-10-30",
+  "reviewer": "project_owner",
+  "method": "human_visual_pass_fail",
+  "scope": "25 original reconstructions; improvement candidates not separately human-rated",
+  "boolean_policy": "User-described slight fail counts as false; original wording retained in note.",
+  "dataset_fingerprint_sha256": "58455354f483ddba4ff0e3c9eebf839dce81d32e0482d2847a45f00f2d9ace77",
+  "results": [
+    {
+      "case_id": "living_01",
+      "passed": true,
+      "note": "pass"
+    },
+    {
+      "case_id": "living_02",
+      "passed": true,
+      "note": "pass"
+    },
+    {
+      "case_id": "living_03",
+      "passed": true,
+      "note": "pass"
+    },
+    {
+      "case_id": "living_04",
+      "passed": true,
+      "note": "pass"
+    },
+    {
+      "case_id": "living_05",
+      "passed": true,
+      "note": "pass"
+    },
+    {
+      "case_id": "living_06",
+      "passed": true,
+      "note": "pass"
+    },
+    {
+      "case_id": "living_07",
+      "passed": true,
+      "note": "pass"
+    },
+    {
+      "case_id": "bedroom_01",
+      "passed": true,
+      "note": "pass"
+    },
+    {
+      "case_id": "bedroom_02",
+      "passed": true,
+      "note": "pass"
+    },
+    {
+      "case_id": "bedroom_03",
+      "passed": false,
+      "note": "slight fail"
+    },
+    {
+      "case_id": "bedroom_04",
+      "passed": true,
+      "note": "pass"
+    },
+    {
+      "case_id": "bedroom_05",
+      "passed": true,
+      "note": "pass"
+    },
+    {
+      "case_id": "bedroom_06",
+      "passed": false,
+      "note": "slight fail"
+    },
+    {
+      "case_id": "kitchen_01",
+      "passed": true,
+      "note": "pass"
+    },
+    {
+      "case_id": "kitchen_02",
+      "passed": false,
+      "note": "slight fail"
+    },
+    {
+      "case_id": "kitchen_03",
+      "passed": false,
+      "note": "slight fail"
+    },
+    {
+      "case_id": "kitchen_04",
+      "passed": false,
+      "note": "fail"
+    },
+    {
+      "case_id": "kitchen_05",
+      "passed": true,
+      "note": "pass"
+    },
+    {
+      "case_id": "bathroom_01",
+      "passed": true,
+      "note": "pass"
+    },
+    {
+      "case_id": "bathroom_02",
+      "passed": true,
+      "note": "pass"
+    },
+    {
+      "case_id": "bathroom_03",
+      "passed": true,
+      "note": "pass"
+    },
+    {
+      "case_id": "bathroom_04",
+      "passed": true,
+      "note": "pass"
+    },
+    {
+      "case_id": "office_01",
+      "passed": true,
+      "note": "pass"
+    },
+    {
+      "case_id": "office_02",
+      "passed": true,
+      "note": "pass"
+    },
+    {
+      "case_id": "office_03",
+      "passed": true,
+      "note": "pass"
+    }
+  ],
+  "summary": {
+    "reviewed": 25,
+    "passed": 20,
+    "failed": 5,
+    "slight_fail": 4,
+    "full_fail": 1,
+    "pass_rate": 0.8
+  },
+  "limitations": [
+    "One project-owner reviewer, not a blinded multi-rater human study.",
+    "These are visual judgments of the saved Eval 2 results, not validation of reference annotations or exact metric dimensions."
+  ],
+  "evaluation_layers": {
+    "code": {
+      "passed": 15,
+      "total": 25
+    },
+    "llm_visual_judge": {
+      "passed": 20,
+      "total": 25,
+      "mean_score_out_of_10": 7.96,
+      "method": "in_session_chat_review_no_judge_api"
+    },
+    "human_visual_judge": {
+      "passed": 20,
+      "total": 25,
+      "method": "single_owner_boolean_review"
+    },
+    "all_three_passed": 14
+  }
+}

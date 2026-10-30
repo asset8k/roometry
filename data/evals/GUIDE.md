@@ -238,3 +238,14 @@ The CPU renders simplify curves, lighting and transparency: use scene JSON for
 occlusions and browser screenshots for inconclusive appearance. Review hashes
 bind judgments to the exact dataset and scenes; stale/invalid judgments are
 isolated. Pending reviews never become successful judgments automatically.
+
+## Recorded human review
+
+`results/eval-2-human.json` preserves the project owner’s pass/fail judgments for
+all 25 original Eval 2 reconstructions: 20 pass and 5 fail. Four were described
+as slight fails; these count as false while retaining that note. Code checks,
+in-session LLM visual judgments and human judgments are three separate layers.
+The human review was one unblinded owner review; it does not independently
+validate reference annotations or improvement candidates. README updates and
+production deployment are deferred. Private migration exports and the detailed
+final report remain under ignored `artifacts/evaluations/eval-2-20261030/`.
