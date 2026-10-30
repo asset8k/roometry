@@ -18,7 +18,7 @@ from roometry.vision.proposal_schemas import SceneDraft, UnresolvedEntity
 from roometry.vision.schemas import RoomAnalysisResponse
 
 
-POLICY_VERSION = "roometry-evaluation-v1.1"
+POLICY_VERSION = "roometry-evaluation-v1.2"
 
 
 def distribution(values):
@@ -101,8 +101,13 @@ def _account_checks(index, trial, raw, entry, has_scene, parent, parent_raw):
             "note": "Ownership/save receipt is recorder evidence, not an independent server authentication check."}
 
 
-def run_benchmark(manifest_path: Path, recordings_path: Path, *, reviews_path: Path | None = None):
+def run_benchmark(manifest_path: Path, recordings_path: Path, *, reviews_path: Path | None = None,
+                  calibration_path: Path | None = None):
     dataset = load_dataset(manifest_path)
+    calibration = None
+    if calibration_path:
+        from roometry.evaluation.calibration import apply_calibration
+        dataset, calibration = apply_calibration(dataset, calibration_path)
     index = load_recordings(recordings_path, dataset)
     root = recordings_path.parent
     raw_runs, errors = {}, {}
@@ -150,7 +155,8 @@ def run_benchmark(manifest_path: Path, recordings_path: Path, *, reviews_path: P
                         row["issues"].append("invalid_unresolved_item")
                 identities = match_identities(reference, analysis, scene, entry.get("visual_reference"), trial.identity_matches)
                 likeness = evaluate_reconstruction(reference, analysis, scene, draft=draft, unresolved=unresolved,
-                    identity_matches=identities.final, observation_matches=identities.observations)
+                    identity_matches=identities.final, observation_matches=identities.observations,
+                    ambiguous_ids=identities.ambiguous, component_matches=identities.components)
                 row["likeness"] = likeness.model_dump(mode="json")
                 row["metrics"] = reconstruction_metrics(entry, reference, raw, scene, analysis, identities, likeness, trial.verified_visible_extras)
                 row["usable"] = row["metrics"]["usable"]
@@ -205,6 +211,7 @@ def run_benchmark(manifest_path: Path, recordings_path: Path, *, reviews_path: P
         "schema_version": 1, "policy_version": POLICY_VERSION, "created_at": datetime.now(UTC).isoformat(),
         "recording_mode": index.recording_mode, "execution": "offline_replay_no_api_calls",
         "dataset_id": dataset.manifest["dataset_id"], "dataset_fingerprint_sha256": dataset.manifest["dataset_fingerprint_sha256"],
+        "calibration": calibration,
         "gates": {"major_object_coverage": .9, "spatial_relationships": .85, "visual_score": 8,
                   "note": "Minor appearance failures are reported separately; code checks cannot replace pending visual judgments."},
         "spending": spending, "review_import_issues": review_errors,

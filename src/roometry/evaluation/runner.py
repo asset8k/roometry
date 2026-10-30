@@ -5,11 +5,15 @@ photo analysis. Pass saved agent JSON plus a photo-case annotation to the CLI.
 The annotations state approximate relationships, never invented metric truth.
 """
 
+from dataclasses import replace
 from math import cos, hypot, sin
 
 from roometry.evaluation.schemas import EvaluationReport, ReconstructionCase
 from roometry.evaluation.inventory import trace_inventory
 from roometry.scenes.schemas import Opening, RoomScene, SceneObject
+from roometry.scenes.geometry import object_bounds
+from roometry.scenes.catalog import ASSET_CATALOG
+from roometry.vision.assembly_context import assembly_features
 from roometry.vision.schemas import RoomAnalysisResponse
 from roometry.vision.proposal_schemas import SceneDraft, UnresolvedEntity
 from roometry.vision.spatial import planar_gap
@@ -20,10 +24,14 @@ def evaluate_reconstruction(
     *, draft: SceneDraft | None = None, unresolved: list[UnresolvedEntity] | None = None,
     identity_matches: dict[str, str] | None = None,
     observation_matches: dict[str, str] | None = None,
+    ambiguous_ids: frozenset[str] = frozenset(),
+    component_matches: dict[str, str] | None = None,
 ) -> EvaluationReport:
     labels = {o.id: o.label.lower() for o in analysis.observations.objects} if analysis else {}
     items = [*scene.objects, *scene.openings] if scene else []
     matched, used, failures = {}, set(), []
+    feature_checks, unassessed = {}, []
+    component_matches = component_matches or {}
     metrics: dict[str, list[bool]] = {
         key: [] for key in ("wall", "orientation", "proportions", "color", "asset")
     }
@@ -71,7 +79,40 @@ def evaluate_reconstruction(
             }[key],
         )
 
+    def end_wall(item):
+        """Use the footprint, preferring an oriented back in a corner tie.
+
+        Twin beds can touch the same headboard wall and opposite side walls;
+        their centers therefore do not identify the relevant room end.
+        """
+        if not isinstance(item, SceneObject) or item.wall:
+            return nearest_wall(item)
+        bounds = object_bounds(item).footprint
+        xs, zs = bounds.project((1, 0)), bounds.project((0, 1))
+        distances = {"west": xs[0], "east": scene.room.width_m - xs[1],
+                     "north": zs[0], "south": scene.room.length_m - zs[1]}
+        minimum = min(distances.values())
+        if item.type in {"bed", "sofa", "armchair"}:
+            back = {"north": cos(item.rotation_y_rad), "south": -cos(item.rotation_y_rad),
+                    "west": sin(item.rotation_y_rad), "east": -sin(item.rotation_y_rad)}
+            preferred = max(back, key=back.get)
+            if back[preferred] >= cos(.7853981634) and distances[preferred] <= minimum + .05:
+                return preferred
+        return min(distances, key=distances.get)
+
     for expected in case.objects:
+        if expected.id not in ambiguous_ids:
+            feature_checks.update({f"{expected.id}:{feature}": False for feature in expected.required_features})
+        if expected.id in component_matches:
+            parent = next((o for o in items if o.id == component_matches[expected.id]), None)
+            recipe = ASSET_CATALOG.get(parent.asset_id) if isinstance(parent, SceneObject) else None
+            if (not expected.component_of or not recipe or not expected.component_part_names
+                or not set(expected.component_part_names) <= {part.name for part in recipe.parts
+                    if not part.placements or parent.placement in part.placements}
+                or (identity_matches or {}).get(expected.component_of) != parent.id):
+                raise ValueError("Integrated component evidence does not match its annotated host.")
+            matched[expected.id] = parent
+            continue  # A component does not inherit its parent's colors/proportions.
         options = [
             o
             for o in items
@@ -101,6 +142,23 @@ def evaluate_reconstruction(
         item = min(options, key=lambda o: o.id)
         matched[expected.id] = item
         used.add(item.id)
+        if expected.id in ambiguous_ids:
+            continue  # Inventory is distinct; identity-specific likeness is unassessed.
+        if expected.required_features:
+            candidates = [item] if isinstance(item, SceneObject) else []
+            # A real supported insert may supply a feature; an unrelated fixture
+            # elsewhere in the room or a label saying "sink" cannot supply it.
+            candidates += [o for o in items if isinstance(o, SceneObject)
+                           and o.type in {"sink", "cooker", "kitchen_counter", "vanity"}
+                           and o.placement == "surface" and o.support_object_id == item.id]
+            actual = {feature for obj in candidates for feature in assembly_features(replace(
+                ASSET_CATALOG[obj.asset_id], parts=tuple(part for part in ASSET_CATALOG[obj.asset_id].parts
+                    if not part.placements or obj.placement in part.placements)))}
+            for feature in expected.required_features:
+                key = f"{expected.id}:{feature}"
+                feature_checks[key] = feature in actual
+                if feature not in actual:
+                    failures.append(f"{expected.id}: required {feature} feature is missing.")
         if expected.color and isinstance(item, SceneObject):
             record(
                 "color",
@@ -168,6 +226,9 @@ def evaluate_reconstruction(
             )
     opposite = {"north": "south", "south": "north", "west": "east", "east": "west"}
     for relation in case.relationships:
+        if relation.subject in ambiguous_ids or relation.target in ambiguous_ids:
+            unassessed.append(f"{relation.subject} → {relation.target}: {relation.kind}; identity ambiguous.")
+            continue
         subject, target = matched.get(relation.subject), matched.get(relation.target)
         metric = "orientation" if relation.kind == "faces" else "wall"
         if subject is None or target is None:
@@ -195,7 +256,7 @@ def evaluate_reconstruction(
                 0.8, 0.15 * min(scene.room.width_m, scene.room.length_m)
             )
         else:
-            left, right = nearest_wall(subject), nearest_wall(target)
+            left, right = end_wall(subject), end_wall(target)
             passed = (
                 left == right
                 if relation.kind == "same_end"
@@ -212,9 +273,20 @@ def evaluate_reconstruction(
         return sum(values) / len(values) if values else None
 
     coverage = len(matched) / len(case.objects)
+    inventory = trace_inventory(
+        case, analysis, scene, {key: value.id for key, value in matched.items()},
+        draft, unresolved or [], observation_matches=observation_matches,
+    )
+    # An explicitly annotated subassembly shares its host observation, rather
+    # than being reported as a missed standalone detection.
+    by_ref = {entry.expected_id: entry for entry in inventory}
+    for ref in case.objects:
+        if ref.id in component_matches:
+            parent = by_ref[ref.component_of]
+            by_ref[ref.id] = parent.model_copy(update={"expected_id": ref.id})
     return EvaluationReport(
         case_id=case.id,
-        passed=not failures,
+        passed=not failures and not ambiguous_ids,
         major_object_coverage=coverage,
         wall_relationships=score("wall"),
         orientation=score("orientation"),
@@ -223,9 +295,6 @@ def evaluate_reconstruction(
         asset_match=score("asset"),
         failures=failures,
         matched_ids={key: value.id for key, value in matched.items()},
-        inventory=trace_inventory(
-            case, analysis, scene, {key: value.id for key, value in matched.items()},
-            draft, unresolved or [],
-            observation_matches=observation_matches,
-        ),
+        inventory=list(by_ref.values()), unassessed_relationships=unassessed,
+        feature_checks=feature_checks,
     )

@@ -1,10 +1,13 @@
 # Evaluation dataset
 
-**25 annotated room cases; no live evaluation runs yet.**
+**25 frozen room cases for offline replay and recorded live evaluations.**
 Seven living rooms, six bedrooms, five kitchens, four bathrooms and three offices.
 Twenty images were generated with the built-in Imagegen tool; five are licensed
 photographs. Five cases (`*_01`) are development cases; the other twenty are held
-out. The frozen manifest records checksums, source permissions and test inputs.
+out in the original split. Following the first benchmark and failure analysis,
+these reused cases are regression evidence, not an untouched holdout. The frozen
+manifest records checksums, source permissions and test inputs; its status is a
+snapshot from dataset preparation.
 
 Open [the image gallery](index.html) in a browser to inspect all 25 rooms. Images
 and annotations use matching case names. The gallery works locally without a
@@ -16,6 +19,7 @@ server or application API calls.
 | `cases/<case_id>.json` | References compatible with the existing offline evaluator | Public |
 | `images/<case_id>/<case_id>.jpg` | The 25 approved images, with identifying metadata stripped | Public |
 | `generation.json` | Exact prompts and built-in generation provenance | Public |
+| `calibration-v1.json` | Versioned, photo-backed scoring corrections | Public |
 | `private/` | Personal photos, annotations and reference scenes | Ignored |
 | `../../artifacts/evaluations/` | Raw runs, screenshots, costs and saved account room links | Ignored |
 
@@ -59,6 +63,23 @@ review; it does not pretend to grade every descriptive field automatically.
   rather than forced into vertical-wall inventory checks.
 - Fitted carpet is floor finish; reflections and outdoor balcony furniture are
   not extra indoor objects. A nearly empty room checks invented furniture.
+
+## Calibrated offline scoring
+
+Pass `--calibration data/evals/calibration-v1.json` to `scripts/run_evals.py` in
+batch mode. It checks the frozen dataset fingerprint and records the calibration
+version, checksum and reasons in the new report. Original evidence is never
+overwritten. Use the same policy and calibration for both benchmark rounds.
+
+Version 1 permits the explicitly annotated segmented lighting and integrated
+desk hutch, and enforces the five kitchens' visible basin/faucet features from
+catalog geometry rather than labels. Repeated interchangeable instances are
+matched without candidate placement; ambiguous identities leave only their own
+relationships unassessed. Twin headboard-wall checks use rotated footprints.
+The 90% inventory, 85% spatial and 8/10 visual gates remain unchanged. Existing
+visual reviews may be reused only for identical photo/scene evidence; report
+their reuse separately from any new judgment. Free-text visual expectations not
+encoded as checks still require visual review.
 
 ## Improvement subset
 

@@ -1,0 +1,96 @@
+{
+  "version": "roometry-reference-calibration-v1",
+  "dataset_fingerprint_sha256": "58455354f483ddba4ff0e3c9eebf839dce81d32e0482d2847a45f00f2d9ace77",
+  "corrections": [
+    {
+      "case_id": "living_05",
+      "object_id": "pendant_group",
+      "reason": "The frozen photo reference explicitly allows one grouped three-bulb fixture or three separate dining pendants. Count retained fixture members rather than requiring a unique single pendant.",
+      "changes": {
+        "segmented_fixture": true,
+        "label_terms": [
+          "pendant",
+          "dining"
+        ]
+      }
+    },
+    {
+      "case_id": "kitchen_04",
+      "object_id": "pendants",
+      "reason": "The frozen photo reference explicitly allows the two island pendants as grouped or separate meshes. Individual light coordinates are not independently annotated.",
+      "changes": {
+        "segmented_fixture": true,
+        "label_terms": [
+          "pendant",
+          "island"
+        ]
+      }
+    },
+    {
+      "case_id": "office_03",
+      "object_id": "hutch",
+      "reason": "The photo shows a desk with attached overhead storage. A catalogue hutch_board on the matched desk can cover this component; a generic desk cannot. The separate screen and corner worktop remain independently assessed.",
+      "changes": {
+        "component_of": "desk",
+        "component_part_names": [
+          "hutch_board"
+        ]
+      }
+    },
+    {
+      "case_id": "kitchen_01",
+      "object_id": "perimeter_counter",
+      "reason": "The frozen visual reference explicitly identifies a visible sink and faucet in this run. A cabinet label alone does not establish these functional components.",
+      "changes": {
+        "required_features": [
+          "basin",
+          "faucet"
+        ]
+      }
+    },
+    {
+      "case_id": "kitchen_02",
+      "object_id": "sink_run",
+      "reason": "The frozen visual reference explicitly identifies a visible sink and faucet in this run. A cabinet label alone does not establish these functional components.",
+      "changes": {
+        "required_features": [
+          "basin",
+          "faucet"
+        ]
+      }
+    },
+    {
+      "case_id": "kitchen_03",
+      "object_id": "counter",
+      "reason": "The frozen visual reference explicitly identifies a visible sink and faucet in this run. A cabinet label alone does not establish these functional components.",
+      "changes": {
+        "required_features": [
+          "basin",
+          "faucet"
+        ]
+      }
+    },
+    {
+      "case_id": "kitchen_04",
+      "object_id": "island",
+      "reason": "The frozen visual reference explicitly identifies a visible sink and faucet in this run. A cabinet label alone does not establish these functional components.",
+      "changes": {
+        "required_features": [
+          "basin",
+          "faucet"
+        ]
+      }
+    },
+    {
+      "case_id": "kitchen_05",
+      "object_id": "counter",
+      "reason": "The frozen visual reference explicitly identifies a visible sink and faucet in this run. A cabinet label alone does not establish these functional components.",
+      "changes": {
+        "required_features": [
+          "basin",
+          "faucet"
+        ]
+      }
+    }
+  ]
+}

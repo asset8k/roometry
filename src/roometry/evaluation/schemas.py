@@ -22,6 +22,12 @@ class ReferenceObject(ReferenceModel):
     allowed_assets: list[str] = Field(default_factory=list)
     wall_span_fraction: tuple[float, float] | None = None
     width_depth_ratio: tuple[float, float] | None = None
+    required_features: list[Literal["basin", "faucet", "worktop", "cooktop"]] = Field(default_factory=list)
+    # Explicit photo-backed representation equivalences, never inferred from a
+    # candidate's successful pose or narrative.
+    segmented_fixture: bool = False
+    component_of: Identifier | None = None
+    component_part_names: list[str] = Field(default_factory=list)
 
 
 class ReferenceRelation(ReferenceModel):
@@ -68,6 +74,8 @@ class EvaluationReport(ReferenceModel):
     failures: list[str]
     matched_ids: dict[str, str]
     inventory: list[InventoryTrace] = Field(default_factory=list)
+    unassessed_relationships: list[str] = Field(default_factory=list)
+    feature_checks: dict[str, bool] = Field(default_factory=dict)
 
 
 class SavedRoomEvidence(ReferenceModel):

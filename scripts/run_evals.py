@@ -24,6 +24,7 @@ def main():
     parser.add_argument("--recordings", type=Path, help="Local recording index; does not execute generations")
     parser.add_argument("--output", type=Path, help="New ignored directory below artifacts/evaluations/")
     parser.add_argument("--reviews", type=Path, help="Optional completed chat visual judgments")
+    parser.add_argument("--calibration", type=Path, help="Optional versioned offline reference corrections")
     parser.add_argument("--render", action="store_true", help="Generate CPU diagnostic views locally")
     args = parser.parse_args()
     if args.manifest:
@@ -34,7 +35,8 @@ def main():
         from roometry.evaluation.reporting import validate_output, write_report
         try:
             validate_output(args.output)
-            dataset, report = run_benchmark(args.manifest, args.recordings, reviews_path=args.reviews)
+            dataset, report = run_benchmark(args.manifest, args.recordings, reviews_path=args.reviews,
+                                            calibration_path=args.calibration)
             clean = write_report(dataset, report, args.output, render=args.render)
         except EvaluationInputError as exc:
             parser.error(str(exc))
@@ -43,7 +45,7 @@ def main():
         # A report was produced successfully. Per-case failures remain in it;
         # pending visual judgments are not represented as a passing benchmark.
         return
-    if not args.case or not args.run or any((args.recordings, args.output, args.reviews, args.render)):
+    if not args.case or not args.run or any((args.recordings, args.output, args.reviews, args.render, args.calibration)):
         parser.error("Single-case mode needs --case and --run; use --manifest for batch replay.")
     case = ReconstructionCase.model_validate_json(args.case.read_text())
     run = json.loads(args.run.read_text())

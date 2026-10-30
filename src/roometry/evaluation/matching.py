@@ -5,7 +5,7 @@ rotations, allowed assets, or relationship success. Tied non-interchangeable
 instances remain explicitly ambiguous. IDs only break interchangeable ties.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import re
 
 from roometry.evaluation.schemas import ReconstructionCase
@@ -18,6 +18,9 @@ class IdentityMatches:
     final: dict[str, str]
     observations: dict[str, str]
     ambiguous: frozenset[str]
+    groups: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    observed_groups: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    components: dict[str, str] = field(default_factory=dict)
 
 
 def color_distance(a, b):
@@ -32,7 +35,7 @@ def _tokens(text):
     # Locations only disambiguate textual identity; no model coordinates enter.
     return set(re.findall(r"[a-z]+", text.lower())) - {
         "the", "a", "an", "of", "at", "on", "in", "with", "and", "to", "is",
-        "wall", "room", "against", "near", "side", "front", "visible", "separate",
+        "wall", "room", "against", "near", "beside", "side", "front", "visible", "separate",
     }
 
 
@@ -79,6 +82,7 @@ def _interchangeable(case, left, right, visual):
     def shape(ref):
         return (tuple(ref.types), ref.opening_type, ref.color, tuple(ref.label_terms),
                 ref.material_colors, ref.allowed_assets, ref.wall_span_fraction, ref.width_depth_ratio,
+                ref.required_features, ref.segmented_fixture, ref.component_of, ref.component_part_names,
                 visual.get(ref.id, {}).get("support_object_id"))
     if shape(left) != shape(right):
         return False
@@ -135,7 +139,9 @@ def match_identities(case: ReconstructionCase, analysis: RoomAnalysisResponse | 
         ties = [k for k in range(len(sources)) if scores[i][k] == scores[i][j]]
         if len(ties) > 1:
             peer_rows = [k for k in range(len(expected)) if k != i and scores[k][j] == scores[i][j]]
-            if any(not _interchangeable(case, expected[k], item, visual) for k in peer_rows) or not peer_rows:
+            cohort = any(k != i and _interchangeable(case, other, item, visual)
+                         for k, other in enumerate(expected))
+            if any(not _interchangeable(case, expected[k], item, visual) for k in peer_rows) or (not peer_rows and not cohort):
                 ambiguous.add(item.id)
     overrides = overrides or {}
     if not set(overrides) <= {item.id for item in expected}:
@@ -150,4 +156,27 @@ def match_identities(case: ReconstructionCase, analysis: RoomAnalysisResponse | 
         ambiguous.discard(key)
     if len(set(final_matches.values())) != len(final_matches):
         raise ValueError("Identity review cannot reuse one entity for several references.")
-    return IdentityMatches(final_matches, source_matches, frozenset(ambiguous))
+    groups, observed_groups, components = {}, {}, {}
+    for ref in expected:
+        if ref.segmented_fixture:
+            # Only an explicitly annotated lighting group without individual
+            # spatial/support constraints may use this equivalence.
+            if (not ref.types or not set(ref.types) <= {"chandelier", "ceiling_light"}
+                or not ref.label_terms or visual.get(ref.id, {}).get("support_object_id")
+                or any(ref.id in {r.subject, r.target} for r in case.relationships)
+                or any(other.id != ref.id and set(other.types) & set(ref.types) for other in expected)):
+                raise ValueError("Segmented fixture needs an isolated, explicitly identified lighting group.")
+            members = tuple(source.id for source in sources if compatible(ref, source)
+                            and any(term.lower() in descriptions[source.id] for term in ref.label_terms))
+            observed_groups[ref.id] = members if observed else ()
+            groups[ref.id] = tuple(key for key in members if key in final and compatible(ref, final[key]))
+            ambiguous.discard(ref.id)
+        if ref.component_of and ref.id not in final_matches:
+            from roometry.scenes.catalog import ASSET_CATALOG
+            parent = final.get(final_matches.get(ref.component_of))
+            recipe = ASSET_CATALOG.get(parent.asset_id) if parent else None
+            if (recipe and ref.component_part_names
+                and set(ref.component_part_names) <= {part.name for part in recipe.parts
+                    if not part.placements or parent.placement in part.placements}):
+                components[ref.id] = parent.id
+    return IdentityMatches(final_matches, source_matches, frozenset(ambiguous), groups, observed_groups, components)

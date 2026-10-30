@@ -58,7 +58,11 @@ def check_measurements(entry, raw, scene):
 def reconstruction_metrics(entry, reference, raw, scene, analysis, identities, likeness, verified_visible_extras=None):
     visual = {item["id"]: item for item in entry.get("visual_reference", {}).get("entities", [])}
     major = [obj for obj in reference.objects if visual.get(obj.id, {}).get("importance", "major") == "major"]
-    coverage = sum(obj.id in identities.final for obj in major) / len(major) if major else None
+    group_issues = [f"incomplete_fixture_group:{key}" for key, observed in identities.observed_groups.items()
+                    if not observed or set(observed) != set(identities.groups.get(key, ()))]
+    coverage = sum((obj.id in identities.final or obj.id in identities.components)
+                   and f"incomplete_fixture_group:{obj.id}" not in group_issues
+                   for obj in major) / len(major) if major else None
     geometry = validate_geometry(scene) if scene else None
     doors = geometry.door_clearance.doors if geometry and geometry.door_clearance else ()
     access = [door.access_status == "clear" for door in doors if door.access_status != "unassessed"]
@@ -70,6 +74,12 @@ def reconstruction_metrics(entry, reference, raw, scene, analysis, identities, l
         if not host:
             continue
         if key in identities.ambiguous or host in identities.ambiguous:
+            continue
+        if key in identities.components:
+            supported = identities.components[key] == identities.final.get(host)
+            support_checks.append(supported)
+            if not supported:
+                support_issues.append(f"support_relationship:{key}:{host}")
             continue
         child, parent = items.get(identities.final.get(key)), identities.final.get(host)
         supported = isinstance(child, SceneObject) and parent is not None and child.placement == "surface" and child.support_object_id == parent
@@ -101,12 +111,12 @@ def reconstruction_metrics(entry, reference, raw, scene, analysis, identities, l
     precision = (len(eligible) - len(extras)) / len(eligible) if eligible else None
     # If identity is not established, do not fabricate a spatial score from an
     # arbitrary pairing. Coverage still counts distinct compatible inventory.
-    ambiguous_relations = any(r.subject in identities.ambiguous or r.target in identities.ambiguous for r in reference.relationships)
-    wall_score = None if ambiguous_relations else likeness.wall_relationships
-    facing_score = None if ambiguous_relations else likeness.orientation
+    wall_score = likeness.wall_relationships
+    facing_score = likeness.orientation
     measurements = check_measurements(entry, raw, scene)
     hard = ([issue.code for issue in geometry.errors] if geometry else ["no_scene"]) + measurements
-    semantic = support_issues.copy()
+    semantic = support_issues + group_issues + [f"missing_functional_feature:{key}"
+                    for key, passed in likeness.feature_checks.items() if not passed]
     if coverage is None or coverage < .9:
         semantic.append("major_object_coverage_below_0.90")
     if wall_score is not None and wall_score < .85:
@@ -133,11 +143,16 @@ def reconstruction_metrics(entry, reference, raw, scene, analysis, identities, l
         "photo_verified_visible_extras": verified_visible_extras,
         "grouped_parts_for_visual_review": sorted(modules),
         "ambiguous_reference_ids": sorted(identities.ambiguous),
+        "unassessed_relationships": likeness.unassessed_relationships,
+        "integrated_components": identities.components,
+        "fixture_groups": {key: {"observed": list(identities.observed_groups[key]), "retained": list(members)}
+                           for key, members in identities.groups.items()},
+        "functional_features": likeness.feature_checks,
         "wall_relationships": wall_score, "orientation": facing_score,
         "observation_wall_consistency": average(wall_checks),
         "support_relationships": average(support_checks),
         "proportions": likeness.proportions,
-        "color_consistency": None if identities.ambiguous else likeness.color_consistency,
+        "color_consistency": likeness.color_consistency,
         "asset_match": likeness.asset_match,
         "hard_issues": hard, "fidelity_issues": semantic,
         "door_checks": geometry.door_clearance.model_dump(mode="json") if geometry and geometry.door_clearance else None,
