@@ -3,6 +3,7 @@
 from math import cos, hypot, sin
 
 from roometry.scenes.assets import ASSET_REGISTRY
+from roometry.scenes.dependencies import support_order, support_closure
 from roometry.scenes.catalog import object_surfaces
 from roometry.scenes.collision import (
     component_bounds,
@@ -119,60 +120,60 @@ def anchor_placements(
                         obj.position.y = fitted_y
 
     by_id = {obj.id: obj for obj in objects}
-    eligible: list[tuple[BoundObject, BoundObject, ObjectBounds]] = []
-    for obj in objects:
-        if obj.placement != "surface" or obj.support_object_id is None:
-            continue
-        support = by_id.get(obj.support_object_id)
-        asset = ASSET_REGISTRY.get(support.asset_id) if support else None
-        if (
-            support is None
-            or support.placement not in {"floor", "wall"}
-            or asset is None
-            or not asset.supplies_surface
-        ):
-            continue
-        surface = next(
-            (
-                s
-                for s in object_surfaces(support.asset_id, support.placement)
-                if s.name == obj.support_surface_id
-            ),
-            None,
-        )
-        if surface is None:
-            continue
-        area = catalog_surface_bounds(
-            surface, support.dimensions_m, support.position, support.rotation_y_rad
-        )
-        before = original[support.id]
-        # Preserve the child's local pose when its host is snapped to a wall.
-        delta = support.rotation_y_rad - before.rotation_y_rad
-        c, s = cos(delta), sin(delta)
-        dx, dz = obj.position.x - before.position.x, obj.position.z - before.position.z
-        obj.position.x = support.position.x + c * dx + s * dz
-        obj.position.z = support.position.z - s * dx + c * dz
-        obj.rotation_y_rad += delta
-        obj.position.y = area.vertical[1]
-        base = contact_bounds(obj)
-        if base is None:
-            continue
-        base_width, base_depth = (2 * half for half in base.footprint.half_extents)
-        relative = obj.rotation_y_rad - support.rotation_y_rad
-        c, s = abs(cos(relative)), abs(sin(relative))
-        rotated_width = c * base_width + s * base_depth
-        rotated_depth = s * base_width + c * base_depth
-        if (
-            (
-                rotated_width > area.footprint.half_extents[0] * 2 + TOLERANCE_M
-                or rotated_depth > area.footprint.half_extents[1] * 2 + TOLERANCE_M
+    def surface_attachments():
+        for obj in support_order(objects):
+            if obj.placement != "surface" or obj.support_object_id is None:
+                continue
+            support = by_id.get(obj.support_object_id)
+            asset = ASSET_REGISTRY.get(support.asset_id) if support else None
+            if (
+                support is None
+                or support.placement not in {"floor", "wall", "surface"}
+                or asset is None
+                or not asset.supplies_surface
+            ):
+                continue
+            surface = next(
+                (
+                    s
+                    for s in object_surfaces(support.asset_id, support.placement)
+                    if s.name == obj.support_surface_id
+                ),
+                None,
             )
-            and base_width <= area.footprint.half_extents[0] * 2
-            and base_depth <= area.footprint.half_extents[1] * 2
-        ):
-            # A wide TV/frame needs the support's orientation, not a smaller size.
-            obj.rotation_y_rad = support.rotation_y_rad
-        eligible.append((obj, support, area))
+            if surface is None:
+                continue
+            area = catalog_surface_bounds(
+                surface, support.dimensions_m, support.position, support.rotation_y_rad
+            )
+            before = original[support.id]
+            # Preserve the child's local pose when its host is snapped to a wall.
+            delta = support.rotation_y_rad - before.rotation_y_rad
+            c, s = cos(delta), sin(delta)
+            dx, dz = obj.position.x - before.position.x, obj.position.z - before.position.z
+            obj.position.x = support.position.x + c * dx + s * dz
+            obj.position.z = support.position.z - s * dx + c * dz
+            obj.rotation_y_rad += delta
+            obj.position.y = area.vertical[1]
+            base = contact_bounds(obj)
+            if base is None:
+                continue
+            base_width, base_depth = (2 * half for half in base.footprint.half_extents)
+            relative = obj.rotation_y_rad - support.rotation_y_rad
+            c, s = abs(cos(relative)), abs(sin(relative))
+            rotated_width = c * base_width + s * base_depth
+            rotated_depth = s * base_width + c * base_depth
+            if (
+                (
+                    rotated_width > area.footprint.half_extents[0] * 2 + TOLERANCE_M
+                    or rotated_depth > area.footprint.half_extents[1] * 2 + TOLERANCE_M
+                )
+                and base_width <= area.footprint.half_extents[0] * 2
+                and base_depth <= area.footprint.half_extents[1] * 2
+            ):
+                # A wide TV/frame needs the support's orientation, not a smaller size.
+                obj.rotation_y_rad = support.rotation_y_rad
+            yield obj, support, area
 
     def inside(obj: BoundObject) -> bool:
         box = draft_bounds(obj)
@@ -197,7 +198,8 @@ def anchor_placements(
             for other in obstacles
         )
 
-    for obj, support, area in sorted(eligible, key=lambda pair: pair[0].id):
+    for obj, support, area in surface_attachments():
+        descendants = support_closure(objects, {obj.id}) - {obj.id}
         outer = area.footprint
         contact = contact_bounds(obj)
         if contact is None:
@@ -222,7 +224,7 @@ def anchor_placements(
         zs = {min(max(local_z, -limit_z), limit_z)}
         # Try adjacent positions around siblings and nearby solid obstacles.
         for other in objects:
-            if other.id in {obj.id, support.id} or (
+            if other.id in {obj.id, support.id} | descendants or (
                 observations.get(other.id) is not None
                 and observations[other.id].type == "rug"
             ):
@@ -263,7 +265,7 @@ def anchor_placements(
                 [
                     other
                     for other in objects
-                    if other.id != obj.id
+                    if other.id != obj.id and other.id not in descendants
                     and (
                         observations.get(other.id) is None
                         or observations[other.id].type != "rug"

@@ -276,10 +276,10 @@ async def test_repair_request_limit_preserves_partial_without_an_extra_paid_call
     actions.append(scene_action(bad))
     original = service_module.build_proposal_request
 
-    def limited(settings, analysis, measurements, draft, issues, images=None, *, operation="scene_proposal"):
+    def limited(settings, analysis, measurements, draft, issues, images=None, *, operation="scene_proposal", essential_only=False):
         if draft is not None:
             raise AnalysisFailure(413, "request_too_large", "The repair request exceeds its input limit.")
-        return original(settings, analysis, measurements, draft, issues, images, operation=operation)
+        return original(settings, analysis, measurements, draft, issues, images, operation=operation, essential_only=essential_only)
 
     monkeypatch.setattr(service_module, "build_proposal_request", limited)
     req = body(analysis, dimensions=confirmed(length_m=4, height_m=2.6))

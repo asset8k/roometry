@@ -107,6 +107,10 @@ def evaluate_fidelity(analysis: RoomAnalysisResponse, scene: RoomScene, wall_map
         else:
             passed = planar_gap(ids[0], ids[1], scene, wall_map) <= relationship_limit(scene, "near")
             check("adjacency", ids, passed, "Keep nearby/beside items in the same local group.", required)
+    from roometry.vision.functional_groups import workstation_pairs
+    for chair, desk in workstation_pairs(analysis, scene.objects).items():
+        check("adjacency", [chair, desk], planar_gap(chair, desk, scene, wall_map) <= relationship_limit(scene, "near"),
+              "Keep the paired chair within reach of its observed desk.")
     corrections = {(c.entity_id, c.field) for c in scene.estimate_corrections}
     for source in obs.objects:
         obj = objects.get(source.id)

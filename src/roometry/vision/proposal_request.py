@@ -40,8 +40,14 @@ def build_proposal_request(
     issues: list[ProposalIssue],
     images: list[bytes] | None = None,
     *, operation: Literal["scene_proposal", "scene_repair"] = "scene_proposal", mandatory_image_ids=(),
-    repair_entity_ids: set[str] | None = None,
+    repair_entity_ids: set[str] | None = None, essential_only: bool = False,
 ) -> ResponseCreateParamsNonStreaming:
+    deferred = []
+    if essential_only:
+        if draft is not None or operation != 'scene_repair':
+            raise ValueError('Essential recovery is only the final allowance after an unfinished initial draft.')
+        from roometry.vision.essential_recovery import essential_analysis
+        analysis, deferred = essential_analysis(analysis)
     editable = repair_scope(analysis, draft, issues) if operation == "scene_repair" and draft is not None else None
     if repair_entity_ids is not None:
         known = {item.id for item in [*analysis.observations.objects, *analysis.observations.openings]}
@@ -164,6 +170,11 @@ def build_proposal_request(
                         "depth": area.footprint.half_extents[1] * 2,
                     },
                     "object_dimensions_m": obj.dimensions_m.model_dump(),
+                    "coplanar_support_areas": [
+                        {"name": s.name, "width_m": (s.x_max-s.x_min)*support.dimensions_m.width,
+                         "depth_m": (s.z_max-s.z_min)*support.dimensions_m.depth}
+                        for s in object_surfaces(support.asset_id, support.placement) if abs(s.y-surface.y) < 1e-6][:8],
+                    "support_rule": "Use the actual contact areas. A countertop's real underside parts may bear on coplanar areas of this same host; a long slab cannot float on one small cabinet. Prefer a photo-supported integrated fitted run, or an audited estimate correction where needed. Never resize confirmed measurements or invent supports.",
                 }
             )
     context = {
@@ -241,6 +252,17 @@ def build_proposal_request(
     if context["repair"] is not None:
         context["repair"]["required_repair_entity_ids"] = required_objects
     context["inventory_rule"] = "Return each required_object_id exactly once. Preserve its observed components and supports; estimate uncertain poses within the confirmed shell. Unsupported observations remain explicit unresolved items."
+    if essential_only:
+        context['recovery_contract'] = 'essential_objects_after_output_limit'
+        context['deferred_object_ids'] = deferred
+        context['recovery_bounds'] = [
+            {'id': obj.id, 'models': [{'asset_id': model['asset_id'],
+                'floor_center_ranges_if_unrotated_m': {
+                    'x': [config['default_dimensions_m']['width']/2, measurements.dimensions.width_m-config['default_dimensions_m']['width']/2],
+                    'z': [config['default_dimensions_m']['depth']/2, measurements.dimensions.length_m-config['default_dimensions_m']['depth']/2]},
+                'dimensions_m': config['default_dimensions_m']}
+                for model in binding['models'][:2] for placement,config in model['configurations'].items() if placement == 'floor']}
+            for obj,binding in zip(analysis.observations.objects, bindings)]
     # A repair returning [] used to consume the only recovery call while
     # silently restoring none of the missing, representable fixtures.
     schema["properties"]["objects"]["minItems"] = len(required_objects)
@@ -280,6 +302,10 @@ def build_proposal_request(
     if settings.scene_compact_context:
         context = compact_context(context, analysis, editable=editable)
         schema = compact_schema(schema, context)
+    if essential_only:
+        from roometry.vision.essential_recovery import lean_schema
+        lean_schema(schema)
+        schema['properties']['openings']['minItems'] = len(analysis.observations.openings)
     selected_ids = analysis.observations.image_ids
     if images is not None and settings.scene_compact_context:
         selected_ids = select_photo_ids(analysis.observations, settings.scene_photo_target, mandatory_image_ids)
@@ -320,6 +346,8 @@ def build_proposal_request(
         "truncation": "disabled",
     }
     effort = settings.model_route(operation).reasoning_effort
+    if essential_only:
+        payload['instructions'] += '\nThe first response exhausted its output limit. Rebuild only required_object_ids and observed openings. Return concise poses, without dimensions_m or support_surface_id: the server uses recorded sizes and approved model defaults. Keep correction arrays empty and notes brief. Plan the main arrangement before emitting JSON. Positions are bottom centers: floor centers must respect rotated half-width/depth bounds, never all zero or wall-edge placeholders. Preserve observed local groups and facing. Never invent dimensions or identities to fill an omitted accessory. Deferred objects remain explicit partial-result limitations.\n'
     if effort != "default":
         payload["reasoning"] = {"effort": effort}
     if (

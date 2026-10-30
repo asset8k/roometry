@@ -35,6 +35,12 @@ accent panel or backsplash, and ceiling_detail for a cove or ceiling trim frame.
 Keep these distinct from furniture and ordinary pictures. When a sink, tap and
 cabinet clearly form one visible fitted assembly, describe the integrated unit;
 do not duplicate its own built-in parts as separate freestanding furniture.
+Treat a continuous cabinet bank and its own worktop as one kitchen_counter
+assembly when their shared structure is visible. A different top material alone
+does not establish an independent slab. Describe its straight/L-shaped return,
+included sink/hob and overall extent so existing fitted-run models can be used.
+Use a separate countertop only for a visibly separate slab, with its actual
+supporting cabinet ID; do not attach a long multi-cabinet top to one small unit.
 Explicitly name its included sink/basin and tap/faucet in the label or notes.
 Use wall_cabinet for upper kitchen units. Keep cabinet banks separated by a
 window, doorway or visible gap as separate observations; do not bridge that
@@ -242,7 +248,8 @@ south=pi, west=pi/2, east=3*pi/2, back touching wall. Server derives attachment
 coordinates. Surface items must preserve their observed support_object_id and use
 support_surface_id from its declared surfaces; fit the rotated solid base inside
 that area and below the next shelf. null selects a default area; select worktop
-for desk devices. Supports are floor/wall only, not nested surface supports.
+for desk devices. A countertop on an approved floor/wall base can support a
+separately observed cooktop or accessory; arbitrary nested supports are forbidden.
 Curtains use an observed opening_id when that opening is visible. If drapes hide
 the opening, select a model with allows_unlinked_wall_drape and use opening_id=null
 on the observed wall; do not invent an unseen window or its dimensions. Never

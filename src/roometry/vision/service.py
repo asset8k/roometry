@@ -647,6 +647,7 @@ class AnalysisService:
         observed = {item.id: item for item in [*analysis.observations.objects, *analysis.observations.openings]}
         problems = []
         repair_failure: AnalysisFailure | None = None
+        essential_recovery = False
         while state.scene_attempts < 2:
             # Reservation is shared by every run/retry using this analysis.
             # An ambiguous first request still spends the initial construction allowance.
@@ -654,9 +655,10 @@ class AnalysisService:
                 "scene_proposal" if state.scene_attempts == 0 else "scene_repair"
             )
             previous_draft = draft
+            essential_request = essential_recovery
             try:
                 payload = await anyio.to_thread.run_sync(
-                    partial(build_proposal_request, operation=operation),
+                    partial(build_proposal_request, operation=operation, essential_only=essential_request),
                     self.settings,
                     analysis,
                     measurements,
@@ -692,8 +694,12 @@ class AnalysisService:
                     if error.code != "invalid_analysis" and not output_limited:
                         raise
                     details = error.diagnostics
+                    essential_recovery = essential_recovery or (output_limited and previous_draft is None)
                     decoded = None
                 try:
+                    if essential_request:
+                        from roometry.vision.essential_recovery import expand_lean_draft
+                        decoded = expand_lean_draft(decoded)
                     draft = parse_scene_draft(decoded, analysis)
                     if operation == "scene_repair" and previous_draft is not None:
                         draft = merge_repair(analysis, previous_draft, draft, problems)
@@ -751,6 +757,10 @@ class AnalysisService:
                         if report
                         else [],
                     }
+                if problems:
+                    details = {**(details or {}), "entity_failures": [
+                        {"code": problem.code, "entity_ids": problem.entity_ids}
+                        for problem in problems if problem.entity_ids][:24]}
                 outcome = (
                     "analysis_incomplete"
                     if output_limited
@@ -818,6 +828,7 @@ class AnalysisService:
                     details={
                         "output_token_limit": self.settings.scene_max_output_tokens,
                         "reasoning_effort": self.settings.model_route(operation).reasoning_effort,
+                        "recovery_contract": "essential" if essential_request else "full",
                         **(details or {}),
                     },
                     operation=operation,

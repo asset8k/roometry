@@ -51,6 +51,8 @@ def repair_scope(analysis: RoomAnalysisResponse, draft: SceneDraft, issues: list
     # repair may reconstruct the draft, but still only from original identities.
     if wall_repair_allowed(analysis, issues) or any(not problem.entity_ids and not (problem.code == "identity_mismatch" and expected - present) for problem in issues):
         affected = expected.copy()
+    from roometry.vision.functional_groups import reconstruction_group
+    affected = reconstruction_group(analysis, draft.objects, affected)
     while True:
         previous = len(affected)
         for obj in draft.objects:

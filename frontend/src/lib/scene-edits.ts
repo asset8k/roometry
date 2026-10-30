@@ -33,13 +33,25 @@ export function objectLabel(object: SceneObject): string {
   return object.type.replaceAll('_', ' ')
 }
 
+function supportDescendants(scene: RoomScene, root: string): Set<string> {
+  const ids = new Set([root])
+  for (let n = 0; n < scene.objects.length; n++) {
+    const before = ids.size
+    for (const object of scene.objects) if (object.support_object_id && ids.has(object.support_object_id)) ids.add(object.id)
+    if (ids.size === before) break
+  }
+  ids.delete(root)
+  return ids
+}
+
 /** UI restrictions complement backend checks; they cannot establish ownership. */
 export function editRestriction(scene: RoomScene, object: SceneObject): string | null {
   if (object.locked) return 'This object is locked. Its position, angle, and color are protected.'
   if (object.fixed) return 'This fixture stays in place. You can still preview its color.'
   if (object.placement === 'surface') return 'Move its supporting furniture to carry this object with it.'
   if (object.placement !== 'floor') return 'Direct wall and ceiling editing is not available yet.'
-  if (scene.objects.some(child => child.support_object_id === object.id && (child.locked || child.fixed))) {
+  const descendants = supportDescendants(scene, object.id)
+  if (scene.objects.some(child => descendants.has(child.id) && (child.locked || child.fixed))) {
     return 'This furniture supports a locked or fixed object and must stay in place.'
   }
   return null
@@ -67,13 +79,14 @@ export function previewTransform(scene: RoomScene, edit: SceneEdit): RoomScene {
   if (x === parent.position.x && z === parent.position.z && angle === parent.rotation_y_rad) return scene
   const delta = angle - parent.rotation_y_rad
   const c = Math.cos(delta), s = Math.sin(delta)
+  const descendants = supportDescendants(scene, parent.id)
   return {
     ...scene,
     objects: scene.objects.map(object => {
       if (object.id === parent.id) {
         return { ...object, position: { ...object.position, x, z }, rotation_y_rad: angle }
       }
-      if (object.support_object_id !== parent.id) return object
+      if (!descendants.has(object.id)) return object
       const dx = object.position.x - parent.position.x
       const dz = object.position.z - parent.position.z
       return {

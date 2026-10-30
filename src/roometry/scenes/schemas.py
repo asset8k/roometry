@@ -295,7 +295,10 @@ class RoomScene(SceneModel):
                     raise ValueError(
                         f"Object {obj.id} references missing support {support_id}"
                     )
-                if support.placement not in {"floor", "wall"}:
+                base = objects.get(support.support_object_id)
+                if not (support.placement in {"floor", "wall"} or (
+                    support.placement == "surface" and support.type == "countertop"
+                    and base is not None and base.placement in {"floor", "wall"})):
                     raise ValueError(
                         f"Object {obj.id} cannot use nested surface support"
                     )

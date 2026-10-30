@@ -51,6 +51,22 @@ describe('visual edit candidates', () => {
     expect(previewTransform(scene, move)).toBe(scene)
   })
 
+  it('carries nested supports and protects a locked grandchild', () => {
+    const scene = structuredClone(loadExampleScene())
+    const child = scene.objects.find(object => object.id === 'computer_1')!
+    const grandchild = structuredClone(child)
+    grandchild.id = 'nested_child'
+    grandchild.support_object_id = child.id
+    grandchild.position.y += .1
+    scene.objects.push(grandchild)
+    const preview = previewTransform(scene, move)
+    expect(preview.objects.find(object => object.id === grandchild.id)?.position).toEqual({ x: .85, y: .85, z: 2.1 })
+    expect(grandchild.position.x).toBe(.65)
+    grandchild.locked = true
+    expect(editRestriction(scene, scene.objects.find(object => object.id === 'desk_1')!)).toContain('supports')
+    expect(previewTransform(scene, move)).toBe(scene)
+  })
+
   it('normalizes angles and ignores nonfinite values, unknown objects, and unchanged poses', () => {
     const scene = loadExampleScene()
     const rotated = previewTransform(scene, { operation: 'rotate', object_id: 'desk_1', rotation_y_rad: -Math.PI / 2 })

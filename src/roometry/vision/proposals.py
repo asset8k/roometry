@@ -152,7 +152,7 @@ def notes(*groups: list[str]) -> list[str]:
 
 def assemble(
     analysis: RoomAnalysisResponse, measurements: Measurements, draft: SceneDraft,
-    *, require_fidelity: bool = True, recover_local: bool = False,
+    *, require_fidelity: bool = True, recover_local: bool = False, recovery_ids=None,
 ) -> tuple[RoomScene | None, GeometryReport | None, list[ProposalIssue]]:
     original_analysis = analysis
     analysis, interpretation_errors = resolve_interpretations(analysis, draft.interpretation_corrections)
@@ -367,13 +367,16 @@ def assemble(
             support = by_id.get(obj.support_object_id)
             if (
                 support is None
-                or support.placement not in {"floor", "wall"}
+                or not (support.placement in {"floor", "wall"} or (
+                    support.placement == "surface" and support.type == "countertop"
+                    and by_id.get(support.support_object_id) is not None
+                    and by_id[support.support_object_id].placement in {"floor", "wall"}))
                 or not ASSET_REGISTRY[support.asset_id].supplies_surface
             ):
                 issues.append(
                     issue(
                         "scene_schema",
-                        "Surface objects must reference an observed floor or wall object that supplies an approved supporting surface; windows and other surface objects cannot supply support.",
+                        "Surface objects require an approved floor/wall support or a countertop on such a support; arbitrary nested supports are not allowed.",
                         obj.id,
                     )
                 )
@@ -457,10 +460,10 @@ def assemble(
     report = validate_geometry(scene)
     if recover_local:
         from roometry.vision.evidence_placement import recover_evidence_placements
-        scene, report = recover_evidence_placements(analysis, scene, report)
+        scene, report = recover_evidence_placements(analysis, scene, report, allowed_ids=recovery_ids)
     if recover_local and report.errors:
         from roometry.vision.local_placement import recover_local_placements
-        scene, report = recover_local_placements(analysis, scene, report)
+        scene, report = recover_local_placements(analysis, scene, report, allowed_ids=recovery_ids)
     fidelity = evaluate_fidelity(original_analysis, scene, wall_map)
     fidelity_problems = [
         issue("fidelity", check.message, *check.entity_ids)

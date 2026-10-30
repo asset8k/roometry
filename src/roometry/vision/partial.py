@@ -51,7 +51,7 @@ def recover_corrections(analysis, draft):
 
 
 def assemble_partial(
-    analysis: RoomAnalysisResponse, measurements: Measurements, draft: SceneDraft, *, recover_local: bool = True,
+    analysis: RoomAnalysisResponse, measurements: Measurements, draft: SceneDraft, *, recover_local: bool = True, recovery_ids=None,
 ) -> tuple[RoomScene | None, GeometryReport | None, list[ProposalIssue], list[UnresolvedEntity]]:
     draft, effective, correction_issues = recover_corrections(analysis, draft)
     obs = effective.observations
@@ -140,7 +140,8 @@ def assemble_partial(
         selected.interpretation_corrections = [c for c in selected.interpretation_corrections if c.entity_id in remaining]
         selected.appearance_corrections = [c for c in selected.appearance_corrections if c.entity_id is None or c.entity_id in remaining]
         selected.openings = [obj for obj in selected.openings if obj.id in remaining]
-        scene, report, problems = assemble(subset, measurements, selected, require_fidelity=False, recover_local=recover_local)
+        scene, report, problems = assemble(subset, measurements, selected, require_fidelity=False,
+                                          recover_local=recover_local, recovery_ids=recovery_ids)
         if scene is not None:
             if problems and not (scene.objects or scene.openings):
                 return None, report, (reasons + problems)[:50], list(unresolved.values())

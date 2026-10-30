@@ -153,6 +153,18 @@ def catalog_supports(child: CatalogPose, support: CatalogPose) -> bool:
     if contact is None:
         return False
     surfaces = object_surfaces(support.asset_id, support.placement)
+    if ASSET_CATALOG[child.asset_id].object_type == 'countertop':
+        # One structural slab may bear on multiple coplanar areas of this SAME
+        # approved host. Every real underside component must be supported; an
+        # L's empty bay and the space between unrelated cabinets stay empty.
+        selected = next((s for s in surfaces if s.name == child.support_surface_id), None)
+        if child.support_surface_id is not None and selected is None:
+            return False
+        height = selected.y if selected else max((s.y for s in surfaces), default=-1)
+        areas = [catalog_surface_bounds(s, support.dimensions_m, support.position, support.rotation_y_rad)
+                 for s in surfaces if abs(s.y-height) <= TOLERANCE_M]
+        contacts = [p.bounds for p in component_bounds(child) if abs(p.bounds.vertical[0]-child.position.y) <= TOLERANCE_M]
+        return bool(contacts) and all(any(surface_is_supported(part, area) for area in areas) for part in contacts)
     if child.support_surface_id is not None:
         surfaces = tuple(s for s in surfaces if s.name == child.support_surface_id)
     elif surfaces:

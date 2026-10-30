@@ -556,9 +556,15 @@ def build(spec: ExpansionSpec):
         return p, areas
     if style.startswith("slab"):
         if style != "slab":
-            return corner_model(slab=True, mirror=style.endswith("right"))
-        slab = part("worktop", (1, 1, 1), (0, .5, 0), "primary")
-        return [slab], [surface(slab)]
+            pieces, _ = corner_model(slab=True, mirror=style.endswith("right"))
+        else:
+            pieces = [part("worktop", (1, 1, 1), (0, .5, 0), "primary")]
+        # A recessed bearing underside describes the real contact geometry;
+        # the visible slab can overhang without making its whole top a foot.
+        bodies = [replace(p, size=(p.size[0], .9, p.size[2]), at=(p.at[0], .55, p.at[2])) for p in pieces]
+        bearings = [part('bearing_' + p.name, (max(.01, p.size[0]-.04), .1, max(.01, p.size[2]-.04)),
+                         (p.at[0], .05, p.at[2]), 'primary') for p in pieces]
+        return [*bodies, *bearings], [surface(p) for p in bodies]
     if style in {"apron_counter", "double_counter", "drainer_counter", "apron_basin", "double_basin", "round_vessel", "rectangular_vessel"}:
         return sink_assembly(style)
     if style in {"deck_faucet", "wall_faucet", "rain_shower", "hand_shower"}:

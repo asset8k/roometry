@@ -13,6 +13,7 @@ from roometry.scenes.geometry import WALL_ROTATIONS_RAD, object_bounds
 from roometry.scenes.validation import validate_geometry
 from roometry.vision.fidelity import evaluate_fidelity
 from roometry.vision.importance import importance
+from roometry.vision.functional_groups import reconstruction_group
 from roometry.vision.spatial import planar_bounds, relationship_error, relationship_limit
 
 MAX_WALL_SHIFT_M = .5
@@ -27,7 +28,7 @@ def failed_relations(analysis, scene):
             and check.kind != 'coverage'}
 
 
-def recover_evidence_placements(analysis, scene, report):
+def recover_evidence_placements(analysis, scene, report, *, allowed_ids=None):
     walls = {entry.observation_id: entry.wall for entry in scene.wall_mapping}
     sources = {obj.id: obj for obj in analysis.observations.objects}
     relations = [r for r in analysis.observations.relationships
@@ -40,6 +41,8 @@ def recover_evidence_placements(analysis, scene, report):
                    key=lambda obj: (importance(sources[obj.id]), obj.id))
     checks = 0
     for root_before in roots[:MAX_ROOTS]:
+        if allowed_ids is not None and root_before.id not in allowed_ids:
+            continue
         root = next(obj for obj in scene.objects if obj.id == root_before.id)
         evidence = [r for r in relations if r.subject_id == root.id]
         def objectives(candidate):
@@ -61,8 +64,10 @@ def recover_evidence_placements(analysis, scene, report):
                 dz = (bounds[2] + bounds[3]) / 2 - root.position.z
                 if hypot(dx, dz) > .05:
                     angles.append(atan2(dx, dz) % (2 * pi))
-        group = {root.id} | {obj.id for obj in scene.objects if obj.support_object_id == root.id}
-        if any(obj.locked for obj in scene.objects if obj.id in group):
+        group = reconstruction_group(analysis, scene.objects, {root.id})
+        if any(obj.locked or obj.provenance != 'photo_observed'
+               or (obj.id != root.id and obj.fixed and obj.placement == 'floor')
+               for obj in scene.objects if obj.id in group):
             continue
         failures = failed_relations(analysis, scene)
         errors = {(error.code, error.entity_ids) for error in report.errors}

@@ -1,8 +1,11 @@
 """Small reconstruction-only pose recovery before deferring observed furniture.
 
-No size, identity, rotation, support or room changes. Candidate translations must
+No size, identity, rotation, support or room changes. Estimated installed-fixture
+poses may be corrected during reconstruction; manual transforms remain protected.
+Candidate translations must
 clear their entire support group and pass the ordinary geometry, relationship
-and clearance checks. This never runs for edits or visual-review patches.
+and clearance checks. Review repairs must supply their authorized identity scope;
+this never runs for manual edits.
 """
 
 from math import hypot
@@ -13,6 +16,7 @@ from roometry.scenes.geometry import bounds_inside_room, boxes_overlap, object_b
 from roometry.scenes.validation import validate_geometry
 from roometry.vision.fidelity import evaluate_fidelity
 from roometry.vision.importance import importance
+from roometry.vision.functional_groups import reconstruction_group
 
 MAX_SHIFT_M = .5
 MAX_CONFLICTS = 8
@@ -24,7 +28,7 @@ def spatial_failures(analysis, scene):
             if not c.passed and c.kind in {'wall', 'facing', 'adjacency', 'support'}}
 
 
-def recover_local_placements(analysis, scene, report):
+def recover_local_placements(analysis, scene, report, *, allowed_ids=None):
     if not report.errors:
         return scene, report
     original = scene
@@ -36,18 +40,22 @@ def recover_local_placements(analysis, scene, report):
         affected = {key for error in report.errors if error.code in {'object_overlap', 'object_outside_room'}
                     for key in error.entity_ids}
         roots = [obj for obj in scene.objects if obj.id in affected and obj.id not in moved
-                 and ((obj.placement == 'floor' and obj.type != 'rug' and not obj.fixed)
+                 and (allowed_ids is None or obj.id in allowed_ids)
+                 and ((obj.placement == 'floor' and obj.type != 'rug' and (
+                        not obj.fixed or obj.type in {'shower', 'bathtub', 'vanity', 'sink', 'toilet',
+                            'kitchen_cabinet', 'kitchen_counter', 'wardrobe', 'cooker'}))
                       or (obj.placement == 'wall' and obj.type in {'tv', 'picture', 'mirror'})) and not obj.locked
                  and obj.provenance == 'photo_observed' and obj.id in sources
-                 and (obj.placement == 'wall' or sources[obj.id].appears_fixed is not True)]
+                 and (obj.placement == 'wall' or sources[obj.id].appears_fixed is not True or obj.type in {
+                     'shower', 'bathtub', 'vanity', 'sink', 'toilet', 'kitchen_cabinet', 'kitchen_counter', 'wardrobe', 'cooker'})]
         roots.sort(key=lambda obj: (-importance(sources[obj.id]),
                                    {'low': 0, 'medium': 1, 'high': 2}[sources[obj.id].confidence], obj.id))
         before_failures = spatial_failures(analysis, scene)
         previous_errors = {(e.code, e.entity_ids) for e in report.errors}
         accepted = False
         for root in roots[:MAX_CONFLICTS]:
-            group = {root.id} | {obj.id for obj in scene.objects if obj.support_object_id == root.id}
-            if any(obj.locked or obj.fixed or obj.provenance != 'photo_observed' for obj in scene.objects
+            group = reconstruction_group(analysis, scene.objects, {root.id})
+            if any(obj.locked or (obj.fixed and obj.placement == 'floor') or obj.provenance != 'photo_observed' for obj in scene.objects
                    if obj.id in group and obj.id != root.id):
                 continue
             box = object_bounds(root).footprint
@@ -81,6 +89,14 @@ def recover_local_placements(analysis, scene, report):
                 else:
                     xs = {root.position.x}
                 ys.add(min(max(root.position.y, 0.), scene.room.height_m-root.dimensions_m.height))
+            elif sources[root.id].wall_id and (root.fixed or sources[root.id].appears_fixed):
+                # Installed fixtures stay on their photographed wall. Correct
+                # tiny boundary overshoots, then search along that wall only.
+                wall = next((m.wall for m in scene.wall_mapping if m.observation_id == sources[root.id].wall_id), None)
+                if wall in {'north', 'south'}:
+                    zs = {min(max(root.position.z, hz), scene.room.length_m-hz)}
+                elif wall in {'east', 'west'}:
+                    xs = {min(max(root.position.x, hx), scene.room.width_m-hx)}
             candidates = sorted(((x, y, z) for x in xs for y in ys for z in zs),
                 key=lambda point: (hypot(point[0]-root.position.x, point[1]-root.position.y, point[2]-root.position.z), point))[:64]
             solids = {obj.id: component_bounds(obj) for obj in others if obj.type != 'rug'}

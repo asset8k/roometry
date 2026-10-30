@@ -53,6 +53,7 @@ from roometry.vision.review_validation import parse_judgment
 from roometry.vision.review_validation import validate_judgment as validate_judgment
 from roometry.vision.scale import photo_span_estimates
 from roometry.vision.schemas import ReconstructionConstraints, RoomAnalysisResponse
+from roometry.vision.functional_groups import carry_review_groups, reconstruction_group, workstation_pairs, workstation_regressions
 
 if TYPE_CHECKING:
     from roometry.vision.service import AnalysisService
@@ -71,7 +72,7 @@ def draft_from_scene(scene: RoomScene) -> SceneDraft:
 
 
 def candidate_allowed(analysis: RoomAnalysisResponse, previous: RoomScene, candidate: RoomScene) -> bool:
-    if previous.room != candidate.room or not validate_geometry(candidate).valid:
+    if previous.room != candidate.room or not validate_geometry(candidate).valid or workstation_regressions(analysis, previous, candidate):
         return False
     old_ids = {item.id for item in [*previous.objects, *previous.openings]}
     if not old_ids <= {item.id for item in [*candidate.objects, *candidate.openings]}:
@@ -157,7 +158,7 @@ def recover_appearance_groups(analysis, measurements, proposal, previous, patch,
     return retained, applied
 
 
-def patch_matches_findings(previous: SceneDraft, merged: SceneDraft, findings) -> bool:
+def patch_matches_findings(previous: SceneDraft, merged: SceneDraft, findings, *, analysis=None) -> bool:
     """A color complaint cannot authorize moving furniture or changing its size."""
     fields = {
         "missing": set(DraftObject.model_fields),
@@ -176,6 +177,7 @@ def patch_matches_findings(previous: SceneDraft, merged: SceneDraft, findings) -
     if previous.wall_assignments != merged.wall_assignments and not wall_change:
         return False
     old = {item.id: item for item in [*previous.objects, *previous.openings]}
+    pairs = workstation_pairs(analysis, previous.objects) if analysis is not None else {}
     changed_ids = set()
     for item in [*merged.objects, *merged.openings]:
         before = old.get(item.id)
@@ -196,6 +198,8 @@ def patch_matches_findings(previous: SceneDraft, merged: SceneDraft, findings) -
         # Poses of dependent items may follow their reviewed support/opening.
         if getattr(item,"support_object_id",None) in changed_ids or getattr(item,"opening_id",None) in changed_ids:
             permitted |= {"position", "rotation_y_rad", "support_surface_id"}
+        if pairs.get(item.id) in changed_ids and kinds.get(pairs[item.id], set()) & {"position", "orientation"}:
+            permitted |= {"position", "rotation_y_rad"}
         differences = {key for key,value in item.model_dump().items() if value != before.model_dump()[key]}
         if not differences <= permitted:
             return False
@@ -313,6 +317,7 @@ class VisualReviewer:
                     payload = build_appearance_repair_request(settings, analysis, proposal, constraints, judgment, selected, images)
                 else:
                     editable = {key for finding in actionable for key in finding.entity_ids}
+                    editable = reconstruction_group(analysis, previous.objects, editable)
                     while True:
                         expanded = editable | {obj.id for obj in previous.objects if obj.support_object_id in editable or obj.opening_id in editable}
                         if expanded == editable:
@@ -353,13 +358,18 @@ class VisualReviewer:
                 patch = parse_scene_draft(decoded, analysis)
                 repair_phase = "scope_check"
                 draft = merge_repair(analysis, previous, patch, problems, allow_room_appearance=room_appearance)
-                if not patch_matches_findings(previous, draft, actionable):
+                draft = carry_review_groups(analysis, proposal.scene, previous, draft, actionable)
+                if not patch_matches_findings(previous, draft, actionable, analysis=analysis):
                     raise AnalysisFailure(502, "invalid_analysis", "The correction exceeds the visual findings.", diagnostics={"reason": "repair_scope_violation"})
                 repair_phase = "assembly"
-                candidate, report, candidate_issues = await anyio.to_thread.run_sync(assemble, analysis, measurements, draft)
+                recovery_ids = reconstruction_group(analysis, draft.objects, {key for finding in actionable
+                    if finding.kind != 'color' for key in finding.entity_ids})
+                candidate, report, candidate_issues = await anyio.to_thread.run_sync(
+                    partial(assemble, recover_local=True, recovery_ids=recovery_ids), analysis, measurements, draft)
                 unresolved = []
                 if candidate is None:
-                    candidate, report, candidate_issues, unresolved = await anyio.to_thread.run_sync(partial(assemble_partial, recover_local=False), analysis, measurements, draft)
+                    candidate, report, candidate_issues, unresolved = await anyio.to_thread.run_sync(
+                        partial(assemble_partial, recover_local=True, recovery_ids=recovery_ids), analysis, measurements, draft)
                 if candidate is not None:
                     old_objects = {item.id:item for item in proposal.scene.objects}
                     for obj in candidate.objects:
@@ -379,7 +389,19 @@ class VisualReviewer:
                 progress = [finding_progress(proposal.scene, candidate, finding) for finding in actionable] if candidate is not None else []
                 repair_phase = "acceptance"
                 preserves_scene = candidate is not None and candidate_allowed(analysis, proposal.scene, candidate)
-                if changed and any(addressed for addressed,_ in progress) and not any(regressed for _,regressed in progress) and preserves_scene:
+                old_poses = {item.id:item for item in [*proposal.scene.objects, *proposal.scene.openings]}
+                new_poses = {item.id:item for item in [*candidate.objects, *candidate.openings]} if candidate else {}
+                pose_fields = {'position', 'rotation_y_rad', 'wall', 'offset_m', 'width_m', 'height_m',
+                               'sill_height_m', 'support_object_id', 'support_surface_id', 'opening_id'}
+                # An untouched unresolved finding cannot block another valid
+                # correction. A changed pose must actually meet its target;
+                # incidental local recovery is not a successful visual repair.
+                placement_progress = all(addressed or all(
+                    key in old_poses and key in new_poses and same_values(
+                        old_poses[key].model_dump(include=pose_fields), new_poses[key].model_dump(include=pose_fields))
+                    for key in finding.entity_ids)
+                    for finding, (addressed, _) in zip(actionable, progress) if finding.placement_target is not None)
+                if changed and placement_progress and any(addressed for addressed,_ in progress) and not any(regressed for _,regressed in progress) and preserves_scene:
                     result.scene, result.validation = candidate, report
                     result.fidelity = evaluate_fidelity(analysis, candidate)
                     result.issues, result.unresolved_entities = candidate_issues, unresolved

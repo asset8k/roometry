@@ -6,6 +6,7 @@ from pydantic import TypeAdapter, ValidationError
 
 from roometry.scenes.edit_schemas import EditOperation, EditRule, MoveObject
 from roometry.scenes.schemas import RoomScene
+from roometry.scenes.dependencies import support_closure
 
 _EDIT_ADAPTER: TypeAdapter[EditOperation] = TypeAdapter(EditOperation)
 
@@ -54,7 +55,8 @@ def apply_edit(scene: RoomScene, edit: EditOperation) -> RoomScene:
     if (new_x, new_z, new_rotation) == (target.position.x, target.position.z, target.rotation_y_rad):
         return base
 
-    children = [obj for obj in base.objects if obj.support_object_id == target.id]
+    descendants = support_closure(base.objects, {target.id}) - {target.id}
+    children = [obj for obj in base.objects if obj.id in descendants]
     protected = tuple(sorted(child.id for child in children if child.locked or child.fixed))
     if protected:
         raise EditRejected(
