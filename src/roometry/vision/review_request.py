@@ -54,7 +54,8 @@ the selected catalog parts. A label saying blue is not proof of blue geometry.
 Observation colors/positions are hypotheses; matching them is not an independent
 photo check. Distinguish neutral fallback colors from evidence-backed materials.
 Use concise concrete evidence per check. not_applicable placement is only for
-room finishes; not_applicable appearance is only for stylized opening markers.
+room finishes; not_applicable appearance is for stylized opening markers or
+absent objects, whose placement must still be checked independently.
 Use uncertain rather than a generic claim of agreement when evidence is weak.
 Every difference check needs a matching finding; every uncertainty belongs in
 limitations. Do not call the overall result consistent with uncertain checks.
@@ -80,8 +81,10 @@ of about 0.5 m alone do not justify moving furniture. Wrong room ends, broken lo
 groups and facing away from the intended target do. Do not invent metric photo
 coordinates. Keep evidence concise (one short sentence and the best 1–2 photo IDs).
 
-Prioritize major arrangement, orientation, scale and material colors BEFORE
-minor missing accessories. A minor absent backpack must not overshadow a wrongly
+Prioritize missing functional furniture/fixtures, then major arrangement,
+orientation and scale, then material colors, before minor accessories.
+A missing shower, sink, pantry or display must not lose its repair slot to decor.
+A minor absent backpack must not overshadow a wrongly
 positioned workstation or lost colored upholstery. If a difference cannot be
 represented with available controls/assets, set repairable=false and explain
 the limitation; do not request an unrelated substitute or a pointless repair.
@@ -155,10 +158,12 @@ Simplified curves, reflections, transparency, textures, lighting and painter-ord
 artifacts do not establish layout errors. Do not demand photorealism.
 
 Use one short concrete evidence sentence and the best 1–2 photo IDs per check.
-Only room placement and stylized opening appearance may be not_applicable.
+Only room placement, stylized opening appearance, and absent-object appearance
+may be not_applicable. An absent object still needs a placement difference check.
 Use uncertain for weak evidence, include its limitations, and never mark an
 uncertain overall result consistent. Every difference needs a matching finding.
-Prioritize major arrangement/facing/proportions and material regions before decor.
+Prioritize missing functional fixtures/furniture/displays, then arrangement,
+facing and proportions, then material regions, before decor.
 Every finding needs known entity/photo/view IDs and a visible difference.
 For repairable position/orientation name ONE subject and a placement_target
 (near/against_wall/faces) referencing an observed entity; never invent metric photo

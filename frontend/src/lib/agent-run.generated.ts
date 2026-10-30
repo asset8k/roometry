@@ -904,6 +904,7 @@ export type AssetId =
   | "kitchen_counter_island_01"
   | "kitchen_counter_sink_01"
   | "kitchen_counter_hob_01"
+  | "cooker_inset_hob_01"
   | "kitchen_cabinet_oven_01"
   | "washing_machine_stack_01"
   | "window_covering_curtain_01"
@@ -1462,6 +1463,10 @@ export type LengthM3 = number | null;
 export type HeightM4 = number | null;
 export type Axis1 = "width_m" | "length_m";
 export type WallId2 = string | null;
+/**
+ * @maxItems 3
+ */
+export type ApproximateObjectIds = [] | [string] | [string, string] | [string, string, string];
 export type PolicyVersion4 = "room-assessment-v1" | "room-assessment-v2";
 export type SceneHash = string;
 export type Status7 = "rated" | "unassessed" | "not_applicable";
@@ -2440,6 +2445,7 @@ export interface EnteredDimensions {
 export interface ReconstructionConstraints {
   wall_axis?: WallAxisAnswer | null;
   object_types?: ObjectTypes;
+  approximate_object_ids?: ApproximateObjectIds;
   facing_targets?: FacingTargets;
 }
 export interface WallAxisAnswer {

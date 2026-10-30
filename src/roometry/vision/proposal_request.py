@@ -104,6 +104,8 @@ def build_proposal_request(
         for object_type in dict.fromkeys(types):
             placement = obj.placement if obj.placement_confidence == "high" else None
             for asset in candidates(object_type, placement):
+                if not retains_features(asset, obj.model_copy(update={"type": object_type}), analysis.observations.objects):
+                    continue
                 for configuration in sorted(ASSET_REGISTRY[asset.asset_id].placements):
                     if placement is not None and placement != configuration:
                         continue

@@ -120,6 +120,10 @@ def question_for(
                 raise ValueError(
                     "This observation has no distinct identity hypothesis."
                 )
+            if any({source.type, source.alternative_type} <= group for group in (
+                {"nightstand", "side_table"}, {"bench", "ottoman"}, {"monitor", "computer"},
+            )):
+                raise ValueError("Equivalent functional categories can use a photo-backed approximate model.")
             primary = (
                 source.type.replace("_", " ") if source.type else "Unclassified item"
             )
@@ -130,8 +134,8 @@ def question_for(
                     "label": source.alternative_type.replace("_", " ").title(),
                 },
                 {
-                    "id": "leave_unknown",
-                    "label": "Neither / not sure — leave this item unresolved",
+                    "id": "use_estimate",
+                    "label": "Not sure — use the closest photo-based model",
                 },
             ]
             text = f"How should we represent {display_label(source.label)}?"
@@ -305,14 +309,16 @@ def answer_updates(state: AgentState, answer: ClarificationAnswer) -> dict[str, 
             obj = next(
                 o for o in state.analysis.observations.objects if o.id == object_id
             )
-            selected = (
-                obj.type
-                if answer.choice_id == "use_primary"
-                else obj.alternative_type
-                if answer.choice_id == "use_alternative"
-                else None
-            )
-            constraints.object_types[object_id] = selected
+            if answer.choice_id == "use_estimate":
+                constraints.approximate_object_ids = list(dict.fromkeys([
+                    *constraints.approximate_object_ids, object_id,
+                ]))
+            else:
+                # Historical leave_unknown/Neither remains an exclusion. Never
+                # reinterpret saved answers as permission to restore furniture.
+                selected = (obj.type if answer.choice_id == "use_primary"
+                            else obj.alternative_type if answer.choice_id == "use_alternative" else None)
+                constraints.object_types[object_id] = selected
         else:
             relation = next(
                 r

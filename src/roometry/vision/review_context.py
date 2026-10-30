@@ -41,7 +41,7 @@ def compact_review_context(context, image_ids):
         if item["id"] in targets and targets[item["id"]]["appearance_controls"]:
             item.pop("color", None)
             item.pop("material_colors", None)
-    # A null answer inside a constraint map records an explicit "not sure";
+    # A null category in historical constraints explicitly leaves it unresolved;
     # preserve it rather than treating it as absent metadata.
     # Targets deliberately retain null entity_id for the room-finish check and
     # null control values for materials absent from the rendered candidate.

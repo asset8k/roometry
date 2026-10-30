@@ -232,6 +232,9 @@ _assets.update(
             frozenset({"floor"}),
             fixed_by_default=True,
         ),
+        "cooker_inset_hob_01": AssetDefinition(
+            "cooker", frozenset({"surface"}), fixed_by_default=True,
+        ),
         "kitchen_cabinet_oven_01": _standard_asset("kitchen_cabinet"),
         "washing_machine_stack_01": _standard_asset("washing_machine"),
         "window_covering_curtain_01": _standard_asset("window_covering"),

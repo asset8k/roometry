@@ -347,11 +347,11 @@ def response_json(response: Response, max_bytes: int) -> object:
 
 
 def _normalize_observations(decoded: object, image_ids: list[str]) -> object:
-    """Normalize lossless representations of dimensions and evidence sets.
+    """Normalize representations and explicitly observed fitted categories.
 
     JSON Schema cannot express our model validators. Normalize only this lossless
-    representation; unknown fields, partial dictionaries and real values still
-    pass through strict Pydantic validation unchanged.
+    representations and canonical fixture names; unknown fields, partial
+    dictionaries and real values still pass through strict validation.
     """
     if not isinstance(decoded, dict):
         return decoded
@@ -370,7 +370,7 @@ def _normalize_observations(decoded: object, image_ids: list[str]) -> object:
                     continue
                 if kind == "objects":
                     from roometry.vision.features import normalize_fixture_category
-                    normalize_fixture_category(entity)
+                    normalize_fixture_category(entity, normalized.get("objects", []))
                 span = entity.get("span")
                 if isinstance(span, dict):
                     refs = span.get("source_image_ids")

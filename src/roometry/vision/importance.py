@@ -14,15 +14,12 @@ _FURNITURE = frozenset({
     "armchair", "chair", "stool", "bench", "ottoman", "dresser", "shelf",
     "tv_stand", "shoe_rack", "sideboard", "wall_shelf", "coffee_table",
     "side_table", "nightstand", "tv",
+    "monitor", "computer", "laptop", "table_lamp",
 })
 
 
 def importance(entity: Observation) -> int:
-    if isinstance(entity, OpeningObservation) or entity.appears_fixed:
-        return 0
-    if entity.type in _PRIMARY:
-        return 0
-    return 1 if entity.type in _FURNITURE else 2
+    return retention_importance(entity)
 
 
 def partial_quality(scene: RoomScene, observed: dict[str, Observation]) -> tuple[int, int, int, int]:

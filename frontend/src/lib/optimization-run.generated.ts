@@ -306,6 +306,7 @@ export type AssetId =
   | "kitchen_counter_island_01"
   | "kitchen_counter_sink_01"
   | "kitchen_counter_hob_01"
+  | "cooker_inset_hob_01"
   | "kitchen_cabinet_oven_01"
   | "washing_machine_stack_01"
   | "window_covering_curtain_01"

@@ -199,6 +199,7 @@ class ReconstructionConstraints(AnalysisModel):
 
     wall_axis: WallAxisAnswer | None = None
     object_types: Annotated[dict[Identifier, ObjectType | None], Field(max_length=3)] = Field(default_factory=dict)
+    approximate_object_ids: Annotated[list[Identifier], Field(max_length=3)] = Field(default_factory=list)
     facing_targets: Annotated[dict[Identifier, Identifier | None], Field(max_length=3)] = Field(default_factory=dict)
 
 

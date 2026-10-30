@@ -8,7 +8,7 @@ from collections import Counter
 
 from pydantic import ValidationError
 
-from roometry.vision.review_policy import appearance_value, _color_error
+from roometry.vision.review_policy import appearance_value, _color_error, finding_priority
 from roometry.vision.review_schemas import MaterialComparison, RelationComparison, ReviewFinding
 
 
@@ -47,7 +47,7 @@ def parse_comparisons(raw, target, warnings):
     return result
 
 
-def apply_comparisons(scene, targets, checks, findings, warnings):
+def apply_comparisons(scene, targets, checks, findings, warnings, *, analysis=None):
     """Derive actionable differences even if an overall model vote says match."""
     generated, remove = [], set()
     for key, check in checks.items():
@@ -133,5 +133,8 @@ def apply_comparisons(scene, targets, checks, findings, warnings):
             generated.remove(replacement)
     result = generated + result
     if len(result) > 12:
-        warnings.append("The bounded review retained its first 12 differences; further differences remain unresolved.")
+        if analysis is not None:
+            sources = {item.id: item for item in [*analysis.observations.objects, *analysis.observations.openings]}
+            result.sort(key=lambda item: finding_priority(item, sources))
+        warnings.append("The bounded review prioritized its 12 most consequential differences; further differences remain unresolved.")
     return result[:12]

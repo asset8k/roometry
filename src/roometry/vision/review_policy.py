@@ -21,6 +21,15 @@ MAX_MATERIAL_COMPARISONS = 32
 LAYOUT_KINDS = {"position", "orientation", "opening", "support", "proportion", "identity"}
 
 
+def finding_priority(finding, sources):
+    ranks = [importance(sources[key]) for key in finding.entity_ids if key in sources]
+    rank = min(ranks, default=2)
+    phase = (0 if finding.kind == "missing" and rank <= 1 else
+             1 if finding.kind in LAYOUT_KINDS and rank <= 1 else
+             2 if finding.kind == "color" else 3)
+    return phase, rank, finding.severity != "major"
+
+
 def same_values(left, right):
     """Ignore only sub-micrometer arithmetic noise, never entity identity."""
     if isinstance(left, dict) and isinstance(right, dict):
@@ -61,9 +70,10 @@ def appearance_controls(obj):
 
 def review_targets(analysis, scene):
     observed = [item for item in [*analysis.observations.openings, *analysis.observations.objects] if importance(item) <= 1]
-    observed.sort(key=lambda item: (importance(item), item.confidence == "low", item.id))
     objects = {obj.id: obj for obj in scene.objects}
     openings = {item.id: item for item in scene.openings}
+    observed.sort(key=lambda item: (importance(item), item.id in objects or item.id in openings,
+                                    item.confidence == "low", item.id))
     walls = {item.observation_id: item.wall for item in scene.wall_mapping}
     targets = []
     for source in observed[:MAX_REVIEW_ENTITIES]:
@@ -144,14 +154,11 @@ def select_findings(analysis, judgment, scene=None):
             for key in finding.entity_ids
         ):
             finding.repairable = True
-    def priority(finding):
-        ranks = [importance(sources[key]) for key in finding.entity_ids if key in sources]
-        return min(ranks, default=0)
     eligible = [(index, finding) for index, finding in enumerate(judgment.findings)
                 if finding.repairable and finding.confidence != "low" and (finding.entity_ids or finding.kind == "color")
                 # Minor unsupported accessories cannot consume the sole visual
                 # repair while the arrangement still needs checking.
-                and not (finding.kind == "missing" and finding.severity == "minor" and priority(finding) > 1)]
+                and not (finding.kind == "missing" and finding_priority(finding, sources)[1] > 1)]
     if scene is not None:
         eligible = [(index, finding) for index, finding in eligible if finding.placement_target is None or any(
             _placement_error(scene, key, finding.placement_target) > relationship_limit(scene, finding.placement_target.relation)
@@ -161,8 +168,7 @@ def select_findings(analysis, judgment, scene=None):
                 > (45 if finding.appearance_target.value.startswith('#') else 0)
             for key in ([None] if finding.appearance_target.field in {'floor_color', 'wall_color', 'floor_pattern'} else finding.entity_ids))]
     return sorted(eligible, key=lambda item: (
-        priority(item[1]), item[1].severity != "major",
-        0 if item[1].kind in LAYOUT_KINDS else 1 if item[1].kind == "color" else 2,
+        finding_priority(item[1], sources),
         item[0],
     ))[:MAX_REPAIR_FINDINGS]
 

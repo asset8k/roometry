@@ -61,6 +61,18 @@ def apply_constraints(analysis: RoomAnalysisResponse, constraints: Reconstructio
             source.notes = [f"User confirmed category: {selected}. Earlier category hypotheses must not override this answer.", *source.notes][:MAX_NOTES]
         source.type = selected
         source.alternative_type = None
+    if len(set(constraints.approximate_object_ids)) != len(constraints.approximate_object_ids):
+        raise ValueError("Approximate identity choices must be unique.")
+    for object_id in constraints.approximate_object_ids:
+        source = by_id.get(object_id)
+        if source is None or object_id in constraints.object_types:
+            raise ValueError("Approximation must name an observed item without a confirmed or excluded category.")
+        if source.type is None and source.alternative_type is not None:
+            source.type, source.alternative_type = source.alternative_type, None
+        source.notes = [
+            "User requested the closest photo-based model; category and dimensions remain unconfirmed hypotheses.",
+            *source.notes,
+        ][:MAX_NOTES]
     for object_id, target in constraints.facing_targets.items():
         relations = [r for r in effective.observations.relationships if r.kind == "faces" and r.subject_id == object_id]
         if len(relations) != 1 or relations[0].alternative_target_id is None or target not in {relations[0].target_id, relations[0].alternative_target_id, None}:
@@ -72,4 +84,13 @@ def apply_constraints(analysis: RoomAnalysisResponse, constraints: Reconstructio
             relation.target_id = target
             relation.alternative_target_id = None
             relation.confidence = "high"
+    # Also canonicalize cached pre-upgrade observations, after respecting any
+    # explicit category choice. Stored source evidence is never rewritten.
+    from roometry.vision.features import normalize_fixture_category
+    for source in effective.observations.objects:
+        if source.id not in constraints.object_types:
+            raw = source.model_dump()
+            normalize_fixture_category(raw, effective.observations.objects)
+            for field in ("type", "notes"):
+                setattr(source, field, raw[field])
     return RoomAnalysisResponse.model_validate(effective.model_dump())

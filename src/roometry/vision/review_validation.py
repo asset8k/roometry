@@ -13,7 +13,7 @@ from pydantic import Field, TypeAdapter, ValidationError
 from roometry.scenes.schemas import Note, SceneModel
 from roometry.vision.context_budget import photo_references
 from roometry.vision.review_comparisons import apply_comparisons, parse_comparisons
-from roometry.vision.review_policy import appearance_controls, review_targets
+from roometry.vision.review_policy import appearance_controls, review_targets, finding_priority
 from roometry.vision.review_render import VIEW_IDS
 from roometry.vision.review_schemas import ReviewCheck, ReviewFinding, ReviewJudgment
 
@@ -82,7 +82,9 @@ def validate_finding_target(analysis, finding, scene):
 def validate_check(check, target):
     if len(set(check.source_image_ids)) != len(check.source_image_ids) or not set(check.source_image_ids) <= set(target["source_image_ids"]):
         raise ValueError("Each object check requires its own recorded photo evidence.")
-    if (check.placement == "not_applicable") != (check.entity_id is None) or (check.appearance == "not_applicable" and target["kind"] != "opening"):
+    if (check.placement == "not_applicable") != (check.entity_id is None) or (
+        check.appearance == "not_applicable" and target["kind"] != "opening" and target.get("retained", True)
+    ):
         raise ValueError("Major furniture needs placement and appearance checks.")
     if check.entity_id is not None and not target["retained"] and (
         check.placement == "consistent" or check.appearance == "consistent"
@@ -138,13 +140,30 @@ def parse_judgment(decoded, analysis, scene, *, require_comparisons=False):
         except (ValidationError, ValueError):
             warnings.append(f"Review finding {index} was skipped because its data or photo evidence was invalid.")
             continue
-        try:
-            validate_finding_target(analysis, finding, scene)
-        except ValueError:
-            finding.repairable = False
-            finding.placement_target = finding.appearance_target = None
-            warnings.append(f"Review finding {index} is retained as a limitation; its correction target was unsupported.")
-        findings.append(finding)
+        variants = [finding]
+        if (finding.repairable and finding.kind in {"position", "orientation"}
+            and finding.placement_target is not None and len(finding.entity_ids) > 1):
+            sources = {item.id: item for item in analysis.observations.objects}
+            variants = []
+            for key in finding.entity_ids:
+                source = sources.get(key)
+                refs = [ref for ref in finding.source_image_ids if source and ref in source.source_image_ids]
+                if refs:
+                    variants.append(finding.model_copy(update={"entity_ids": [key], "source_image_ids": refs}, deep=True))
+            warnings.append("A grouped placement finding was split into individually checked photo-backed subjects.")
+        for variant in variants:
+            try:
+                validate_finding_target(analysis, variant, scene)
+            except ValueError:
+                variant.repairable = False
+                variant.placement_target = variant.appearance_target = None
+                warnings.append(f"Review finding {index} is retained as a limitation; its correction target was unsupported.")
+            findings.append(variant)
+    if len(findings) > 12:
+        sources = {item.id: item for item in [*analysis.observations.objects, *analysis.observations.openings]}
+        findings.sort(key=lambda item: finding_priority(item, sources))
+        findings = findings[:12]
+        warnings.append("Expanded findings exceeded the review limit; essential reconstruction differences were prioritized.")
 
     # Quarantine all conflicting duplicates, rather than selecting an arbitrary
     # first/last check. JSON objects with duplicate keys are rejected upstream.
@@ -181,7 +200,7 @@ def parse_judgment(decoded, analysis, scene, *, require_comparisons=False):
             warnings.append("An omitted or invalid item check was marked uncertain; other valid checks were retained.")
 
     if require_comparisons:
-        findings = apply_comparisons(scene, expected, checks, findings, warnings)
+        findings = apply_comparisons(scene, expected, checks, findings, warnings, analysis=analysis)
 
     # A valid subject finding still needs an agreeing subject check before it
     # can spend a repair call. Disagreement stays visible, never silently fixed.

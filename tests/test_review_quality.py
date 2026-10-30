@@ -160,7 +160,8 @@ async def test_uncertain_placement_keeps_a_provisional_scene_without_manufacturi
 def test_minor_missing_accessory_does_not_spend_the_only_visual_repair():
     analysis=source()
     accessory=analysis.observations.objects[2]
-    assert accessory.type=="computer"
+    accessory.type, accessory.label = "household_accessory", "Small decorative item"
+    accessory.appears_fixed = False
     absent=finding("missing",accessory.id)
     absent["severity"]="minor"
     review=ReviewJudgment.model_validate({"verdict":"needs_correction","summary":"An accessory is absent.","limitations":[],"findings":[absent]})

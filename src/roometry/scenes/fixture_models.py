@@ -328,6 +328,15 @@ def hob_counter() -> Model:
     return p, []
 
 
+def inset_hob() -> Model:
+    # Thin component above the host worktop. The underside meets its real
+    # support plane; no cabinet/oven body duplicates the observed host.
+    p = [part("hob_base", (.9, .16, .88), (0, .08, 0), "primary_dark", radius=.01),
+         part("hob_panel", (.98, .24, .98), (0, .28, 0), "primary", radius=.015)]
+    p += burners(.78, width=.27)
+    return p, []
+
+
 def hood() -> Model:
     p = frame("rim", 0.03, 0.06, hole_x=0.76, hole_z=0.76, material="primary_metal")
     p += [
@@ -933,6 +942,11 @@ def register(
     )
 
 
+register(
+    "cooker", "Inset four-ring cooktop without oven, supported by a worktop",
+    (.6, .035, .52), "#202225", "kitchen", inset_hob(),
+    asset_id="cooker_inset_hob_01",
+)
 register(
     "kitchen_cabinet",
     "Base kitchen cabinet",
