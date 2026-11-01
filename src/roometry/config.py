@@ -71,6 +71,24 @@ class Settings(BaseSettings):
         return self
 
     project_storage_dir: Path = Path(__file__).resolve().parents[2] / ".local" / "project-images"
+    project_storage_backend: Literal["local", "supabase"] = "local"
+    supabase_url: str | None = None
+    supabase_storage_secret_key: SecretStr | None = None
+    supabase_storage_bucket: str = "room-photos"
+
+    @model_validator(mode="after")
+    def storage_configuration(self):
+        if self.project_storage_backend == "supabase":
+            from urllib.parse import urlsplit
+            url = urlsplit(self.supabase_url or "")
+            if url.scheme != "https" or not url.hostname or url.username or url.password or url.query or url.fragment or url.path not in ("", "/"):
+                raise ValueError("Supabase Storage requires an HTTPS project origin.")
+            if not self.supabase_storage_secret_key or not self.supabase_storage_secret_key.get_secret_value().strip():
+                raise ValueError("Supabase Storage requires a server-side secret key.")
+            import re
+            if not re.fullmatch(r"[a-z0-9][a-z0-9._-]{0,62}", self.supabase_storage_bucket):
+                raise ValueError("Invalid Supabase Storage bucket name.")
+        return self
 
     # Limits apply to original uploads and normalized private derivatives.
     max_images_per_request: int = Field(default=MAX_IMAGES, ge=1, le=MAX_IMAGES)

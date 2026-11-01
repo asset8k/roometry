@@ -40,7 +40,7 @@ from roometry.optimization.router import router as optimization_router
 from roometry.optimization.runs import OptimizationRuns
 from roometry.projects.router import router as projects_router
 from roometry.projects.service import ProjectService
-from roometry.projects.storage import ProjectPhotos
+from roometry.projects.storage import ProjectPhotos, SupabaseProjectPhotos
 from roometry.quota.router import router as quota_router
 from roometry.quota.service import NetworkScope, QuotaFailure, Quotas
 from roometry.scenes.router import router as scenes_router
@@ -73,7 +73,10 @@ def create_app(
     service = UploadService(
         settings.public_upload_limits(), LocalInputStorage(settings.upload_storage_dir)
     )
-    registered = RegisteredRuns(database, ProjectPhotos(settings.project_storage_dir), service.storage)
+    photos = (SupabaseProjectPhotos(settings.supabase_url, settings.supabase_storage_bucket,
+                                    settings.supabase_storage_secret_key.get_secret_value())
+              if settings.project_storage_backend == "supabase" else ProjectPhotos(settings.project_storage_dir))
+    registered = RegisteredRuns(database, photos, service.storage)
     workspace_inputs = WorkspaceInputs(registered)
     analyzer = PhotoAnalyzer(settings, analysis_client)
     analysis_service = AnalysisService(settings, workspace_inputs, analyzer)
@@ -150,7 +153,7 @@ def create_app(
     application.state.auth_service = AuthService(database, settings)
     application.state.auth_hash_limiter = anyio.CapacityLimiter(2)
     application.state.auth_attempts = AuthAttempts(settings.auth_attempts_per_minute)
-    application.state.project_service = ProjectService(database, ProjectPhotos(settings.project_storage_dir), workspace_inputs, agent_runs, optimization_runs)
+    application.state.project_service = ProjectService(database, photos, workspace_inputs, agent_runs, optimization_runs)
     application.state.upload_service = service
     application.state.analysis_service = analysis_service
     application.state.agent_runs = agent_runs
