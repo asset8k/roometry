@@ -41,7 +41,7 @@ export function createProgressObserver(factory?: (url: string, options: EventSou
     const clear = () => { if (watchdog) clearTimeout(watchdog); watchdog = undefined }
     const stop = () => { stopped = true; clear(); source?.close() }
     const fallback = () => { if (!stopped) { stop(); hooks.mode('polling') } }
-    const alive = () => { clear(); watchdog = setTimeout(fallback, 25_000) }
+    const alive = () => { errors = 0; clear(); watchdog = setTimeout(fallback, 25_000) }
     hooks.mode('connecting')
     try { source = create(`${baseUrl}${path}`, { withCredentials: true }) }
     catch { fallback(); return stop }
@@ -65,7 +65,7 @@ export function createProgressObserver(factory?: (url: string, options: EventSou
     source.onerror = () => {
       if (stopped) return
       if (++errors >= 3) fallback()
-      else { hooks.mode('reconnecting'); alive() }
+      else { hooks.mode('reconnecting'); clear(); watchdog = setTimeout(fallback, 25_000) }
     }
     alive()
     return stop

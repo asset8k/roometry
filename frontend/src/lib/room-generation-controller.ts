@@ -57,6 +57,7 @@ export class RoomGenerationController {
   private streamId: string | null = null
   private stopWatching: (() => void) | null = null
   private refreshQueued = false
+  private readFailures = 0
   constructor(private inputs: RoomInputController, private client: AgentClient = agentClient, private now = Date.now, private pollMs = 1200, private observe: ProgressObserver | undefined = client === agentClient ? observeProgress : undefined) {}
   getSnapshot = () => this.state
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener) } }
@@ -105,6 +106,7 @@ export class RoomGenerationController {
     checkRunInput(run, this.input, this.state.run?.run_id)
     if (!newerRun(run, this.state.run)) return
     if (this.pendingAnswer && run.submitted_answers?.[this.pendingAnswer.question_id]) this.pendingAnswer = null
+    this.readFailures = 0
     const expired = Date.parse(run.expires_at) <= this.now()
     if (expired || (!activeRun(run) && run.status !== 'awaiting_answer')) this.pendingAnswer = null
     const waitingRetry = Boolean(this.pendingAnswer) && run.status === 'awaiting_answer' && this.state.recovery
@@ -148,9 +150,17 @@ export class RoomGenerationController {
   }
   connect = () => {
     this.connected = true
+    const resume = () => { if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return; if (this.locked()) { this.refreshQueued = true; void this.poll() } }
+    if (typeof window !== 'undefined') window.addEventListener('focus', resume)
+    if (typeof document !== 'undefined') document.addEventListener('visibilitychange', resume)
     const unsubscribe = this.inputs.subscribe(this.sync)
     this.schedule()
-    return () => { unsubscribe(); this.connected = false; this.releaseRun() }
+    return () => {
+      unsubscribe()
+      if (typeof window !== 'undefined') window.removeEventListener('focus', resume)
+      if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', resume)
+      this.connected = false; this.releaseRun()
+    }
   }
   private async mutate(operation: (signal: AbortSignal) => Promise<AgentState>) {
     const revision = this.revision, controller = new AbortController()
@@ -161,7 +171,9 @@ export class RoomGenerationController {
     } catch (error) {
       if (revision !== this.revision || controller.signal.aborted || this.mutation !== controller) return
       if (this.state.run && !activeRun(this.state.run) && !this.pendingAnswer) return
-      this.failure(error)
+      if (this.state.run && !this.pendingAnswer && (!(error instanceof AgentRunError) || error.status >= 500 || error.status === 0)) {
+        this.refreshQueued = true; void this.poll()
+      } else this.failure(error)
     } finally {
       this.requests.delete(controller)
       if (this.mutation === controller) this.mutation = null
@@ -206,7 +218,14 @@ export class RoomGenerationController {
     } catch (error) {
       if (revision !== this.revision || controller.signal.aborted) return
       if (error instanceof AgentRunError && error.status === 404 && !this.state.run && this.mutation) this.schedule()
-      else { this.stopTimer(); this.failure(error) }
+      else {
+        const transient = !(error instanceof AgentRunError) || error.status === 0 || error.status >= 500
+        if (!transient || ++this.readFailures >= 3) this.failure(error)
+        if (transient && this.connected) {
+          this.stopTimer()
+          this.timer = setTimeout(() => { void this.poll() }, Math.min(10_000, this.pollMs * this.readFailures))
+        }
+      }
     } finally {
       this.requests.delete(controller)
       if (this.reading === controller) this.reading = null

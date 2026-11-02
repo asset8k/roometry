@@ -32,6 +32,7 @@ export class OptimizationController {
   private streamId: string | null = null
   private stopWatching: (() => void) | null = null
   private refreshQueued = false
+  private readFailures = 0
   private source: AgentState
   private context: StartOptimizationRequest['context'] = null
   private instruction: string | null = null
@@ -66,8 +67,13 @@ export class OptimizationController {
   connect = () => {
     this.connected = true
     this.schedule()
+    const resume = () => { if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return; if (this.locked()) { this.refreshQueued = true; void this.poll() } }
+    if (typeof window !== 'undefined') window.addEventListener('focus', resume)
+    if (typeof document !== 'undefined') document.addEventListener('visibilitychange', resume)
     const timer = setTimeout(() => { this.stopStream(); this.stopPolling(); this.reading?.abort(); this.reading = null; this.active?.abort(); this.active = null; this.update({ phase: 'expired', recovery: false, error: 'This temporary reconstruction has expired. Generate again to request improvements.' }) }, Math.max(0, Date.parse(this.source.expires_at) - this.now()))
     return () => {
+      if (typeof window !== 'undefined') window.removeEventListener('focus', resume)
+      if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', resume)
       clearTimeout(timer); this.connected = false; this.stopStream(); this.stopPolling(); this.reading?.abort(); this.reading = null
       this.active?.abort(); this.active = null
       if (this.source.persistence !== 'account' && this.state.result && (this.state.result.status === 'running' || (this.executionRequested && this.state.result.status === 'prepared'))) {
@@ -134,6 +140,7 @@ export class OptimizationController {
     if (!this.pending) return
     checkOptimization(result, this.source, this.pending)
     if (Date.parse(result.expires_at) <= this.now()) throw new AgentRunError('This temporary improvement request has expired.', 404)
+    this.readFailures = 0
     const previous = this.state.result
     const terminal = !['prepared', 'running'].includes(result.status)
     if (previous && previous.run_id !== result.run_id) throw new AgentRunError('The service returned a different improvement request.')
@@ -171,7 +178,12 @@ export class OptimizationController {
   }
   private executionFailure(error: unknown) {
     if (this.state.result && !['prepared', 'running'].includes(this.state.result.status)) return
-    this.stopPolling()
+    const transient = !(error instanceof AgentRunError) || error.status === 0 || error.status >= 500
+    if (transient && this.connected) {
+      this.stopPolling()
+      this.pollTimer = setTimeout(() => { void this.poll() }, Math.min(10_000, 1200 * ++this.readFailures))
+      if (this.readFailures < 3) return
+    } else this.stopPolling()
     if (error instanceof AgentRunError && ['daily_session_limit', 'session_action_limit', 'guest_network_limit'].includes(error.code)) {
       this.stopStream(); this.executionRequested = false; this.pending = null
       this.update({ phase: 'error', result: null, recovery: false, error: error.message })

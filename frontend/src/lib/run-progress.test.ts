@@ -44,6 +44,12 @@ describe('read-only public SSE transport',()=>{
   expect(hooks.mode).toHaveBeenLastCalledWith('polling')
   source.emit('progress',event(9));expect(hooks.event).not.toHaveBeenCalled()
  })
+ it('resets the failure count after a healthy connection',()=>{
+  const {source,hooks}=setup()
+  for(let i=0;i<4;i++){source.onerror?.();source.onopen?.();source.emit('heartbeat','{}')}
+  expect(source.close).not.toHaveBeenCalled()
+  expect(hooks.mode).toHaveBeenLastCalledWith('streaming')
+ })
  it('detects a silent connection, but keepalives extend the observation window',()=>{
   vi.useFakeTimers();const {source,hooks}=setup()
   vi.advanceTimersByTime(20_000);source.emit('heartbeat','{}');vi.advanceTimersByTime(20_000)
