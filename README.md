@@ -4,7 +4,7 @@ An AI app that reconstructs a room from photos as an approximate, editable 3D sc
 
 **Live:** [roometry-ai.vercel.app](https://roometry-ai.vercel.app) · **Backend:** [roometry.fastapicloud.dev](https://roometry.fastapicloud.dev)
 
-The frontend and API are deployed on Vercel and FastAPI Cloud. Supabase provides PostgreSQL and private saved-photo storage. Account creation and Explore connectivity have been checked; the synthetic example-room import has completed and full end-to-end verification is in progress.
+The frontend and API are deployed on Vercel and FastAPI Cloud. Supabase provides PostgreSQL and private saved-photo storage. Account creation and Explore connectivity have been checked; all 25 synthetic examples and public previews have passed a read-only production check. Generation and SSE verification remain in progress.
 
 ## Run locally
 
