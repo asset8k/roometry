@@ -200,15 +200,15 @@ async def prepare_input(request: Request, response: Response) -> PreparedRoomInp
         # with the same name and different paths.
         response.delete_cookie(
             COOKIE_NAME, path="/api/rooms", httponly=True,
-            secure=settings.app_environment == "production", samesite="lax",
+            secure=settings.auth_cookie_secure, samesite=settings.auth_cookie_samesite,
         )
         response.set_cookie(
             COOKIE_NAME,
             token,
             max_age=service.limits.ttl_seconds,
             httponly=True,
-            secure=settings.app_environment == "production",
-            samesite="lax",
+            secure=settings.auth_cookie_secure,
+            samesite=settings.auth_cookie_samesite,
             path="/api",
         )
         response.headers["Cache-Control"] = "no-store"

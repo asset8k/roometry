@@ -283,14 +283,16 @@ async def test_parser_closes_files_after_failure(client, photo, monkeypatch):
     assert all(handle.closed for handle in handles)
 
 
-async def test_secure_cookie_and_credentialed_cors(tmp_path, photo):
-    app = create_app(Settings(_env_file=None, app_environment="production", generation_quota_enabled=False, cors_origins=["https://frontend.example"],
+@pytest.mark.parametrize("same_site", ["lax", "none"])
+async def test_secure_cookie_and_credentialed_cors(tmp_path, photo, same_site):
+    app = create_app(Settings(_env_file=None, app_environment="production", generation_quota_enabled=False, auth_cookie_secure=True, auth_cookie_samesite=same_site, cors_origins=["https://frontend.example"],
                               upload_storage_dir=tmp_path / "secure"))
     async with app.router.lifespan_context(app):
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="https://api.example") as client:
             response = await client.post("/api/rooms/inputs", files=batch(photo), headers={"origin": "https://frontend.example"})
             assert response.status_code == 201
             assert "Secure" in response.headers["set-cookie"]
+            assert f"SameSite={same_site}" in response.headers["set-cookie"]
             assert response.headers["access-control-allow-credentials"] == "true"
             assert (await client.delete(f'/api/rooms/inputs/{response.json()["input_id"]}', headers={"origin": "https://frontend.example"})).status_code == 204
 
