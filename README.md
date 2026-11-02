@@ -1,6 +1,10 @@
 # Roometry
 
-An AI app that reconstructs a room from photos as an approximate, editable 3D scene and suggests layout improvements. Currently in development.
+An AI app that reconstructs a room from photos as an approximate, editable 3D scene and suggests layout improvements.
+
+**Live:** [roometry-ai.vercel.app](https://roometry-ai.vercel.app) · **Backend:** [roometry.fastapicloud.dev](https://roometry.fastapicloud.dev)
+
+The frontend and API are deployed on Vercel and FastAPI Cloud. Supabase provides PostgreSQL and private saved-photo storage. Account creation and Explore connectivity have been checked; migration of synthetic examples and full end-to-end verification are in progress.
 
 ## Run locally
 
