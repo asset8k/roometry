@@ -34,6 +34,7 @@
     "room_type": "bedroom",
     "room_type_confidence": "high",
     "room_shape": "rectangular",
+    "room_shape_detail": null,
     "floor_visible": true,
     "ceiling_visible": null,
     "estimated_dimensions": null,

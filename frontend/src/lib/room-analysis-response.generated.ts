@@ -92,6 +92,10 @@ export type RoomType1 =
   | null;
 export type RoomTypeConfidence = ("low" | "medium" | "high") | null;
 export type RoomShape = "rectangular" | "non_rectangular" | "unknown";
+/**
+ * Basis of the shape assessment: main_footprint for a visible floor-plan change, minor_recess for a window/door niche within an otherwise rectangular main area, uncertain when the main footprint is not established.
+ */
+export type RoomShapeDetail = ("main_footprint" | "minor_recess" | "uncertain") | null;
 export type FloorVisible = boolean | null;
 export type CeilingVisible = boolean | null;
 export type WidthM1 = number | null;
@@ -589,6 +593,7 @@ export interface RoomObservations {
   room_type: RoomType1;
   room_type_confidence: RoomTypeConfidence;
   room_shape: RoomShape;
+  room_shape_detail?: RoomShapeDetail;
   floor_visible: FloorVisible;
   ceiling_visible: CeilingVisible;
   estimated_dimensions: EstimatedRoomDimensions | null;

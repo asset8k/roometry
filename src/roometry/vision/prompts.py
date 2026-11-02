@@ -157,8 +157,16 @@ a visibly black-and-blue chair to all black. Never add an accent that is not see
 Observe floor/wall colors and floor_pattern (wood, tile or plain) in finishes,
 with source_image_ids and evidence. Patterned carpet is plain, not wood planks.
 Exact wallpaper/texture reproduction is outside this approximation.
-Square rooms are rectangular. Report non_rectangular/unknown honestly rather than
-forcing a rectangular room. Mark missing viewpoints, uncertain wall relationships,
+Classify room_shape from the MAIN usable floor footprint, not furniture edges,
+wall finishes, a wardrobe, a window sill, or a window/door recess. Square rooms
+are rectangular. A shallow window recess or niche in an otherwise rectangular
+room is rectangular with room_shape_detail=minor_recess; disclose its omitted
+geometry in warnings. Do not let a partly occluded window recess establish an
+L-shaped room. Use non_rectangular with room_shape_detail=main_footprint only
+when visible structural boundaries establish a substantial L/U shape, angled
+main walls, or another non-rectangular main floor plan. When the footprint is
+not established use unknown with room_shape_detail=uncertain. Never invent a
+rectangular footprint for a visibly non-rectangular main area. Mark missing viewpoints, uncertain wall relationships,
 occlusions, and missing measurements in unknowns. State necessary assumptions and
 limitations briefly. Do not claim schema-valid observations passed geometry checks.
 """

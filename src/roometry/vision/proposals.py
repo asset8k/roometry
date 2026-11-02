@@ -107,7 +107,7 @@ def issue(code: str, message: str, *ids: str) -> ProposalIssue:
 def preflight(analysis: RoomAnalysisResponse) -> list[ProposalIssue]:
     obs = analysis.observations
     issues = []
-    if obs.room_shape == "non_rectangular":
+    if obs.room_shape == "non_rectangular" and obs.room_shape_detail != "minor_recess":
         issues.append(
             issue(
                 "unsupported_room_shape",
@@ -329,6 +329,10 @@ def assemble(
     if measurements.estimated:
         assumptions.append(
             "Unconfirmed room dimensions: " + ", ".join(measurements.estimated) + "."
+        )
+    if obs.room_shape_detail == "minor_recess":
+        assumptions.append(
+            "The main room is approximated as rectangular; the observed window or door recess is not modeled. Positions near that recess remain approximate."
         )
     if obs.room_shape == "unknown":
         assumptions.append(

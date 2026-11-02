@@ -337,3 +337,20 @@ async def test_repair_cannot_trade_valid_unaffected_chairs_for_a_restored_sofa(h
     assert [obj['id'] for obj in result['scene']['objects']] == ['chair_0', 'chair_1']
     assert any(item['code'] == 'repair_failed' for item in result['issues'])
     assert {item['entity_id'] for item in result['unresolved_entities']} == {'sofa'}
+
+
+def test_minor_window_recess_does_not_block_rectangular_main_room():
+    analysis, data = source(), draft_data()
+    analysis.observations.room_shape = "non_rectangular"
+    analysis.observations.room_shape_detail = "minor_recess"
+    scene, _, issues, _ = select(analysis, data)
+    assert scene is not None, issues
+
+
+def test_non_rectangular_main_footprint_remains_blocked():
+    analysis, data = source(), draft_data()
+    analysis.observations.room_shape = "non_rectangular"
+    analysis.observations.room_shape_detail = "main_footprint"
+    scene, _, issues, _ = select(analysis, data)
+    assert scene is None
+    assert any(item.code == "unsupported_room_shape" for item in issues)

@@ -209,6 +209,10 @@ class RoomObservations(AnalysisModel):
     room_type: RoomType | None
     room_type_confidence: Confidence | None
     room_shape: Literal["rectangular", "non_rectangular", "unknown"]
+    room_shape_detail: Literal["main_footprint", "minor_recess", "uncertain"] | None = Field(
+        default=None,
+        description="Basis of the shape assessment: main_footprint for a visible floor-plan change, minor_recess for a window/door niche within an otherwise rectangular main area, uncertain when the main footprint is not established.",
+    )
     floor_visible: bool | None
     ceiling_visible: bool | None
     estimated_dimensions: EstimatedRoomDimensions | None
