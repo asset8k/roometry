@@ -31,14 +31,11 @@ describe('room input API client', () => {
     expect(form.getAll('images').map(value => (value as File).name)).toEqual(['room.png', 'phone.heic'])
     expect(JSON.parse(form.get('options') as string)).toEqual(options)
   })
-  it('recovers one dropped upload through readiness without any generation call', async () => {
-    const files = [photo()]
-    const fetcher = vi.fn().mockRejectedValueOnce(new TypeError('Failed to fetch'))
-      .mockResolvedValueOnce(new Response('{"status":"ok"}'))
-      .mockResolvedValueOnce(new Response(JSON.stringify(prepared(files)), {status:201}))
+  it('never automatically retries an upload network failure', async () => {
+    const fetcher = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'))
     vi.stubGlobal('fetch', fetcher)
-    expect((await uploadRoomInput(files, {}, signal())).images).toHaveLength(1)
-    expect(fetcher.mock.calls.map(call => call[0])).toEqual(['/api/rooms/inputs', '/api/health', '/api/rooms/inputs'])
+    await expect(uploadRoomInput([photo()], {}, signal())).rejects.toThrow()
+    expect(fetcher).toHaveBeenCalledTimes(1)
   })
   it('does not retry an upload cancelled by the user', async () => {
     const controller = new AbortController()

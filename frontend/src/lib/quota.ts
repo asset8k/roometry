@@ -1,3 +1,4 @@
+import { safeRead } from './safe-read'
 import { useEffect, useState } from 'react'
 
 export type Allowance = { enabled: boolean; sessions_limit: number; sessions_remaining: number | null; actions_limit: number; actions_remaining: number | null; resets_at: string }
@@ -22,7 +23,7 @@ export function useAllowance(runId?: string, revision?: unknown) {
       const request = ++sequence
       try {
         const base = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '')
-        const response = await fetch(`${base}/usage${runId ? `?run_id=${encodeURIComponent(runId)}` : ''}`, { credentials: 'include', cache: 'no-store', signal: AbortSignal.any([abort.signal, AbortSignal.timeout(10000)]) })
+        const response = await safeRead(`${base}/usage${runId ? `?run_id=${encodeURIComponent(runId)}` : ''}`, { credentials: 'include', cache: 'no-store', signal: abort.signal })
         if (!response.ok) return
         const value = parseAllowance(await response.json())
         if (active && request === sequence) {

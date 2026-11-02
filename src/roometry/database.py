@@ -1,6 +1,6 @@
 """A lazy SQLAlchemy engine; schema changes are explicit Alembic migrations."""
 
-from sqlalchemy import MetaData, create_engine, event
+from sqlalchemy import MetaData, create_engine, event, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -38,7 +38,10 @@ class Database:
             if url.database in (None, "", ":memory:"):
                 options["poolclass"] = StaticPool
         else:
-            options["connect_args"] = {"connect_timeout": 5}
+            options["pool_timeout"] = 5
+            options["connect_args"] = {"connect_timeout": 5, "keepalives": 1,
+                                       "keepalives_idle": 5, "keepalives_interval": 2,
+                                       "keepalives_count": 2, "tcp_user_timeout": 10000}
         self.engine = create_engine(url, **options)
         if url.get_backend_name() == "sqlite":
 
@@ -47,6 +50,15 @@ class Database:
                 connection.execute("PRAGMA foreign_keys=ON")
 
         self.sessions = sessionmaker(self.engine, expire_on_commit=False)
+
+    def keepalive(self):
+        with self.engine.connect() as connection:
+            with connection.begin():
+                if self.engine.dialect.name == "postgresql":
+                    connection.execute(text("SET LOCAL statement_timeout = '3000ms'"))
+                    connection.execute(text("SET TRANSACTION READ ONLY"))
+                if connection.execute(text("SELECT 1")).scalar_one() != 1:
+                    raise RuntimeError("Database probe failed")
 
     def close(self):
         self.engine.dispose()

@@ -1,3 +1,4 @@
+import { safeRead } from './safe-read'
 import { parseLayoutScore } from './layout-scoring'
 import type { ScoreLayoutRequest } from './layout-scoring'
 import type { HealthResponse } from './types'
@@ -11,8 +12,8 @@ import { parseInputLimits, parsePreparedInput, parseUploadIssues, RoomInputError
 const baseUrl = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '')
 
 export async function fetchHealth(signal: AbortSignal): Promise<HealthResponse> {
-  const response = await fetch(`${baseUrl}/health`, {
-    signal: AbortSignal.any([signal, AbortSignal.timeout(5000)]),
+  const response = await safeRead(`${baseUrl}/health`, {
+    signal,
     cache: 'no-store',
   })
 
@@ -56,8 +57,8 @@ async function uploadResponse(response: Response): Promise<unknown> {
 }
 
 export async function fetchUploadLimits(signal: AbortSignal) {
-  const response = await fetch(`${baseUrl}/rooms/input-limits`, {
-    credentials: 'include', cache: 'no-store', signal: AbortSignal.any([signal, AbortSignal.timeout(10000)]),
+  const response = await safeRead(`${baseUrl}/rooms/input-limits`, {
+    credentials: 'include', cache: 'no-store', signal,
   })
   return parseInputLimits(await uploadResponse(response))
 }
@@ -66,30 +67,15 @@ export async function uploadRoomInput(files: readonly File[], options: RoomInput
   const body = new FormData()
   for (const file of files) body.append('images', file, file.name)
   body.append('options', JSON.stringify(options))
-  const send = () => fetch(`${baseUrl}/rooms/inputs`, {
+  const response = await fetch(`${baseUrl}/rooms/inputs`, {
     method: 'POST', body, credentials: 'include', cache: 'no-store',
     signal: AbortSignal.any([signal, AbortSignal.timeout(120000)]),
   })
-  // A cold host/gateway can drop the first upload. Retry once, after a cheap
-  // readiness request; this endpoint only prepares photos, never runs models.
-  let response: Response
-  try {
-    response = await send()
-    if (![502, 503, 504].includes(response.status)) return await preparedResponse(response)
-  } catch (error) {
-    if (signal.aborted || error instanceof RoomInputError || !(error instanceof TypeError || (error instanceof DOMException && error.name === 'TimeoutError'))) throw error
+  const result = parsePreparedInput(await uploadResponse(response))
+  if (result.images.length !== files.length || result.images.some((image, index) => image.original_bytes !== files[index].size)) {
+    throw new RoomInputError('The upload response does not match your selected photos. Please try again.', [], true, true)
   }
-  await fetch(`${baseUrl}/health`, { cache: 'no-store', signal: AbortSignal.any([signal, AbortSignal.timeout(60000)]) })
-  if (signal.aborted) throw signal.reason
-  return preparedResponse(await send())
-
-  async function preparedResponse(response: Response) {
-    const result = parsePreparedInput(await uploadResponse(response))
-    if (result.images.length !== files.length || result.images.some((image, index) => image.original_bytes !== files[index].size)) {
-      throw new RoomInputError('The upload response does not match your selected photos. Please try again.', [], true, true)
-    }
-    return result
-  }
+  return result
 }
 
 export async function discardRoomInput(inputId: string, signal: AbortSignal): Promise<void> {

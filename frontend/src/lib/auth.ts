@@ -1,3 +1,4 @@
+import { safeRead } from './safe-read'
 export interface AccountUser { id: string; username: string }
 export interface AccountSession { user: AccountUser | null; expires_at: string | null }
 export class AuthError extends Error {
@@ -17,8 +18,8 @@ export function parseSession(value: unknown): AccountSession {
   return { user: { id: user.id, username: user.username }, expires_at: data.expires_at }
 }
 async function request(path: string, signal: AbortSignal, body?: object): Promise<AccountSession | null> {
-  const response = await fetch(`${baseUrl}/auth/${path}`, { method: body ? 'POST' : 'GET', credentials: 'include', cache: 'no-store',
-    signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]), ...(body ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}) })
+  const response = await (body ? fetch : safeRead)(`${baseUrl}/auth/${path}`, { method: body ? 'POST' : 'GET', credentials: 'include', cache: 'no-store',
+    signal: body ? AbortSignal.any([signal, AbortSignal.timeout(15000)]) : signal, ...(body ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}) })
   if (response.status === 204 && path === 'logout') return null
   let data: unknown
   try { data = await response.json() } catch { throw new AuthError('The sign-in response was interrupted. Please try again.', response.status) }

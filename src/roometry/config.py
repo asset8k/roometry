@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     app_environment: Literal["development", "test", "production"] = "development"
     cors_origins: list[str] = Field(default_factory=list)
     database_url: SecretStr | None = None
+    keepalive_token: SecretStr | None = None
     jwt_secret_key: SecretStr | None = None
     jwt_algorithm: Literal["HS256"] = "HS256"
     access_token_expire_minutes: int = Field(default=60, ge=1, le=10080)

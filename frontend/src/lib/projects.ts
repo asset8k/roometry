@@ -1,3 +1,4 @@
+import { safeRead } from './safe-read'
 import type { RoomScene } from './scene.generated'
 import { canonicalJson } from './canonical-json'
 
@@ -117,8 +118,8 @@ export interface OpenedProject {
   run: AgentState
 }
 export async function projectRequest(path: string, signal: AbortSignal, method = 'GET', body?: object): Promise<unknown> {
-  const response = await fetch(`${baseUrl}/projects${path}`, { method, credentials: 'include', cache: 'no-store',
-    signal: AbortSignal.any([signal, AbortSignal.timeout(20000)]), ...(body ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}) })
+  const response = await (method === 'GET' ? safeRead : fetch)(`${baseUrl}/projects${path}`, { method, credentials: 'include', cache: 'no-store',
+    signal: method === 'GET' ? signal : AbortSignal.any([signal, AbortSignal.timeout(20000)]), ...(body ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}) })
   if (response.status === 204) return null
   let data: unknown
   try { data = await response.json() } catch { throw new ProjectError('Couldn’t read the saved room response. Please retry.') }

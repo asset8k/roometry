@@ -1,6 +1,7 @@
 """FastAPI entry point: uv run uvicorn roometry.main:app --reload."""
 
 import logging
+from threading import Lock
 from contextlib import asynccontextmanager
 from typing import Literal
 
@@ -32,6 +33,7 @@ from roometry.auth.router import router as auth_router
 from roometry.auth.service import AuthService
 from roometry.config import Settings, get_settings
 from roometry.database import Database
+from roometry.keepalive import router as keepalive_router
 from roometry.feed.service import FeedService
 from roometry.feed.router import router as feed_router
 from roometry.mcp.furniture_client import FurnitureCatalogClient
@@ -146,6 +148,7 @@ def create_app(
     application = FastAPI(title="Roometry API", version="0.1.0", lifespan=lifespan)
     application.state.settings = settings
     application.state.database = database
+    application.state.keepalive_lock = Lock()
     application.state.feed_service = FeedService(database)
     application.state.feed_render_limiter = anyio.CapacityLimiter(2)
     application.state.quotas = quotas
@@ -177,6 +180,7 @@ def create_app(
         )
 
     application.include_router(scenes_router)
+    application.include_router(keepalive_router)
     application.include_router(auth_router)
     application.include_router(projects_router)
     application.include_router(feed_router)

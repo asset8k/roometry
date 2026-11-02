@@ -1,3 +1,4 @@
+import { safeRead } from './safe-read'
 import { parseRoomScene } from './scene'
 import type { RoomScene } from './scene.generated'
 import { projectRequest, ProjectError } from './projects'
@@ -41,7 +42,7 @@ export function parseSharedRoom(value: unknown): SharedRoom {
   return { ...card, scene }
 }
 async function publicRequest(path: string, signal: AbortSignal) {
-  const response = await fetch(`${base}/feed${path}`, { credentials: 'omit', cache: 'no-store', signal: AbortSignal.any([signal, AbortSignal.timeout(20000)]) })
+  const response = await safeRead(`${base}/feed${path}`, { credentials: 'omit', cache: 'no-store', signal })
   let data: unknown
   try { data = await response.json() } catch { throw new ProjectError('Explore is temporarily unavailable.') }
   if (!response.ok) throw new ProjectError(response.status === 404 ? 'This room is no longer shared.' : 'Explore is temporarily unavailable.', response.status)

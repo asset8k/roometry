@@ -1,14 +1,15 @@
+import { safeRead } from './safe-read'
 import { agentFailure, parseAgentRun, AgentRunError } from './agent-run'
 import type { ClarificationAnswer, StartRunRequest } from './agent-run'
 import { refreshAllowance } from './quota'
 
 const baseUrl = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '')
 async function request(path: string, signal: AbortSignal, body?: unknown) {
-  const response = await fetch(`${baseUrl}/agent-runs${path}`, {
+  const response = await (body === undefined ? safeRead : fetch)(`${baseUrl}/agent-runs${path}`, {
     method: body === undefined ? 'GET' : 'POST',
     ...(body === undefined ? {} : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
     credentials: 'include', cache: 'no-store',
-    signal: AbortSignal.any([signal, AbortSignal.timeout(body === undefined || path.endsWith('/cancel') ? 10000 : 1800000)]),
+    signal: body === undefined ? signal : AbortSignal.any([signal, AbortSignal.timeout(body === undefined || path.endsWith('/cancel') ? 10000 : 1800000)]),
   })
   let data: unknown
   try { data = await response.json() } catch { throw new AgentRunError('The service response was interrupted. Check status to recover the same generation.') }

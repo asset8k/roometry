@@ -1,3 +1,4 @@
+import { safeRead } from './safe-read'
 import { canonicalJson } from './canonical-json'
 import Ajv2020 from 'ajv/dist/2020.js'
 import addFormats from 'ajv-formats'
@@ -74,10 +75,10 @@ export function checkOptimization(run: OptimizationRun, source: AgentState, requ
 }
 const baseUrl = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '')
 async function request(path: string, signal: AbortSignal, body?: unknown) {
-  const response = await fetch(`${baseUrl}/agent-runs${path}`, {
+  const response = await (body === undefined ? safeRead : fetch)(`${baseUrl}/agent-runs${path}`, {
     method: body === undefined ? 'GET' : 'POST', credentials: 'include', cache: 'no-store',
     ...(body === undefined ? {} : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
-    signal: AbortSignal.any([signal, AbortSignal.timeout(path.endsWith('/execute') ? 1800000 : 15000)]),
+    signal: body === undefined ? signal : AbortSignal.any([signal, AbortSignal.timeout(path.endsWith('/execute') ? 1800000 : 15000)]),
   })
   let data: unknown
   try { data = await response.json() } catch { throw new AgentRunError('The service response was interrupted. Retry to recover the same improvement request.') }
