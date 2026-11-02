@@ -73,8 +73,8 @@ export function RoomInputForm({ state, controller, onGenerate, onCancel, onClear
       <fieldset className="input-edit-lock" disabled={locked}>
         <div className="input-columns">
           <section className="photo-section" aria-labelledby={`${photoInput}-heading`}>
-            <div className="input-section-heading"><h3 id={`${photoInput}-heading`}>Room photos</h3><span>{photos.length}{limits ? ` / ${limits.max_images}` : ''}</span></div>
-            {state.policyLoading && <p className="input-help" role="status">Loading photo requirements…</p>}
+            <div className="input-section-heading"><h3 id={`${photoInput}-heading`}>Room photos</h3><span>{photos.length} / {limits?.max_images ?? '—'}</span></div>
+            {state.policyLoading && <p className="visually-hidden" role="status">Loading photo requirements…</p>}
             {state.policyError && <div className="input-notice error" role="alert"><p>{state.policyError}</p><Button onClick={() => void controller.loadLimits()}>Retry connection</Button></div>}
             <div className={`photo-picker${photos.length ? ' has-photos' : ''}`}>
               <span className="upload-symbol"><Icon name="upload" /></span>
@@ -97,7 +97,7 @@ export function RoomInputForm({ state, controller, onGenerate, onCancel, onClear
                 {photo.resolutionIssue && <p className="photo-issue">{photo.resolutionIssue}</p>}
               </li>)}</ul>
             </>}
-            {limits && <details className="photo-requirements"><summary>Photo requirements</summary><p>JPEG, PNG, WebP, HEIC, HEIF or AVIF · Up to {formatBytes(limits.max_file_bytes)} each.</p><p>{limits.min_edge_px}–{limits.max_edge_px.toLocaleString()} px per edge · Up to {Math.floor(limits.max_pixels / 1000000)} MP · {formatBytes(limits.max_total_file_bytes)} total.</p></details>}
+            <details className="photo-requirements"><summary>Photo requirements</summary>{limits ? <><p>JPEG, PNG, WebP, HEIC, HEIF or AVIF · Up to {formatBytes(limits.max_file_bytes)} each.</p><p>{limits.min_edge_px}–{limits.max_edge_px.toLocaleString()} px per edge · Up to {Math.floor(limits.max_pixels / 1000000)} MP · {formatBytes(limits.max_total_file_bytes)} total.</p></> : <p>Loading photo requirements…</p>}</details>
           </section>
           <fieldset className="room-preferences" disabled={Boolean(busy)}>
             <legend>Room details</legend>

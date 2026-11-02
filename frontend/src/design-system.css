@@ -152,7 +152,7 @@ h1 span { color: var(--lime); text-shadow: 0 0 24px rgba(204, 255, 50, .17); }
 .photo-section { min-width: 0; }
 .input-section-heading { margin: 0 0 18px; }
 .input-section-heading h3 { font-size: 13px; font-weight: 500; }
-.input-section-heading > span { padding: 3px 8px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: 10px; }
+.input-section-heading > span { min-width: 44px; text-align: center; font-variant-numeric: tabular-nums; padding: 3px 8px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: 10px; }
 .photo-picker { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 266px; padding: 22px; border: 1px dashed var(--line-strong); border-radius: 16px; background: radial-gradient(ellipse at 50% 0%, rgba(216, 255, 134, .06), transparent 75%), rgba(0, 10, 4, .12); box-shadow: inset 0 1px 1px rgba(238, 255, 217, .08); }
 .upload-symbol { display: grid; place-items: center; width: 52px; height: 52px; margin-bottom: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--control-glass); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 4px 12px var(--shadow-ink); color: var(--accent-ink); }
 .upload-symbol .ui-icon { width: 25px; height: 25px; }
