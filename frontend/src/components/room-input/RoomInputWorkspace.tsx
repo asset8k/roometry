@@ -10,7 +10,6 @@ import { RoomInputController } from '../../lib/room-input-controller'
 import type { RoomInputState } from '../../lib/room-input-controller'
 import { formatBytes } from '../../lib/room-input'
 import { useAllowance } from '../../lib/quota'
-import AllowanceNotice from '../room-analysis/AllowanceNotice'
 
 const roomTypes = [
   ['bedroom', 'Bedroom'], ['living_room', 'Living room'], ['kitchen', 'Kitchen'], ['bathroom', 'Bathroom'],
@@ -45,7 +44,6 @@ export default function RoomInputWorkspace({ onConnectionChange, inputController
   const form = <RoomInputForm quotaBlocked={!!allowance?.enabled && allowance.sessions_remaining === 0} state={state} controller={controller} locked={generation.locked()} generating={['starting', 'running', 'awaiting_answer'].includes(generationState.phase)} generated={['completed', 'partial'].includes(generationState.phase)} recovering={generationState.recovery} onGenerate={async () => { generationOwner.current = account; await generation.generate() }} onCancel={() => void generation.cancel()} onClear={() => void generation.discard()} />
   if (generationState.run?.persistence === 'account' && generationOwner.current !== account) return <div className="input-notice info"><p>This reconstruction is private to the account that created it.</p><Button onClick={() => void generation.discard()}>Create another room</Button><a className="ui-button" href="#my-rooms">My rooms</a></div>
   return <>
-    <AllowanceNotice allowance={allowance} />
     {generationState.phase === 'idle' && generationState.notice?.kind === 'error' && <p className="input-notice error" role="alert">{generationState.notice.text}</p>}
     {generationState.run?.working_scene && !['starting', 'running', 'awaiting_answer'].includes(generationState.phase)
       ? <details className="source-inputs"><summary>Room photos &amp; details</summary>{form}</details> : form}

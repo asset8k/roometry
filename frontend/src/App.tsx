@@ -15,6 +15,8 @@ import type { RoomDestination } from './lib/workspace-navigation'
 import { WorkspaceNavigationContext } from './components/site/WorkspaceNavigation'
 import Dialog from './components/ui/Dialog'
 import { pageMotion } from './lib/motion'
+import { useAllowance } from './lib/quota'
+import AllowanceNotice from './components/room-analysis/AllowanceNotice'
 
 type Page = 'create' | 'explore' | 'my-rooms' | 'saved' | 'recover' | 'public'
 const pageFromHash = (hash = typeof window === 'undefined' ? '#' : window.location.hash): Page => /^#shared\/[a-f0-9-]{36}$/.test(hash) ? 'public' : /^#room\/[a-f0-9-]{36}$/.test(hash) ? 'saved' : /^#run\/[a-f0-9-]{36}$/.test(hash) ? 'recover' : hash === '#explore' ? 'explore' : hash === '#my-rooms' ? 'my-rooms' : 'create'
@@ -23,6 +25,7 @@ export default function App() {
   const [auth] = useState(() => new AuthController())
   const session = useSyncExternalStore(auth.subscribe, auth.getSnapshot, auth.getSnapshot)
   useEffect(auth.connect, [auth])
+  const allowance = useAllowance(undefined, session.user?.id)
   const [page, setPage] = useState<Page>(() => pageFromHash())
   const [routeHash, setRouteHash] = useState(() => typeof window === 'undefined' ? '' : window.location.hash)
   const [account, setAccount] = useState<'signin' | 'save' | null>(null)
@@ -108,6 +111,7 @@ export default function App() {
           <a href="#explore" aria-current={page === 'explore' ? 'page' : undefined}>Explore</a>
           <a href="#my-rooms" aria-current={['my-rooms', 'saved', 'recover'].includes(page) ? 'page' : undefined}>My rooms</a>
           {(page !== 'create' || nav.hasWork) && <Button onClick={goCreate}>New room</Button>}
+          <AllowanceNotice allowance={allowance} />
           {session.user ? <><span className="account-name" title={session.user.username}>{session.user.username}</span><Button disabled={session.pending} onClick={() => navigation.request({ hash: '#', fresh: true, signOut: true })}>Sign out</Button></>
             : <Button onClick={() => { auth.clearError(); openAccount() }}>Sign in</Button>}
         </nav>
