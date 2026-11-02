@@ -66,15 +66,30 @@ export async function uploadRoomInput(files: readonly File[], options: RoomInput
   const body = new FormData()
   for (const file of files) body.append('images', file, file.name)
   body.append('options', JSON.stringify(options))
-  const response = await fetch(`${baseUrl}/rooms/inputs`, {
+  const send = () => fetch(`${baseUrl}/rooms/inputs`, {
     method: 'POST', body, credentials: 'include', cache: 'no-store',
     signal: AbortSignal.any([signal, AbortSignal.timeout(120000)]),
   })
-  const result = parsePreparedInput(await uploadResponse(response))
-  if (result.images.length !== files.length || result.images.some((image, index) => image.original_bytes !== files[index].size)) {
-    throw new RoomInputError('The upload response does not match your selected photos. Please try again.', [], true, true)
+  // A cold host/gateway can drop the first upload. Retry once, after a cheap
+  // readiness request; this endpoint only prepares photos, never runs models.
+  let response: Response
+  try {
+    response = await send()
+    if (![502, 503, 504].includes(response.status)) return await preparedResponse(response)
+  } catch (error) {
+    if (signal.aborted || error instanceof RoomInputError || !(error instanceof TypeError || (error instanceof DOMException && error.name === 'TimeoutError'))) throw error
   }
-  return result
+  await fetch(`${baseUrl}/health`, { cache: 'no-store', signal: AbortSignal.any([signal, AbortSignal.timeout(60000)]) })
+  if (signal.aborted) throw signal.reason
+  return preparedResponse(await send())
+
+  async function preparedResponse(response: Response) {
+    const result = parsePreparedInput(await uploadResponse(response))
+    if (result.images.length !== files.length || result.images.some((image, index) => image.original_bytes !== files[index].size)) {
+      throw new RoomInputError('The upload response does not match your selected photos. Please try again.', [], true, true)
+    }
+    return result
+  }
 }
 
 export async function discardRoomInput(inputId: string, signal: AbortSignal): Promise<void> {

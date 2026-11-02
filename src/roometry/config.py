@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     auth_cookie_samesite: Literal["lax", "none", "strict"] = "lax"
     auth_attempts_per_minute: int = Field(default=10, ge=1, le=120)
     generation_quota_enabled: bool | None = None
+    ai_quota_exempt_usernames: list[str] = Field(default_factory=list)
     ai_sessions_per_day: int = Field(default=3, ge=1, le=100)
     ai_actions_per_session: int = Field(default=3, ge=1, le=100)
     ai_guest_sessions_per_ip_per_day: int = Field(default=12, ge=1, le=1000)

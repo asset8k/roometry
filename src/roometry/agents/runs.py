@@ -246,7 +246,7 @@ class AgentRuns:
             await anyio.to_thread.run_sync(self.durable.claim,owner,run_id,entry.initial.limits.step_timeout_seconds)
         async def persist_usage(usage):
             if self.quotas:
-                await anyio.to_thread.run_sync(self.quotas.started, run_id)
+                await anyio.to_thread.run_sync(self.quotas.started, run_id, owner)
             if self.durable and owner.startswith('account:'):
                 await anyio.to_thread.run_sync(self.durable.reserve,owner,run_id,usage,entry.initial.limits.step_timeout_seconds)
         graph, config = build_graph(entry.saver), self._config(entry)

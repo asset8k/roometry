@@ -40,6 +40,20 @@ class Quotas:
     def enabled(self):
         return self.settings.quota_enabled
 
+    def exempt(self, owner):
+        # Only a server-resolved account ID can qualify, never a guest/client label.
+        if not owner or not owner.startswith("account:") or not self.settings.ai_quota_exempt_usernames:
+            return False
+        from roometry.users.model import User
+        from uuid import UUID
+        try:
+            user_id = UUID(owner.removeprefix("account:"))
+        except ValueError:
+            return False
+        with self.database.sessions() as db:
+            user = db.get(User, user_id)
+            return user is not None and user.is_active and user.username in self.settings.ai_quota_exempt_usernames
+
     def key(self, value):
         return hmac.new(
             self.settings.jwt_secret_key.get_secret_value().encode(),
@@ -79,7 +93,7 @@ class Quotas:
         return row
 
     def reserve(self, owner, room_id, action_id, *, initial=False):
-        if not self.enabled:
+        if not self.enabled or self.exempt(owner):
             return
         with self.transaction() as db:
             daily = self.bucket(db, self.key("owner:" + owner))
@@ -141,8 +155,8 @@ class Quotas:
                 max(1, int((self.reset() - self.now()).total_seconds())),
             )
 
-    def started(self, action_id):
-        if not self.enabled:
+    def started(self, action_id, owner=None):
+        if not self.enabled or self.exempt(owner):
             return
         with self.database.sessions.begin() as db:
             action = db.get(QuotaAction, action_id)
@@ -191,14 +205,14 @@ class Quotas:
 
     def status(self, owner, room_id=None):
         result = {
-            "enabled": self.enabled,
+            "enabled": self.enabled and not self.exempt(owner),
             "sessions_limit": self.settings.ai_sessions_per_day,
             "sessions_remaining": None,
             "actions_limit": self.settings.ai_actions_per_session,
             "actions_remaining": None,
             "resets_at": self.reset().isoformat(),
         }
-        if not self.enabled:
+        if not result["enabled"]:
             return result
         with self.database.sessions() as db:
             bucket = db.get(QuotaBucket, self.key("owner:" + owner))

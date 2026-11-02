@@ -235,7 +235,7 @@ class OptimizationRuns:
         async def authorize(): await self._owned(run_id, owner)
         async def persist_usage(usage):
             if self.quotas:
-                await anyio.to_thread.run_sync(self.quotas.started, run_id)
+                await anyio.to_thread.run_sync(self.quotas.started, run_id, owner)
             if self.durable and owner.startswith('account:'):
                 await anyio.to_thread.run_sync(self.durable.reserve,owner,run_id,usage,entry.result.limits.step_timeout_seconds)
         budget = entry.budget = RunBudget(entry.result.limits, entry.result.usage, authorize,

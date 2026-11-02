@@ -390,3 +390,28 @@ async def test_pre_dispatch_failure_refunds_session_but_paid_model_failure_does_
     assert (await client.get("/api/usage")).json()["sessions_remaining"] == 2 and len(
         calls
     ) == 2
+
+
+def test_explicit_exemption_only_applies_to_authenticated_existing_account(ledger):
+    from roometry.users.model import User
+    service, _, settings, database = ledger
+    user_id = uuid4()
+    with database.sessions.begin() as db:
+        db.add(User(id=user_id, username="asset", password_hash="unused-test-hash", created_at=service.now()))
+    settings.ai_quota_exempt_usernames = ["asset"]
+    owner = f"account:{user_id}"
+    for _ in range(5):
+        room = str(uuid4())
+        service.check_new(owner)
+        service.reserve(owner, room, room, initial=True)
+        service.started(room, owner)
+        for _ in range(4):
+            action = str(uuid4())
+            service.reserve(owner, room, action)
+            service.started(action, owner)
+        assert service.status(owner, room)["enabled"] is False
+    assert service.status("asset")["enabled"] is True
+    assert service.status("account:asset")["enabled"] is True
+    assert service.status(f"account:{uuid4()}")["enabled"] is True
+    settings.ai_quota_exempt_usernames = []
+    assert service.status(owner)["enabled"] is True

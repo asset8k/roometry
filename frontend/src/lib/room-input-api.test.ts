@@ -31,6 +31,22 @@ describe('room input API client', () => {
     expect(form.getAll('images').map(value => (value as File).name)).toEqual(['room.png', 'phone.heic'])
     expect(JSON.parse(form.get('options') as string)).toEqual(options)
   })
+  it('recovers one dropped upload through readiness without any generation call', async () => {
+    const files = [photo()]
+    const fetcher = vi.fn().mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(new Response('{"status":"ok"}'))
+      .mockResolvedValueOnce(new Response(JSON.stringify(prepared(files)), {status:201}))
+    vi.stubGlobal('fetch', fetcher)
+    expect((await uploadRoomInput(files, {}, signal())).images).toHaveLength(1)
+    expect(fetcher.mock.calls.map(call => call[0])).toEqual(['/api/rooms/inputs', '/api/health', '/api/rooms/inputs'])
+  })
+  it('does not retry an upload cancelled by the user', async () => {
+    const controller = new AbortController()
+    const fetcher = vi.fn(async () => { controller.abort(); throw new TypeError('aborted') })
+    vi.stubGlobal('fetch', fetcher)
+    await expect(uploadRoomInput([photo()], {}, controller.signal)).rejects.toThrow()
+    expect(fetcher).toHaveBeenCalledTimes(1)
+  })
   it('preserves actionable server errors without treating a known rejection as an uncertain commit', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ detail: [
       { code: 'invalid_image', message: 'This photo could not be decoded.', file_index: 1 },
